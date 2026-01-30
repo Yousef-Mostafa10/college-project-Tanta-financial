@@ -1,0 +1,237 @@
+import 'package:flutter/material.dart';
+import 'tracking_colors.dart';
+import 'tracking_helpers.dart';
+
+Widget buildTimelineStep({
+  required dynamic forward,
+  required int stepNumber,
+  required bool isFirst,
+  required bool isLast,
+  required int totalSteps,
+  required bool isMobile,
+  required bool isTablet,
+}) {
+  final statusColor = TrackingHelpers.getStatusColorAsColor(forward['status']);
+  final statusIcon = TrackingHelpers.getStatusIconAsIconData(forward['status']);
+
+  return Container(
+    margin: EdgeInsets.symmetric(horizontal: isMobile ? 4 : 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // الخط الزمني العمودي
+        Column(
+          children: [
+            // الدائرة العلوية (للخط)
+            if (!isFirst) ...[
+              Container(
+                width: 2,
+                height: isMobile ? 16 : 20,
+                color: TrackingColors.primary.withOpacity(0.3),
+              ),
+            ],
+            // الدائرة الرئيسية
+            Container(
+              width: isMobile ? 32 : 40,
+              height: isMobile ? 32 : 40,
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+                border: Border.all(color: statusColor, width: 2),
+              ),
+              child: Center(
+                child: Text(
+                  stepNumber.toString(),
+                  style: TextStyle(
+                    fontSize: isMobile ? 12 : 14,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ),
+            // الخط السفلي (للخط)
+            if (!isLast) ...[
+              Container(
+                width: 2,
+                height: isMobile ? 16 : 20,
+                color: TrackingColors.primary.withOpacity(0.3),
+              ),
+            ],
+          ],
+        ),
+        SizedBox(width: isMobile ? 12 : 16),
+
+        // محتوى الخطوة
+        Expanded(
+          child: Container(
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
+            decoration: BoxDecoration(
+              color: TrackingColors.cardBg,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: TrackingColors.statShadow,
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+              border: Border.all(
+                color: statusColor.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // الهيدر - المرسل والمستقبل
+                Row(
+                  children: [
+                    // المرسل
+                    Expanded(
+                      child: _buildUserCard(
+                        forward['sender'],
+                        'From',
+                        Icons.person_outline_rounded,
+                        TrackingColors.accentBlue,
+                        isMobile,
+                      ),
+                    ),
+                    SizedBox(width: isMobile ? 6 : 8),
+                    // السهم
+                    Container(
+                      padding: EdgeInsets.all(isMobile ? 3 : 4),
+                      decoration: BoxDecoration(
+                        color: TrackingColors.primary.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: TrackingColors.primary.withOpacity(0.3)),
+                      ),
+                      child: Icon(Icons.arrow_forward_rounded, size: isMobile ? 14 : 16, color: TrackingColors.primary),
+                    ),
+                    SizedBox(width: isMobile ? 6 : 8),
+                    // المستقبل
+                    Expanded(
+                      child: _buildUserCard(
+                        forward['receiver'],
+                        'To',
+                        Icons.person_rounded,
+                        TrackingColors.accentGreen,
+                        isMobile,
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: isMobile ? 8 : 12),
+
+                // معلومات الحالة والوقت
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 10 : 12,
+                        vertical: isMobile ? 4 : 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, size: isMobile ? 14 : 16, color: statusColor),
+                          SizedBox(width: isMobile ? 4 : 6),
+                          Text(
+                            forward['status'].toString().toUpperCase(),
+                            style: TextStyle(
+                              fontSize: isMobile ? 10 : 12,
+                              fontWeight: FontWeight.bold,
+                              color: statusColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      TrackingHelpers.formatDate(forward['forwardedAt']),
+                      style: TextStyle(
+                        fontSize: isMobile ? 10 : 12,
+                        color: TrackingColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // وقت التحديث إذا كان مختلفاً
+                if (forward['updatedAt'] != null && forward['updatedAt'] != forward['forwardedAt']) ...[
+                  SizedBox(height: isMobile ? 6 : 8),
+                  Text(
+                    'Updated: ${TrackingHelpers.formatDate(forward['updatedAt'])}',
+                    style: TextStyle(
+                      fontSize: isMobile ? 10 : 11,
+                      color: TrackingColors.textMuted,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildUserCard(Map<String, dynamic>? user, String label, IconData icon, Color color, bool isMobile) {
+  final userName = user?['name'] ?? 'Unknown';
+  final userGroup = user?['group'] ?? 'N/A';
+
+  return Container(
+    padding: EdgeInsets.all(isMobile ? 8 : 12),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.05),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: color.withOpacity(0.2)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: isMobile ? 12 : 14, color: color),
+            SizedBox(width: isMobile ? 3 : 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: isMobile ? 10 : 12,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: isMobile ? 2 : 4),
+        Text(
+          userName,
+          style: TextStyle(
+            fontSize: isMobile ? 12 : 14,
+            fontWeight: FontWeight.bold,
+            color: TrackingColors.textPrimary,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          userGroup,
+          style: TextStyle(
+            fontSize: isMobile ? 9 : 11,
+            color: TrackingColors.textSecondary,
+          ),
+        ),
+      ],
+    ),
+  );
+}

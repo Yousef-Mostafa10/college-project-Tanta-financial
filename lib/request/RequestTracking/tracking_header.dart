@@ -1,0 +1,143 @@
+import 'package:flutter/material.dart';
+import 'tracking_colors.dart';
+import 'tracking_helpers.dart';
+
+Widget buildTransactionHeader({
+  required String transactionId,
+  required List<dynamic> forwards,
+  required bool isMobile,
+  required bool isTablet,
+}) {
+  return Container(
+    width: double.infinity,
+    padding: EdgeInsets.all(isMobile ? 16 : 24),
+    decoration: BoxDecoration(
+      color: TrackingColors.primary.withOpacity(0.1),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(30),
+        bottomRight: Radius.circular(30),
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(isMobile ? 10 : 12),
+              decoration: BoxDecoration(
+                color: TrackingColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+                border: Border.all(color: TrackingColors.primary.withOpacity(0.3)),
+              ),
+              child: Icon(Icons.timeline_rounded, color: TrackingColors.primary, size: isMobile ? 24 : 28),
+            ),
+            SizedBox(width: isMobile ? 12 : 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Transaction #$transactionId',
+                    style: TextStyle(
+                      fontSize: isMobile ? 18 : 20,
+                      fontWeight: FontWeight.bold,
+                      color: TrackingColors.primary,
+                    ),
+                  ),
+                  SizedBox(height: isMobile ? 2 : 4),
+                  Text(
+                    'Tracking ${forwards.length} forwarding steps',
+                    style: TextStyle(
+                      fontSize: isMobile ? 12 : 14,
+                      color: TrackingColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: isMobile ? 12 : 16),
+        // معلومات سريعة عن الحالة الحالية
+        if (forwards.isNotEmpty) ...[
+          Container(
+            padding: EdgeInsets.all(isMobile ? 10 : 12),
+            decoration: BoxDecoration(
+              color: TrackingColors.cardBg,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: TrackingColors.statShadow,
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: TrackingHelpers.getStatusColorAsColor(forwards.last['status']).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: TrackingHelpers.getStatusColorAsColor(forwards.last['status']).withOpacity(0.3)),
+                  ),
+                  child: Icon(
+                    TrackingHelpers.getStatusIconAsIconData(forwards.last['status']),
+                    color: TrackingHelpers.getStatusColorAsColor(forwards.last['status']),
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: isMobile ? 8 : 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Current Status',
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 12,
+                          color: TrackingColors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        forwards.last['status'].toString().toUpperCase(),
+                        style: TextStyle(
+                          fontSize: isMobile ? 14 : 16,
+                          fontWeight: FontWeight.bold,
+                          color: TrackingHelpers.getStatusColorAsColor(forwards.last['status']),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Last Update',
+                      style: TextStyle(
+                        fontSize: isMobile ? 11 : 12,
+                        color: TrackingColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      TrackingHelpers.formatDate(forwards.last['updatedAt'] ?? forwards.last['forwardedAt']),
+                      style: TextStyle(
+                        fontSize: isMobile ? 10 : 12,
+                        fontWeight: FontWeight.w500,
+                        color: TrackingColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+}
