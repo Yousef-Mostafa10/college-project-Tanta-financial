@@ -1,7 +1,10 @@
+import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/request/RequestTracking/tracking_colors.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'tracking_colors.dart';
 
 Widget buildEmptyState({
+  required BuildContext context,
   required bool isMobile,
   required bool isTablet,
 }) {
@@ -24,7 +27,7 @@ Widget buildEmptyState({
             ),
             SizedBox(height: isMobile ? 16 : 24),
             Text(
-              "No forwarding history found",
+              AppLocalizations.of(context)!.translate('no_forwarding_history_title'),
               style: TextStyle(
                 fontSize: isMobile ? 18 : 20,
                 fontWeight: FontWeight.w600,
@@ -33,7 +36,7 @@ Widget buildEmptyState({
             ),
             SizedBox(height: isMobile ? 6 : 8),
             Text(
-              "This transaction hasn't been forwarded to any users yet",
+              AppLocalizations.of(context)!.translate('no_forwarding_history_details'),
               style: TextStyle(
                 fontSize: isMobile ? 12 : 14,
                 color: TrackingColors.textSecondary,

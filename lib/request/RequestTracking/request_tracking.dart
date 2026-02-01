@@ -878,6 +878,7 @@
 //   }
 // }
 
+import 'package:college_project/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'tracking_colors.dart';
 import 'tracking_api.dart';
@@ -931,7 +932,7 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
   Future<void> _fetchTransactionForwards() async {
     if (_userToken == null) {
       setState(() {
-        _errorMessage = "Please login first";
+        _errorMessage = AppLocalizations.of(context)!.translate('please_login_first');
         _isLoading = false;
       });
       return;
@@ -972,7 +973,7 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
       backgroundColor: TrackingColors.bodyBg,
       appBar: AppBar(
         title: Text(
-          'Transaction Tracking',
+          AppLocalizations.of(context)!.translate('transaction_tracking_title'),
           style: TextStyle(
             fontSize: isMobile ? 16 : 18,
             fontWeight: FontWeight.w600,
@@ -988,14 +989,15 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
           IconButton(
             icon: Icon(Icons.refresh_rounded, size: isMobile ? 20 : 24),
             onPressed: _fetchTransactionForwards,
-            tooltip: 'Refresh',
+            tooltip: AppLocalizations.of(context)!.translate('refresh'),
           ),
         ],
       ),
       body: _isLoading
-          ? buildLoadingState(isMobile)
+          ? buildLoadingState(context, isMobile)
           : _errorMessage != null
           ? buildErrorState(
+        context: context,
         errorMessage: _errorMessage!,
         onRetry: _fetchTransactionForwards,
         isMobile: isMobile,
@@ -1011,6 +1013,7 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
         children: [
           // الهيدر مع معلومات المعاملة
           buildTransactionHeader(
+            context: context,
             transactionId: widget.transactionId,
             forwards: _forwards,
             isMobile: isMobile,
@@ -1019,6 +1022,7 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
 
           // قسم الفلاتر
           buildFilterSection(
+            context: context,
             selectedStatus: _selectedStatus,
             statusFilters: _statusFilters,
             onStatusChanged: (status) {
@@ -1032,6 +1036,7 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
 
           // الإحصائيات
           buildStatsSection(
+            context: context,
             forwards: _forwards,
             isMobile: isMobile,
             isTablet: isTablet,
@@ -1039,8 +1044,9 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
 
           // مسار التتبع
           _forwards.isEmpty
-              ? buildEmptyState(isMobile: isMobile, isTablet: isTablet)
+              ? buildEmptyState(context: context, isMobile: isMobile, isTablet: isTablet)
               : buildTrackingTimeline(
+            context: context,
             forwards: _filteredForwards,
             isMobile: isMobile,
             isTablet: isTablet,

@@ -5,6 +5,9 @@ import 'package:college_project/users/viewUser/viewuser.dart';
 import 'package:flutter/material.dart';
 import 'package:college_project/Notefecation/inbox.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:college_project/providers/language_provider.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 // 🎨 COLOR PALETTE - Consistent with the whole application
 class AppColors {
@@ -125,11 +128,11 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
             // قسم Management - يظهر فقط للادمن
             if (_userType.toLowerCase() == 'admin') ...[
-              _buildSectionHeader("Management", Icons.admin_panel_settings_rounded, isMobile),
+              _buildSectionHeader(AppLocalizations.of(context)!.translate('management'), Icons.admin_panel_settings_rounded, isMobile),
 
               _buildMenuItem(
                 icon: Icons.person_add_alt_1_rounded,
-                title: "Add User",
+                title: AppLocalizations.of(context)!.translate('add_user'),
                 color: AppColors.accentGreen,
                 isMobile: isMobile,
                 onTap: () {
@@ -141,7 +144,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
               _buildMenuItem(
                 icon: Icons.people_alt_rounded,
-                title: "View Users",
+                title: AppLocalizations.of(context)!.translate('view_users'),
                 color: AppColors.accentBlue,
                 isMobile: isMobile,
                 onTap: () {
@@ -160,11 +163,11 @@ class _CustomDrawerState extends State<CustomDrawer> {
               ),
             ],
 
-            _buildSectionHeader("Requests", Icons.request_quote_rounded, isMobile),
+            _buildSectionHeader(AppLocalizations.of(context)!.translate('requests'), Icons.request_quote_rounded, isMobile),
 
             _buildMenuItem(
               icon: Icons.add_circle_outline_rounded,
-              title: "Create Request",
+              title: AppLocalizations.of(context)!.translate('create_request'),
               color: AppColors.primary,
               isBold: true,
               isMobile: isMobile,
@@ -177,7 +180,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
             _buildMenuItem(
               icon: Icons.list_alt_rounded,
-              title: "My Requests",
+              title: AppLocalizations.of(context)!.translate('my_requests'),
               color: AppColors.accentOrange,
               isMobile: isMobile,
               onTap: () {
@@ -196,11 +199,11 @@ class _CustomDrawerState extends State<CustomDrawer> {
               endIndent: isMobile ? 20 : 24,
             ),
 
-            _buildSectionHeader("General", Icons.settings_rounded, isMobile),
+            _buildSectionHeader(AppLocalizations.of(context)!.translate('general'), Icons.settings_rounded, isMobile),
 
             _buildMenuItem(
               icon: Icons.notifications_active_rounded,
-              title: "Notifications",
+              title: AppLocalizations.of(context)!.translate('notifications'),
               color: AppColors.accentPurple,
               badgeCount: 3,
               isMobile: isMobile,
@@ -212,20 +215,102 @@ class _CustomDrawerState extends State<CustomDrawer> {
               },
             ),
 
-            _buildMenuItem(
-              icon: Icons.settings_rounded,
-              title: "Settings",
-              color: AppColors.textSecondary,
-              isMobile: isMobile,
-              onTap: () {
-                Navigator.pop(context);
-                _showComingSoonSnackbar(context);
-              },
+            // إعدادات اللغة (Language Settings)
+            Container(
+              margin: EdgeInsets.symmetric(
+                horizontal: isMobile ? 12 : 16,
+                vertical: isMobile ? 2 : 4,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+                color: AppColors.cardBg,
+                border: Border.all(
+                  color: AppColors.primary.withOpacity(0.1),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(isMobile ? 8 : 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.textSecondary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.textSecondary.withOpacity(0.2)),
+                    ),
+                    child: Icon(
+                      Icons.settings_rounded,
+                      color: AppColors.textSecondary,
+                      size: isMobile ? 20 : 22,
+                    ),
+                  ),
+                  title: Text(
+                    AppLocalizations.of(context)!.translate('settings'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: isMobile ? 14 : 16,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  // collapsedIconColor: AppColors.primary.withOpacity(0.5),
+                  childrenPadding: const EdgeInsets.only(bottom: 10),
+                  children: [
+                     Padding(
+                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                       child: Row(
+                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                         children: [
+                           Row(
+                             children: [
+                               Icon(Icons.language, color: AppColors.primary, size: 20),
+                               const SizedBox(width: 10),
+                               Text(
+                                 AppLocalizations.of(context)!.translate('language'),
+                                 style: TextStyle(
+                                   color: AppColors.textPrimary,
+                                   fontSize: 14,
+                                   fontWeight: FontWeight.w500,
+                                 ),
+                               ),
+                             ],
+                           ),
+                           Consumer<LanguageProvider>(
+                             builder: (context, provider, child) {
+                               return DropdownButton<String>(
+                                 value: provider.currentLocale.languageCode,
+                                 underline: const SizedBox(),
+                                 icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
+                                 onChanged: (String? newValue) {
+                                   if (newValue != null) {
+                                     provider.changeLanguage(Locale(newValue));
+                                   }
+                                 },
+                                 items: const [
+                                   DropdownMenuItem(value: 'en', child: Text('English')),
+                                   DropdownMenuItem(value: 'ar', child: Text('العربية')),
+                                 ],
+                               );
+                             },
+                           ),
+                         ],
+                       ),
+                     ),
+                  ],
+                ),
+              ),
             ),
 
             _buildMenuItem(
               icon: Icons.help_outline_rounded,
-              title: "Help & Support",
+              title: AppLocalizations.of(context)!.translate('help_support'),
               color: AppColors.textSecondary,
               isMobile: isMobile,
               onTap: () {
@@ -354,7 +439,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
           ),
           SizedBox(height: isMobile ? 12 : 16),
           Text(
-            'Loading user data...',
+            AppLocalizations.of(context)!.translate('loading_user_data'),
             style: TextStyle(
               fontSize: isMobile ? 14 : 16,
               color: AppColors.textSecondary,
@@ -388,7 +473,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
           ),
         ),
         title: Text(
-          "Logout",
+          AppLocalizations.of(context)!.translate('logout'),
           style: TextStyle(
             color: AppColors.statusRejected,
             fontWeight: FontWeight.w600,
@@ -532,8 +617,8 @@ class _CustomDrawerState extends State<CustomDrawer> {
   void _showComingSoonSnackbar(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text(
-          "هذه الميزة قريباً",
+        content: Text(
+          AppLocalizations.of(context)!.translate('coming_soon'),
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.textWhite),
         ),

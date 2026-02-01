@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../home/dashboard.dart';
-import '../request/Myrequest/myrequest.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -85,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
           await prefs.setString('user_group', userGroup);
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("✅ Login Successful")),
+            SnackBar(content: Text("✅ ${AppLocalizations.of(context)!.translate('login_successful')}")),
           );
 
           Navigator.pushReplacement(
@@ -96,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data["message"] ?? "Login failed ❌")),
+            SnackBar(content: Text(data["message"] ?? "${AppLocalizations.of(context)!.translate('login_failed')} ❌")),
           );
         }
       } else {
@@ -106,7 +106,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("⚠️ Connection error")),
+        SnackBar(content: Text("⚠️ ${AppLocalizations.of(context)!.translate('connection_error')}")),
       );
     } finally {
       setState(() => isLoading = false);
@@ -222,7 +222,7 @@ class _LoginPageState extends State<LoginPage> {
           if (screenWidth < 600) const SizedBox(height: 10),
           if (screenWidth < 600)
             Text(
-              "Welcome Back!",
+              AppLocalizations.of(context)!.translate('welcome_back'),
               style: TextStyle(
                 fontSize: min(screenWidth * 0.045, 20),
                 fontWeight: FontWeight.w600,
@@ -257,7 +257,7 @@ class _LoginPageState extends State<LoginPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                screenWidth > 600 ? "Tanta Finance System" : "Tanta Finance",
+                screenWidth > 600 ? AppLocalizations.of(context)!.translate('app_name_long') : AppLocalizations.of(context)!.translate('app_name_short'),
                 style: TextStyle(
                   fontSize: screenWidth > 600
                       ? min(screenWidth * 0.04, 28)
@@ -270,7 +270,7 @@ class _LoginPageState extends State<LoginPage> {
               if (screenWidth > 600) ...[
                 const SizedBox(height: 8),
                 Text(
-                  "Sign in to your account",
+                  AppLocalizations.of(context)!.translate('sign_in_subtitle'),
                   style: TextStyle(
                     fontSize: min(screenWidth * 0.025, 16),
                     color: Colors.grey[600],
@@ -288,7 +288,7 @@ class _LoginPageState extends State<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Username",
+                AppLocalizations.of(context)!.translate('username'),
                 style: TextStyle(
                   fontSize: min(screenWidth * 0.035, 16),
                   fontWeight: FontWeight.w500,
@@ -299,7 +299,7 @@ class _LoginPageState extends State<LoginPage> {
               TextFormField(
                 controller: emailController,
                 decoration: InputDecoration(
-                  hintText: "Enter your username",
+                  hintText: AppLocalizations.of(context)!.translate('enter_username_hint'),
                   prefixIcon: const Icon(Icons.person, color: primaryLight),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -315,13 +315,13 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 validator: (value) =>
-                value == null || value.isEmpty ? 'Enter username' : null,
+                value == null || value.isEmpty ? AppLocalizations.of(context)!.translate('enter_username_error') : null,
               ),
               const SizedBox(height: 20),
 
               // Password
               Text(
-                "Password",
+                AppLocalizations.of(context)!.translate('password'),
                 style: TextStyle(
                   fontSize: min(screenWidth * 0.035, 16),
                   fontWeight: FontWeight.w500,
@@ -333,7 +333,7 @@ class _LoginPageState extends State<LoginPage> {
                 controller: passwordController,
                 obscureText: !isPasswordVisible,
                 decoration: InputDecoration(
-                  hintText: "Enter your password",
+                  hintText: AppLocalizations.of(context)!.translate('enter_password_hint'),
                   prefixIcon: const Icon(Icons.lock, color: primaryLight),
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -360,7 +360,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 validator: (value) =>
-                value == null || value.isEmpty ? 'Enter password' : null,
+                value == null || value.isEmpty ? AppLocalizations.of(context)!.translate('enter_password_error') : null,
               ),
               const SizedBox(height: 30),
 
@@ -389,7 +389,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   )
                       : Text(
-                    "Sign In",
+                    AppLocalizations.of(context)!.translate('sign_in_button'),
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: min(screenWidth * 0.04, 18),

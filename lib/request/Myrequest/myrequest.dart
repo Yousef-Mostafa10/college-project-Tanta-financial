@@ -2430,14 +2430,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 import 'my_requests_colors.dart';
 import 'my_requests_api.dart';
 import 'my_requests_helpers.dart';
 import 'my_requests_desktop_card.dart';
 import 'my_requests_mobile_card.dart';
-import 'my_requests_desktop_filters.dart'; // تأكد من استيراد الملف الصحيح
+import 'my_requests_desktop_filters.dart';
 import 'my_requests_mobile_filters.dart';
+import 'my_requests_mobile_stats.dart';
 import 'my_requests_stats_widget.dart';
 import 'my_requests_empty_state.dart';
 import 'my_requests_header.dart';
@@ -2495,7 +2497,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     } else {
       setState(() {
         _isLoading = false;
-        _errorMessage = "Unable to load user information. Please login again.";
+        _errorMessage = AppLocalizations.of(context)!.translate('unable_load_user_info');
       });
     }
   }
@@ -2533,7 +2535,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   Future<void> _fetchMyRequests() async {
     if (_userToken == null || _userName == null) {
       setState(() {
-        _errorMessage = "Please login first";
+        _errorMessage = AppLocalizations.of(context)!.translate('please_login_first');
         _isLoading = false;
       });
       return;
@@ -2555,7 +2557,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       print("❌ Error fetching requests: $e");
       setState(() {
         _isLoading = false;
-        _errorMessage = "Failed to load requests";
+        _errorMessage = AppLocalizations.of(context)!.translate('failed_load_requests');
       });
     }
   }
@@ -2626,17 +2628,17 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Request'),
-          content: const Text('Are you sure you want to delete this request? This action cannot be undone.'),
+          title: Text(AppLocalizations.of(context)!.translate('delete_request_confirm_title')),
+          content: Text(AppLocalizations.of(context)!.translate('delete_request_confirm_content')),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.translate('cancel_button')),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(
-                'Delete',
+              child: Text(
+                AppLocalizations.of(context)!.translate('delete_button'),
                 style: TextStyle(color: Colors.red),
               ),
             ),
@@ -2657,15 +2659,15 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Request deleted successfully!'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('request_deleted_success')),
             backgroundColor: Colors.green,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to delete request'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('failed_delete_request')),
             backgroundColor: Colors.red,
           ),
         );
@@ -2673,7 +2675,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Network error: ${e.toString()}'),
+          content: Text('${AppLocalizations.of(context)!.translate('network_error')}: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -2714,17 +2716,31 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                       ),
                     ),
                   ),
-                  ...options.map((option) => ListTile(
-                    leading: Icon(
-                      Icons.check_rounded,
-                      color: option == currentValue ? MyRequestsColors.primary : Colors.transparent,
-                    ),
-                    title: Text(option, style: TextStyle(color: MyRequestsColors.textPrimary)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onSelected(option);
-                    },
-                  )),
+                ...options.map((option) {
+                    String displayText = option;
+                    if (option == 'All') displayText = AppLocalizations.of(context)!.translate('all_filter');
+                    if (option == 'All Types') displayText = AppLocalizations.of(context)!.translate('all_types_filter');
+                    if (option == 'Waiting') displayText = AppLocalizations.of(context)!.translate('status_waiting');
+                    if (option == 'Approved') displayText = AppLocalizations.of(context)!.translate('status_approved');
+                    if (option == 'Rejected') displayText = AppLocalizations.of(context)!.translate('status_rejected');
+                    if (option == 'Needs Change') displayText = AppLocalizations.of(context)!.translate('status_needs_change');
+                    if (option == 'Fulfilled') displayText = AppLocalizations.of(context)!.translate('status_fulfilled');
+                    if (option == 'High') displayText = AppLocalizations.of(context)!.translate('priority_high');
+                    if (option == 'Medium') displayText = AppLocalizations.of(context)!.translate('priority_medium');
+                    if (option == 'Low') displayText = AppLocalizations.of(context)!.translate('priority_low');
+
+                    return ListTile(
+                      leading: Icon(
+                        Icons.check_rounded,
+                        color: option == currentValue ? MyRequestsColors.primary : Colors.transparent,
+                      ),
+                      title: Text(displayText, style: TextStyle(color: MyRequestsColors.textPrimary)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        onSelected(option);
+                      },
+                    );
+                  }),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -2744,7 +2760,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
           ),
           SizedBox(height: 16),
           Text(
-            'Loading requests...',
+            AppLocalizations.of(context)!.translate('loading_requests'),
             style: TextStyle(
               fontSize: isMobile ? 14 : 16,
               color: MyRequestsColors.textSecondary,
@@ -2764,7 +2780,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       backgroundColor: MyRequestsColors.bodyBg,
       appBar: AppBar(
         title: Text(
-          'My Requests',
+          AppLocalizations.of(context)!.translate('my_requests'),
           style: TextStyle(
             fontSize: isMobile ? 18 : 20,
             fontWeight: FontWeight.w600,
@@ -2777,7 +2793,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
           IconButton(
             icon: Icon(Icons.refresh_rounded, size: isMobile ? 20 : 24),
             onPressed: _fetchMyRequests,
-            tooltip: 'Refresh',
+            tooltip: AppLocalizations.of(context)!.translate('refresh'),
           ),
         ],
       ),
@@ -2804,80 +2820,14 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     final needsChangeForwards = _requests.where((req) => req["userForwardStatus"] == "needs_change").length;
     final fulfilledForwards = _requests.where((req) => req["fulfilled"] == true).length;
 
-    // إنشاء شريط الإحصائيات للموبايل
-    Widget buildMobileStatsSection() {
-      final statItems = [
-        {"label": "Total", "value": total, "color": MyRequestsColors.textPrimary, "icon": Icons.dashboard_rounded},
-        {"label": "Approved", "value": approvedForwards, "color": MyRequestsColors.statusApproved, "icon": Icons.check_circle_rounded},
-        {"label": "Rejected", "value": rejectedForwards, "color": MyRequestsColors.statusRejected, "icon": Icons.cancel_rounded},
-        {"label": "Waiting", "value": waitingForwards, "color": MyRequestsColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
-        {"label": "Needs Change", "value": needsChangeForwards, "color": MyRequestsColors.statusNeedsChange, "icon": Icons.edit_note_rounded},
-        {"label": "Fulfilled", "value": fulfilledForwards, "color": MyRequestsColors.statusFulfilled, "icon": Icons.task_alt_rounded},
-      ];
-
-      return Container(
-        margin: const EdgeInsets.all(12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: MyRequestsColors.statBgLight,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: MyRequestsColors.statShadow,
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-          ],
-          border: Border.all(color: MyRequestsColors.statBorder),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: statItems.map((stat) => Expanded(
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: (stat["color"] as Color).withOpacity(0.1),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: (stat["color"] as Color).withOpacity(0.3), width: 1),
-                  ),
-                  child: Icon(stat["icon"] as IconData, color: stat["color"] as Color, size: 18),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  (stat["value"] as int).toString(),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: stat["color"] as Color,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  stat["label"] as String,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    color: MyRequestsColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                ),
-              ],
-            ),
-          )).toList(),
-        ),
-      );
-    }
-
     return Column(
       children: [
         // 1️⃣ الجزء الثابت عند الأعلى - الإحصائيات
-        buildMobileStatsSection(),
+        buildMobileStatsSection(context, total, approvedForwards, rejectedForwards, waitingForwards, needsChangeForwards, fulfilledForwards),
 
         // 2️⃣ الجزء الثابت عند الأعلى - البحث والفلترة
         buildMobileFilterSection(
+          context: context,
           searchController: _searchController,
           selectedPriority: _selectedPriority,
           selectedType: _selectedType,
@@ -2887,7 +2837,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
           statuses: statuses,
           onSearchChanged: (value) => _applyFilters(),
           onPriorityTap: () => _showMobileFilterDialog(
-            "Select Priority",
+            AppLocalizations.of(context)!.translate('select_priority'),
             priorities,
             _selectedPriority,
                 (value) {
@@ -2896,7 +2846,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
             },
           ),
           onTypeTap: () => _showMobileFilterDialog(
-            "Select Type",
+            AppLocalizations.of(context)!.translate('select_type'),
             typeNames,
             _selectedType,
                 (value) {
@@ -2905,7 +2855,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
             },
           ),
           onStatusTap: () => _showMobileFilterDialog(
-            "Select Status",
+            AppLocalizations.of(context)!.translate('select_status'),
             statuses,
             _selectedStatus,
                 (value) {
@@ -2925,7 +2875,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
 
   Widget _buildMobileRequestsList() {
     if (_filteredRequests.isEmpty) {
-      return buildEmptyState(true, onResetFilters: () {
+      return buildEmptyState(context, true, onResetFilters: () {
         setState(() {
           _selectedPriority = 'All';
           _selectedType = 'All Types';
@@ -2943,10 +2893,14 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         final req = _filteredRequests[index];
         final id = req["id"].toString();
         final title = req["title"] ?? "No Title";
-        final type = req["type"]?["name"] ?? "N/A";
-        final priority = req["priority"] ?? "N/A";
+        final type = req["type"]?["name"] ?? AppLocalizations.of(context)!.translate('not_available');
+        String priority = req["priority"] ?? AppLocalizations.of(context)!.translate('not_available');
+        if (priority.toLowerCase() == 'high') priority = AppLocalizations.of(context)!.translate('priority_high');
+        else if (priority.toLowerCase() == 'medium') priority = AppLocalizations.of(context)!.translate('priority_medium');
+        else if (priority.toLowerCase() == 'low') priority = AppLocalizations.of(context)!.translate('priority_low');
+
         final createdAt = req["created_at"];
-        final formattedDate = MyRequestsHelpers.formatDate(createdAt);
+        final formattedDate = MyRequestsHelpers.formatDate(context, createdAt);
 
         final userForwardStatus = req["userForwardStatus"];
         final fulfilled = req["fulfilled"] == true;
@@ -2958,37 +2912,37 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         if (userForwardStatus != null) {
           switch (userForwardStatus) {
             case "approved":
-              status = "Approved";
+              status = AppLocalizations.of(context)!.translate('status_approved');
               statusColor = MyRequestsColors.statusApproved;
               statusIcon = Icons.check_circle_rounded;
               break;
             case "rejected":
-              status = "Rejected";
+              status = AppLocalizations.of(context)!.translate('status_rejected');
               statusColor = MyRequestsColors.statusRejected;
               statusIcon = Icons.cancel_rounded;
               break;
             case "waiting":
-              status = "Waiting";
+              status = AppLocalizations.of(context)!.translate('status_waiting');
               statusColor = MyRequestsColors.statusWaiting;
               statusIcon = Icons.hourglass_empty_rounded;
               break;
             case "needs_change":
-              status = "Needs Change";
+              status = AppLocalizations.of(context)!.translate('status_needs_change');
               statusColor = MyRequestsColors.statusNeedsChange;
               statusIcon = Icons.edit_note_rounded;
               break;
             default:
-              status = "Waiting";
+              status = AppLocalizations.of(context)!.translate('status_waiting');
               statusColor = MyRequestsColors.statusWaiting;
               statusIcon = Icons.hourglass_empty_rounded;
           }
         } else {
           if (fulfilled) {
-            status = "Fulfilled";
+            status = AppLocalizations.of(context)!.translate('status_fulfilled');
             statusColor = MyRequestsColors.statusFulfilled;
             statusIcon = Icons.task_alt_rounded;
           } else {
-            status = "Waiting";
+            status = AppLocalizations.of(context)!.translate('status_waiting');
             statusColor = MyRequestsColors.statusWaiting;
             statusIcon = Icons.hourglass_empty_rounded;
           }
@@ -3070,6 +3024,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     final fulfilledForwards = _requests.where((req) => req["fulfilled"] == true).length;
 
     return buildDesktopStatsRow(
+        context,
         total,
         approvedForwards,
         rejectedForwards,
@@ -3080,12 +3035,12 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   }
 
   Widget _buildDesktopHeader(int itemCount) {
-    return buildDesktopHeader(itemCount);
+    return buildDesktopHeader(context, itemCount);
   }
 
   Widget _buildDesktopRequestsList() {
     if (_filteredRequests.isEmpty) {
-      return buildEmptyState(false, onResetFilters: () {
+      return buildEmptyState(context, false, onResetFilters: () {
         setState(() {
           _selectedPriority = 'All';
           _selectedType = 'All Types';
@@ -3101,10 +3056,14 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         ..._filteredRequests.map((req) {
           final id = req["id"].toString();
           final title = req["title"] ?? "No Title";
-          final type = req["type"]?["name"] ?? "N/A";
-          final priority = req["priority"] ?? "N/A";
+          final type = req["type"]?["name"] ?? AppLocalizations.of(context)!.translate('not_available');
+          String priority = req["priority"] ?? AppLocalizations.of(context)!.translate('not_available');
+          if (priority.toLowerCase() == 'high') priority = AppLocalizations.of(context)!.translate('priority_high');
+          else if (priority.toLowerCase() == 'medium') priority = AppLocalizations.of(context)!.translate('priority_medium');
+          else if (priority.toLowerCase() == 'low') priority = AppLocalizations.of(context)!.translate('priority_low');
+
           final createdAt = req["created_at"];
-          final formattedDate = MyRequestsHelpers.formatDate(createdAt);
+          final formattedDate = MyRequestsHelpers.formatDate(context, createdAt);
 
           final userForwardStatus = req["userForwardStatus"];
           final fulfilled = req["fulfilled"] == true;
@@ -3116,37 +3075,37 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
           if (userForwardStatus != null) {
             switch (userForwardStatus) {
               case "approved":
-                status = "Approved";
+                status = AppLocalizations.of(context)!.translate('status_approved');
                 statusColor = MyRequestsColors.statusApproved;
                 statusIcon = Icons.check_circle_rounded;
                 break;
               case "rejected":
-                status = "Rejected";
+                status = AppLocalizations.of(context)!.translate('status_rejected');
                 statusColor = MyRequestsColors.statusRejected;
                 statusIcon = Icons.cancel_rounded;
                 break;
               case "waiting":
-                status = "Waiting";
+                status = AppLocalizations.of(context)!.translate('status_waiting');
                 statusColor = MyRequestsColors.statusWaiting;
                 statusIcon = Icons.hourglass_empty_rounded;
                 break;
               case "needs_change":
-                status = "Needs Change";
+                status = AppLocalizations.of(context)!.translate('status_needs_change');
                 statusColor = MyRequestsColors.statusNeedsChange;
                 statusIcon = Icons.edit_note_rounded;
                 break;
               default:
-                status = "Waiting";
+                status = AppLocalizations.of(context)!.translate('status_waiting');
                 statusColor = MyRequestsColors.statusWaiting;
                 statusIcon = Icons.hourglass_empty_rounded;
             }
           } else {
             if (fulfilled) {
-              status = "Fulfilled";
+              status = AppLocalizations.of(context)!.translate('status_fulfilled');
               statusColor = MyRequestsColors.statusFulfilled;
               statusIcon = Icons.task_alt_rounded;
             } else {
-              status = "Waiting";
+              status = AppLocalizations.of(context)!.translate('status_waiting');
               statusColor = MyRequestsColors.statusWaiting;
               statusIcon = Icons.hourglass_empty_rounded;
             }

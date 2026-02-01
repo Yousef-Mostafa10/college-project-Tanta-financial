@@ -1037,6 +1037,7 @@ import 'users_search_filter.dart';
 import 'user_card.dart';
 import 'users_empty_state.dart';
 import 'users_list_header.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 class ViewUsersPage extends StatefulWidget {
   const ViewUsersPage({super.key});
@@ -1162,7 +1163,7 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
       backgroundColor: AppColors.bodyBg,
       appBar: AppBar(
         title: Text(
-          'Users Management',
+          AppLocalizations.of(context)!.translate('users_management'),
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,

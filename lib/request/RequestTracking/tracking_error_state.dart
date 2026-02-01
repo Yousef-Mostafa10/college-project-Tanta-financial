@@ -1,7 +1,10 @@
+import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/request/RequestTracking/tracking_colors.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'tracking_colors.dart';
 
 Widget buildErrorState({
+  required BuildContext context,
   required String errorMessage,
   required Function() onRetry,
   required bool isMobile,
@@ -26,7 +29,7 @@ Widget buildErrorState({
           ElevatedButton.icon(
             onPressed: onRetry,
             icon: Icon(Icons.refresh_rounded, size: isMobile ? 18 : 20),
-            label: Text('Try Again', style: TextStyle(fontSize: isMobile ? 14 : 16)),
+            label: Text(AppLocalizations.of(context)!.translate('try_again_button'), style: TextStyle(fontSize: isMobile ? 14 : 16)),
             style: ElevatedButton.styleFrom(
               backgroundColor: TrackingColors.primary,
               foregroundColor: Colors.white,

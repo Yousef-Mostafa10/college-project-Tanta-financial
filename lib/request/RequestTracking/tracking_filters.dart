@@ -1,8 +1,11 @@
+import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/request/RequestTracking/tracking_colors.dart';
+import 'package:college_project/request/RequestTracking/tracking_helpers.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'tracking_colors.dart';
-import 'tracking_helpers.dart';
 
 Widget buildFilterSection({
+  required BuildContext context,
   required String selectedStatus,
   required List<String> statusFilters,
   required Function(String) onStatusChanged,
@@ -32,7 +35,7 @@ Widget buildFilterSection({
             Icon(Icons.filter_alt_rounded, color: TrackingColors.primary, size: isMobile ? 18 : 20),
             SizedBox(width: isMobile ? 6 : 8),
             Text(
-              'FILTER BY STATUS',
+              AppLocalizations.of(context)!.translate('filter_by_status_label'),
               style: TextStyle(
                 fontSize: isMobile ? 12 : 14,
                 fontWeight: FontWeight.w600,
@@ -50,10 +53,20 @@ Widget buildFilterSection({
             final isSelected = selectedStatus == status;
             final statusColor = TrackingHelpers.getStatusColorAsColor(status);
 
+            String displayText = status;
+            if (status == "All") {
+              displayText = AppLocalizations.of(context)!.translate('all_filter');
+            } else {
+              displayText = AppLocalizations.of(context)!.translate('status_${status.toLowerCase().replaceAll('-', '_')}');
+              if (displayText == 'status_${status.toLowerCase().replaceAll('-', '_')}') {
+                displayText = status.toUpperCase();
+              }
+            }
+
             return FilterChip(
               selected: isSelected,
               label: Text(
-                status == "All" ? "All" : status.toUpperCase(),
+                displayText,
                 style: TextStyle(
                   fontSize: isMobile ? 11 : 12,
                   color: isSelected ? Colors.white : TrackingColors.textPrimary,

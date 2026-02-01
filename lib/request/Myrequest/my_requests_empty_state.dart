@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'my_requests_colors.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
-Widget buildEmptyState(bool isMobile, {Function()? onResetFilters}) {
+Widget buildEmptyState(BuildContext context, bool isMobile, {Function()? onResetFilters}) {
   return Center(
     child: Padding(
       padding: const EdgeInsets.only(top: 60.0),
@@ -16,7 +17,7 @@ Widget buildEmptyState(bool isMobile, {Function()? onResetFilters}) {
             ),
             SizedBox(height: 16),
             Text(
-              "No transactions found",
+              AppLocalizations.of(context)!.translate('no_transactions_found'),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -25,7 +26,7 @@ Widget buildEmptyState(bool isMobile, {Function()? onResetFilters}) {
             ),
             SizedBox(height: 8),
             Text(
-              "Try adjusting your filters or check back later",
+              AppLocalizations.of(context)!.translate('try_adjust_filters'),
               style: TextStyle(
                 fontSize: 12,
                 color: MyRequestsColors.textMuted,
@@ -37,7 +38,7 @@ Widget buildEmptyState(bool isMobile, {Function()? onResetFilters}) {
               ElevatedButton.icon(
                 onPressed: onResetFilters,
                 icon: Icon(Icons.refresh_rounded, size: 16),
-                label: Text("Reset Filters"),
+                label: Text(AppLocalizations.of(context)!.translate('reset_filters')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: MyRequestsColors.primary,
                   foregroundColor: Colors.white,

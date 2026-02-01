@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 // 🎨 COLOR PALETTE - Consistent with Dashboard and Inbox
 class AppColors {
@@ -86,7 +87,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       await _fetchRequestData();
     } catch (e) {
       setState(() {
-        _errorMessage = "Error loading data";
+        _errorMessage = AppLocalizations.of(context)!.translate('error_loading_data_msg');
         _isLoading = false;
       });
     }
@@ -95,7 +96,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   Future<void> _fetchRequestData() async {
     if (_userToken == null) {
       setState(() {
-        _errorMessage = "Please login first";
+        _errorMessage = AppLocalizations.of(context)!.translate('please_login_first');
         _isLoading = false;
       });
       return;
@@ -119,19 +120,19 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           });
         } else {
           setState(() {
-            _errorMessage = "No transaction data found";
+            _errorMessage = AppLocalizations.of(context)!.translate('no_request_details_msg');
             _isLoading = false;
           });
         }
       } else {
         setState(() {
-          _errorMessage = "Failed to load request details: ${response.statusCode}";
+          _errorMessage = "${AppLocalizations.of(context)!.translate('failed_load_requests')}: ${response.statusCode}";
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = "Network error: ${e.toString()}";
+        _errorMessage = "${AppLocalizations.of(context)!.translate('network_error')}: ${e.toString()}";
         _isLoading = false;
       });
     }
@@ -140,7 +141,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   String _formatDate(dynamic dateValue) {
     try {
       if (dateValue == null || dateValue == "N/A" || dateValue.toString().isEmpty) {
-        return "N/A";
+        return AppLocalizations.of(context)!.translate('not_available');
       }
 
       String dateString = dateValue.toString();
@@ -152,7 +153,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
       return dateString;
     } catch (e) {
-      return "N/A";
+      return AppLocalizations.of(context)!.translate('not_available');
     }
   }
 
@@ -168,7 +169,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Storage permission not granted.'),
+            content: Text(AppLocalizations.of(context)!.translate('storage_permission_denied')),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -182,7 +183,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Invalid document URI: $documentURI'),
+            content: Text(AppLocalizations.of(context)!.translate('invalid_document_uri_error').replaceFirst('{uri}', documentURI)),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -205,7 +206,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
     setState(() {
       _downloadingFiles[fileName] = true;
-      _downloadProgress[fileName] = 'Starting download...';
+      _downloadProgress[fileName] = AppLocalizations.of(context)!.translate('starting_download_msg');
     });
 
     Directory? dir = await getDownloadsDirectory();
@@ -216,7 +217,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Could not get storage directory.'),
+              content: Text(AppLocalizations.of(context)!.translate('error_loading_data_msg')),
               backgroundColor: AppColors.accentRed,
             ),
           );
@@ -246,7 +247,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
         if (response.statusCode == 200) {
           setState(() {
-            _downloadProgress[fileName] = 'Saving file...';
+            _downloadProgress[fileName] = AppLocalizations.of(context)!.translate('saving_file_msg');
           });
 
           final file = File(filePath);
@@ -265,15 +266,12 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Download Complete!',
+                    Text(AppLocalizations.of(context)!.translate('download_complete_title'),
                         style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                     SizedBox(height: 4),
-                    Text('File: $fileName', style: TextStyle(fontSize: 12, color: Colors.white)),
+                    Text(fileName, style: TextStyle(fontSize: 12, color: Colors.white)),
                     SizedBox(height: 4),
-                    Text('Saved to: $storagePath',
-                        style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.8))),
-                    SizedBox(height: 4),
-                    Text('Used endpoint: ${i + 1}',
+                    Text('${AppLocalizations.of(context)!.translate('open_folder_button')}: $storagePath',
                         style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.8))),
                   ],
                 ),
@@ -295,16 +293,10 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Download Failed',
+                      Text(AppLocalizations.of(context)!.translate('download_failed_title'),
                           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                       SizedBox(height: 4),
-                      Text('File: $fileName', style: TextStyle(fontSize: 12, color: Colors.white)),
-                      SizedBox(height: 4),
-                      Text('Reason: File name format not supported for regular users',
-                          style: TextStyle(fontSize: 10, color: Colors.white)),
-                      SizedBox(height: 4),
-                      Text('Solution: Contact admin or upload file with Arabic characters',
-                          style: TextStyle(fontSize: 9, color: Colors.white.withOpacity(0.8))),
+                      Text(fileName, style: TextStyle(fontSize: 12, color: Colors.white)),
                     ],
                   ),
                   backgroundColor: AppColors.accentRed,
@@ -355,7 +347,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           children: [
             Icon(Icons.check_circle, color: AppColors.accentGreen),
             SizedBox(width: 8),
-            Text('File Downloaded Successfully',
+            Text(AppLocalizations.of(context)!.translate('file_downloaded_success_title'),
                 style: TextStyle(color: AppColors.textPrimary)),
           ],
         ),
@@ -363,22 +355,22 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('File: $fileName',
+            Text(fileName,
                 style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             SizedBox(height: 8),
-            Text('Location:',
+            Text('${AppLocalizations.of(context)!.translate('open_folder_button')}:',
                 style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             Text(filePath,
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             SizedBox(height: 8),
-            Text('Size: ${_getFileSize(filePath)}',
+            Text('${AppLocalizations.of(context)!.translate('total')}: ${_getFileSize(filePath)}',
                 style: TextStyle(color: AppColors.textPrimary)),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: TextStyle(color: AppColors.primary)),
+            child: Text(AppLocalizations.of(context)!.translate('close'), style: TextStyle(color: AppColors.primary)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -388,7 +380,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
             ),
-            child: Text('Open Folder', style: TextStyle(color: Colors.white)),
+            child: Text(AppLocalizations.of(context)!.translate('open_folder_button'), style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -423,7 +415,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('File location: ${directory.path}'),
+          content: Text('${AppLocalizations.of(context)!.translate('open_folder_button')}: ${directory.path}'),
           backgroundColor: AppColors.accentBlue,
         ),
       );
@@ -443,7 +435,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       backgroundColor: AppColors.bodyBg,
       appBar: AppBar(
         title: Text(
-          'Request Details',
+          AppLocalizations.of(context)!.translate('request_details_title'),
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: min(width * 0.04, 20),
@@ -480,7 +472,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Loading request details...',
+            AppLocalizations.of(context)!.translate('loading_request_details'),
             style: TextStyle(
               fontSize: 16,
               color: AppColors.textSecondary,
@@ -510,7 +502,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
             ),
-            child: Text('Retry'),
+            child: Text(AppLocalizations.of(context)!.translate('retry_button')),
           ),
         ],
       ),
@@ -525,7 +517,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           Icon(Icons.inbox_rounded, size: 64, color: AppColors.textMuted),
           const SizedBox(height: 16),
           Text(
-            "No request details found",
+            AppLocalizations.of(context)!.translate('no_request_details_msg'),
             style: TextStyle(
               fontSize: 16,
               color: AppColors.textSecondary,
@@ -538,15 +530,23 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
   Widget _buildRequestDetails(bool isMobile, bool isTablet, bool isDesktop) {
     final data = _requestData!;
-    final title = data["title"] ?? "No Title";
-    final type = data["type"]?["name"] ?? "N/A";
-    final priority = data["priority"] ?? "N/A";
-    final description = data["description"] ?? "No description available";
+    final title = data["title"] ?? AppLocalizations.of(context)!.translate('no_title');
+    final type = data["type"]?["name"] ?? AppLocalizations.of(context)!.translate('not_available');
+    String priority = data["priority"] ?? AppLocalizations.of(context)!.translate('not_available');
+    if (priority.toLowerCase() == 'high') {
+      priority = AppLocalizations.of(context)!.translate('priority_high');
+    } else if (priority.toLowerCase() == 'medium') {
+      priority = AppLocalizations.of(context)!.translate('priority_medium');
+    } else if (priority.toLowerCase() == 'low') {
+      priority = AppLocalizations.of(context)!.translate('priority_low');
+    }
+
+    final description = data["description"] ?? AppLocalizations.of(context)!.translate('not_available');
     final createdAt = _formatDate(data["createdAt"]);
     final fulfilled = data["fulfilled"] == true;
-    final status = fulfilled ? "Fulfilled" : "Pending";
+    final status = fulfilled ? AppLocalizations.of(context)!.translate('status_fulfilled') : AppLocalizations.of(context)!.translate('pending');
     final statusColor = fulfilled ? AppColors.accentGreen : AppColors.accentYellow;
-    final creator = data["creator"]?["name"] ?? "Unknown";
+    final creator = data["creator"]?["name"] ?? AppLocalizations.of(context)!.translate('unknown');
     final documents = data["documents"] as List<dynamic>? ?? [];
 
     final content = SingleChildScrollView(
@@ -614,7 +614,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                 SizedBox(width: isMobile ? 4 : 6),
                 Expanded(
                   child: Text(
-                    'Created by: $creator',
+                    '${AppLocalizations.of(context)!.translate('created_by_label')}: $creator',
                     style: TextStyle(
                       fontSize: isMobile ? 12 : 14,
                       color: AppColors.textSecondary,
@@ -674,7 +674,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Request Details',
+              AppLocalizations.of(context)!.translate('request_details_title'),
               style: TextStyle(
                 fontSize: isMobile ? 16 : 18,
                 fontWeight: FontWeight.bold,
@@ -686,13 +686,13 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
               spacing: isMobile ? 8 : 12,
               runSpacing: isMobile ? 8 : 12,
               children: [
-                _buildDetailChip('Type: $type', Icons.category_rounded, AppColors.primary, isMobile),
-                _buildDetailChip('Priority: $priority', priorityIcon, priorityColor, isMobile),
+                _buildDetailChip('${AppLocalizations.of(context)!.translate('type')}: $type', Icons.category_rounded, AppColors.primary, isMobile),
+                _buildDetailChip('${AppLocalizations.of(context)!.translate('priority')}: $priority', priorityIcon, priorityColor, isMobile),
               ],
             ),
             SizedBox(height: isMobile ? 12 : 16),
             Text(
-              'Description',
+              AppLocalizations.of(context)!.translate('description_label'),
               style: TextStyle(
                 fontSize: isMobile ? 14 : 16,
                 fontWeight: FontWeight.w600,
@@ -731,7 +731,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                 Icon(Icons.attach_file_rounded, color: AppColors.primary, size: isMobile ? 18 : 20),
                 SizedBox(width: isMobile ? 6 : 8),
                 Text(
-                  'Attachments (${documents.length})',
+                  '${AppLocalizations.of(context)!.translate('attachments_label')} (${documents.length})',
                   style: TextStyle(
                     fontSize: isMobile ? 16 : 18,
                     fontWeight: FontWeight.bold,
@@ -839,7 +839,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      'By: $uploaderName',
+                      '${AppLocalizations.of(context)!.translate('by')}: $uploaderName',
                       style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                     if (fileId.isNotEmpty) ...[
@@ -895,7 +895,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           spacing: 4,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text('By: $uploaderName',
+            Text('${AppLocalizations.of(context)!.translate('by')}: $uploaderName',
                 style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
             if (fileId.isNotEmpty) ...[
               Container(
@@ -942,7 +942,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   // بناء حالة التحميل المكتمل
   Widget _buildDownloadedStatus(String fileName, bool isMobile) {
     return Tooltip(
-      message: 'Tap to view file details',
+      message: AppLocalizations.of(context)!.translate('view_details'),
       child: GestureDetector(
         onTap: () => _showFileDetails(fileName),
         child: Container(
@@ -953,7 +953,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
               Icon(Icons.check_circle, size: isMobile ? 12 : 14, color: AppColors.accentGreen),
               SizedBox(width: 4),
               Text(
-                'Downloaded',
+                AppLocalizations.of(context)!.translate('fulfilled'),
                 style: TextStyle(
                   fontSize: isMobile ? 10 : 11,
                   color: AppColors.accentGreen,
@@ -985,7 +985,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       return GestureDetector(
         onTap: () => _showFileDetails(fileName),
         child: Tooltip(
-          message: 'Tap to view file details',
+          message: AppLocalizations.of(context)!.translate('view_details'),
           child: Container(
             width: isMobile ? 32 : 40,
             height: isMobile ? 32 : 40,
@@ -1042,9 +1042,9 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         return '${dir.path}/$fileName';
       }
       final internalDir = await getExternalStorageDirectory();
-      return internalDir?.path ?? 'Unknown path';
+      return internalDir?.path ?? AppLocalizations.of(context)!.translate('unknown');
     } catch (e) {
-      return 'Unknown path';
+      return AppLocalizations.of(context)!.translate('unknown');
     }
   }
 
@@ -1061,7 +1061,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Additional Information',
+              AppLocalizations.of(context)!.translate('additional_info_label'),
               style: TextStyle(
                 fontSize: isMobile ? 16 : 18,
                 fontWeight: FontWeight.bold,
@@ -1069,12 +1069,12 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
               ),
             ),
             SizedBox(height: isMobile ? 12 : 16),
-            _buildInfoRow('Request ID', data["id"]?.toString() ?? "N/A", isMobile),
-            _buildInfoRow('Created', _formatDate(data["createdAt"]), isMobile),
+            _buildInfoRow(AppLocalizations.of(context)!.translate('request_id_label'), data["id"]?.toString() ?? AppLocalizations.of(context)!.translate('not_available'), isMobile),
+            _buildInfoRow(AppLocalizations.of(context)!.translate('created_at'), _formatDate(data["createdAt"]), isMobile),
             if (data["updatedAt"] != null)
-              _buildInfoRow('Last Updated', _formatDate(data["updatedAt"]), isMobile),
+              _buildInfoRow(AppLocalizations.of(context)!.translate('updated_at'), _formatDate(data["updatedAt"]), isMobile),
             if (data["creator"]?["group"] != null)
-              _buildInfoRow('Creator Group', data["creator"]?["group"] ?? "N/A", isMobile),
+              _buildInfoRow(AppLocalizations.of(context)!.translate('type'), data["creator"]?["group"] ?? AppLocalizations.of(context)!.translate('not_available'), isMobile),
           ],
         ),
       ),

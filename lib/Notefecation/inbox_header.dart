@@ -1,5 +1,6 @@
 // Notefecation/inbox_header.dart
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import './inbox_colors.dart';
 
 class InboxHeader extends StatelessWidget {
@@ -24,7 +25,7 @@ class InboxHeader extends StatelessWidget {
               Icon(Icons.inbox_rounded, color: InboxColors.primary, size: isMobile ? 14 : 18),
               SizedBox(width: isMobile ? 4 : 6),
               Text(
-                'INBOX REQUESTS',
+                AppLocalizations.of(context)!.translate('inbox_requests'),
                 style: TextStyle(
                   fontSize: isMobile ? 10 : 14,
                   fontWeight: FontWeight.w600,
@@ -42,7 +43,7 @@ class InboxHeader extends StatelessWidget {
               border: Border.all(color: InboxColors.primary.withOpacity(0.3)),
             ),
             child: Text(
-              '$itemCount items',
+              AppLocalizations.of(context)!.translate('transactions_count').replaceAll('{count}', itemCount.toString()),
               style: TextStyle(
                 fontSize: isMobile ? 10 : 12,
                 color: InboxColors.primary,

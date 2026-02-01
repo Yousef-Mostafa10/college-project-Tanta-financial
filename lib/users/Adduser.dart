@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 // 🎨 COLOR PALETTE - Consistent with the whole application
 class AppColors {
@@ -72,7 +73,7 @@ class _AddUserPageState extends State<AddUserPage> {
       final token = prefs.getString('token');
 
       if (token == null || token.isEmpty) {
-        _showErrorMessage("⚠️ No token found — Please log in again.");
+        _showErrorMessage(AppLocalizations.of(context)!.translate('no_token_error'));
         setState(() => _isLoading = false);
         return;
       }
@@ -102,17 +103,17 @@ class _AddUserPageState extends State<AddUserPage> {
           _showErrorMessage(data["message"] ?? "Failed to add user ❌");
         }
       } else if (response.statusCode == 409) {
-        _showErrorMessage("⛔ User already exists with this name");
+        _showErrorMessage(AppLocalizations.of(context)!.translate('user_exists_error'));
       } else if (response.statusCode == 403) {
-        _showErrorMessage("⛔ You don't have permission to create users");
+        _showErrorMessage(AppLocalizations.of(context)!.translate('permission_error'));
       } else if (response.statusCode == 401) {
-        _showErrorMessage("⛔ Unauthorized — Token invalid or expired.");
+        _showErrorMessage(AppLocalizations.of(context)!.translate('unauthorized_error'));
       } else {
         _showErrorMessage("Error: ${response.statusCode}");
       }
     } catch (e) {
       debugPrint("Error: $e");
-      _showErrorMessage("⚠️ Connection error");
+      _showErrorMessage(AppLocalizations.of(context)!.translate('connection_error'));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -123,13 +124,13 @@ class _AddUserPageState extends State<AddUserPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
-          children: const [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 12),
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'User added successfully!',
-                style: TextStyle(fontSize: 16),
+                AppLocalizations.of(context)!.translate('user_added_success'),
+                style: const TextStyle(fontSize: 16),
               ),
             ),
           ],
@@ -183,7 +184,7 @@ class _AddUserPageState extends State<AddUserPage> {
       backgroundColor: AppColors.bodyBg,
       appBar: AppBar(
         title: Text(
-          'Add New User',
+          AppLocalizations.of(context)!.translate('add_new_user'),
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
@@ -237,18 +238,18 @@ class _AddUserPageState extends State<AddUserPage> {
                 // Username Field
                 _inputField(
                   controller: _nameController,
-                  label: 'Username',
+                  label: AppLocalizations.of(context)!.translate('username'),
                   icon: Icons.person_outline,
                   isMobile: isMobile,
                   validator: (v) =>
-                  v == null || v.isEmpty ? 'Please enter username' : null,
+                  v == null || v.isEmpty ? AppLocalizations.of(context)!.translate('please_enter_username') : null,
                 ),
                 SizedBox(height: isMobile ? 16 : 20),
 
                 // Password Field
                 _inputField(
                   controller: _passwordController,
-                  label: 'Password',
+                  label: AppLocalizations.of(context)!.translate('password'),
                   icon: Icons.lock_outline,
                   obscure: !_showPassword,
                   isMobile: isMobile,
@@ -267,9 +268,9 @@ class _AddUserPageState extends State<AddUserPage> {
                     },
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Please enter password';
+                    if (v == null || v.isEmpty) return AppLocalizations.of(context)!.translate('please_enter_password');
                     if (v.length < 6) {
-                      return 'Password must be at least 6 characters';
+                      return AppLocalizations.of(context)!.translate('password_length_error');
                     }
                     return null;
                   },
@@ -277,7 +278,7 @@ class _AddUserPageState extends State<AddUserPage> {
 
                 SizedBox(height: isMobile ? 16 : 20),
 
-                // User Group Selection - التصميم الجديد المودرن
+                // User Group Selection
                 _buildUserGroupSelector(isMobile),
 
                 SizedBox(height: isMobile ? 24 : 32),
@@ -298,7 +299,7 @@ class _AddUserPageState extends State<AddUserPage> {
                     ),
                   ),
                   child: Text(
-                    'Cancel',
+                    AppLocalizations.of(context)!.translate('cancel'),
                     style: TextStyle(
                       fontSize: isMobile ? 14 : 16,
                       fontWeight: FontWeight.w500,
@@ -321,7 +322,7 @@ class _AddUserPageState extends State<AddUserPage> {
         Padding(
           padding: EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
-            'User Type',
+            AppLocalizations.of(context)!.translate('user_type'),
             style: TextStyle(
               fontSize: isMobile ? 14 : 15,
               fontWeight: FontWeight.w500,
@@ -349,8 +350,8 @@ class _AddUserPageState extends State<AddUserPage> {
                   // Admin Option
                   Expanded(
                     child: _buildGroupOption(
-                      title: 'Administrator',
-                      subtitle: 'Full access',
+                      title: AppLocalizations.of(context)!.translate('administrator'),
+                      subtitle: AppLocalizations.of(context)!.translate('full_access'),
                       value: 'admin',
                       icon: Icons.admin_panel_settings,
                       isSelected: _selectedGroup == 'admin',
@@ -360,8 +361,8 @@ class _AddUserPageState extends State<AddUserPage> {
                   // User Option
                   Expanded(
                     child: _buildGroupOption(
-                      title: 'Regular User',
-                      subtitle: 'Limited access',
+                      title: AppLocalizations.of(context)!.translate('regular_user'),
+                      subtitle: AppLocalizations.of(context)!.translate('limited_access'),
                       value: 'user',
                       icon: Icons.person,
                       isSelected: _selectedGroup == 'user',
@@ -558,7 +559,7 @@ class _AddUserPageState extends State<AddUserPage> {
             ),
             SizedBox(width: isMobile ? 6 : 8),
             Text(
-              'Add User',
+              AppLocalizations.of(context)!.translate('add_user'),
               style: TextStyle(
                   fontSize: isMobile ? 14 : 16,
                   fontWeight: FontWeight.w600

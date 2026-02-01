@@ -1,5 +1,6 @@
 import 'package:college_project/users/viewUser/users_api.dart';
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import 'user_model.dart';
 import 'users_colors.dart';
 import 'users_helpers.dart';
@@ -81,7 +82,7 @@ class UserCard extends StatelessWidget {
                 ),
               ),
               child: Text(
-                user.group,
+                user.group == 'admin' ? AppLocalizations.of(context)!.translate('administrator') : AppLocalizations.of(context)!.translate('regular_user'),
                 style: TextStyle(
                   fontSize: isMobile ? 9 : 10,
                   fontWeight: FontWeight.w600,
@@ -127,7 +128,7 @@ class UserCard extends StatelessWidget {
                   ),
                   SizedBox(width: isMobile ? 6 : 8),
                   Text(
-                    'View Profile',
+                    AppLocalizations.of(context)!.translate('view_profile'),
                     style: TextStyle(
                       fontSize: isMobile ? 13 : 14,
                       color: AppColors.textPrimary,
@@ -147,7 +148,7 @@ class UserCard extends StatelessWidget {
                   ),
                   SizedBox(width: isMobile ? 6 : 8),
                   Text(
-                    'Change Password',
+                    AppLocalizations.of(context)!.translate('change_password'),
                     style: TextStyle(
                       fontSize: isMobile ? 13 : 14,
                       color: AppColors.textPrimary,

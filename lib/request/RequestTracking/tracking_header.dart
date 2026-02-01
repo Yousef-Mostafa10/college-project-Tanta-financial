@@ -1,8 +1,11 @@
+import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/request/RequestTracking/tracking_colors.dart';
+import 'package:college_project/request/RequestTracking/tracking_helpers.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'tracking_colors.dart';
-import 'tracking_helpers.dart';
 
 Widget buildTransactionHeader({
+  required BuildContext context,
   required String transactionId,
   required List<dynamic> forwards,
   required bool isMobile,
@@ -38,7 +41,7 @@ Widget buildTransactionHeader({
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Transaction #$transactionId',
+                    AppLocalizations.of(context)!.translate('transaction_id_label').replaceFirst('{id}', transactionId),
                     style: TextStyle(
                       fontSize: isMobile ? 18 : 20,
                       fontWeight: FontWeight.bold,
@@ -47,7 +50,7 @@ Widget buildTransactionHeader({
                   ),
                   SizedBox(height: isMobile ? 2 : 4),
                   Text(
-                    'Tracking ${forwards.length} forwarding steps',
+                    AppLocalizations.of(context)!.translate('tracking_steps_count').replaceFirst('{count}', forwards.length.toString()),
                     style: TextStyle(
                       fontSize: isMobile ? 12 : 14,
                       color: TrackingColors.textSecondary,
@@ -96,14 +99,14 @@ Widget buildTransactionHeader({
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Current Status',
+                        AppLocalizations.of(context)!.translate('current_status_label'),
                         style: TextStyle(
                           fontSize: isMobile ? 11 : 12,
                           color: TrackingColors.textSecondary,
                         ),
                       ),
                       Text(
-                        forwards.last['status'].toString().toUpperCase(),
+                        AppLocalizations.of(context)!.translate('status_${forwards.last['status'].toString().toLowerCase().replaceAll('-', '_')}'),
                         style: TextStyle(
                           fontSize: isMobile ? 14 : 16,
                           fontWeight: FontWeight.bold,
@@ -117,7 +120,7 @@ Widget buildTransactionHeader({
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      'Last Update',
+                      AppLocalizations.of(context)!.translate('last_update_label'),
                       style: TextStyle(
                         fontSize: isMobile ? 11 : 12,
                         color: TrackingColors.textSecondary,

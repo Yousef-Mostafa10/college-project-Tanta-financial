@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'users_api.dart';
 import 'users_colors.dart';
 import 'users_helpers.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 class ChangePasswordDialog extends StatefulWidget {
   final String userName;
@@ -34,7 +35,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
         borderRadius: BorderRadius.circular(widget.isMobile ? 16 : 20),
       ),
       title: Text(
-        'Change Password',
+        AppLocalizations.of(context)!.translate('change_password'),
         style: TextStyle(
           fontWeight: FontWeight.bold,
           color: AppColors.primary,
@@ -46,7 +47,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Change password for ${widget.userName}',
+              '${AppLocalizations.of(context)!.translate('change_password')} - ${widget.userName}',
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: widget.isMobile ? 14 : 16,
@@ -59,7 +60,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
               controller: _newPasswordController,
               obscureText: !_showNewPassword,
               decoration: InputDecoration(
-                labelText: 'New Password',
+                labelText: AppLocalizations.of(context)!.translate('new_password'),
                 labelStyle: TextStyle(color: AppColors.textSecondary),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(widget.isMobile ? 8 : 12),
@@ -106,7 +107,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
               controller: _confirmPasswordController,
               obscureText: !_showConfirmPassword,
               decoration: InputDecoration(
-                labelText: 'Confirm Password',
+                labelText: AppLocalizations.of(context)!.translate('confirm_password'),
                 labelStyle: TextStyle(color: AppColors.textSecondary),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(widget.isMobile ? 8 : 12),
@@ -153,7 +154,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.pop(context),
           child: Text(
-            'Cancel',
+            AppLocalizations.of(context)!.translate('cancel'),
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: widget.isMobile ? 14 : 16,
@@ -191,7 +192,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
               ),
               SizedBox(width: widget.isMobile ? 4 : 6),
               Text(
-                'Change Password',
+                AppLocalizations.of(context)!.translate('change_password'),
                 style: TextStyle(fontSize: widget.isMobile ? 14 : 16),
               ),
             ],
@@ -203,15 +204,16 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
 
   Future<void> _changePassword() async {
     if (_newPasswordController.text.isEmpty) {
-      UsersHelpers.showErrorMessage(context, "Please enter new password");
+      UsersHelpers.showErrorMessage(context, AppLocalizations.of(context)!.translate('please_enter_password'));
       return;
     }
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      UsersHelpers.showErrorMessage(context, "Passwords don't match");
+      // Assuming a generic error for mismatch or adding a specific key if not present
+      UsersHelpers.showErrorMessage(context, "Passwords don't match"); 
       return;
     }
     if (_newPasswordController.text.length < 6) {
-      UsersHelpers.showErrorMessage(context, "Password must be at least 6 characters");
+      UsersHelpers.showErrorMessage(context, AppLocalizations.of(context)!.translate('password_length_error'));
       return;
     }
 
@@ -222,7 +224,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
         widget.userName,
         _newPasswordController.text,
       );
-      UsersHelpers.showSuccessMessage(context, "Password changed successfully for ${widget.userName}");
+      UsersHelpers.showSuccessMessage(context, "${AppLocalizations.of(context)!.translate('password_changed_success')} ${widget.userName}");
       Navigator.pop(context);
     } catch (e) {
       UsersHelpers.showErrorMessage(context, e.toString());

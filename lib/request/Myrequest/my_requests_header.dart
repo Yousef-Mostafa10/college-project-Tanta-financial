@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'my_requests_colors.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
-Widget buildDesktopHeader(int itemCount) {
+Widget buildDesktopHeader(BuildContext context, int itemCount) {
   return Padding(
     padding: const EdgeInsets.symmetric(horizontal: 4),
     child: Row(
@@ -12,7 +13,7 @@ Widget buildDesktopHeader(int itemCount) {
             Icon(Icons.list_alt_outlined, color: MyRequestsColors.primary, size: 18),
             SizedBox(width: 6),
             Text(
-              'MY REQUESTS',
+              AppLocalizations.of(context)!.translate('all_transactions').toUpperCase(),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -30,7 +31,7 @@ Widget buildDesktopHeader(int itemCount) {
             border: Border.all(color: MyRequestsColors.primary.withOpacity(0.3)),
           ),
           child: Text(
-            '$itemCount items',
+            AppLocalizations.of(context)!.translate('transactions_count').replaceFirst('{count}', '$itemCount'),
             style: TextStyle(
               fontSize: 12,
               color: MyRequestsColors.primary,
@@ -43,7 +44,7 @@ Widget buildDesktopHeader(int itemCount) {
   );
 }
 
-Widget buildLoadingState(bool isMobile) {
+Widget buildLoadingState(BuildContext context, bool isMobile) {
   return Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -53,7 +54,7 @@ Widget buildLoadingState(bool isMobile) {
         ),
         SizedBox(height: isMobile ? 16 : 20),
         Text(
-          'Loading your requests...',
+          AppLocalizations.of(context)!.translate('loading_requests'),
           style: TextStyle(
             fontSize: isMobile ? 16 : 18,
             color: MyRequestsColors.textSecondary,

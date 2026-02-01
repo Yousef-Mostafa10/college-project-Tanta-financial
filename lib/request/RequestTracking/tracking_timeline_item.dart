@@ -1,8 +1,11 @@
+import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/request/RequestTracking/tracking_colors.dart';
+import 'package:college_project/request/RequestTracking/tracking_helpers.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'tracking_colors.dart';
-import 'tracking_helpers.dart';
 
 Widget buildTimelineStep({
+  required BuildContext context,
   required dynamic forward,
   required int stepNumber,
   required bool isFirst,
@@ -90,8 +93,9 @@ Widget buildTimelineStep({
                     // المرسل
                     Expanded(
                       child: _buildUserCard(
+                        context,
                         forward['sender'],
-                        'From',
+                        AppLocalizations.of(context)!.translate('from_label'),
                         Icons.person_outline_rounded,
                         TrackingColors.accentBlue,
                         isMobile,
@@ -112,8 +116,9 @@ Widget buildTimelineStep({
                     // المستقبل
                     Expanded(
                       child: _buildUserCard(
+                        context,
                         forward['receiver'],
-                        'To',
+                        AppLocalizations.of(context)!.translate('to_label'),
                         Icons.person_rounded,
                         TrackingColors.accentGreen,
                         isMobile,
@@ -143,7 +148,7 @@ Widget buildTimelineStep({
                           Icon(statusIcon, size: isMobile ? 14 : 16, color: statusColor),
                           SizedBox(width: isMobile ? 4 : 6),
                           Text(
-                            forward['status'].toString().toUpperCase(),
+                            AppLocalizations.of(context)!.translate('status_${forward['status'].toString().toLowerCase().replaceAll('-', '_')}'),
                             style: TextStyle(
                               fontSize: isMobile ? 10 : 12,
                               fontWeight: FontWeight.bold,
@@ -168,7 +173,7 @@ Widget buildTimelineStep({
                 if (forward['updatedAt'] != null && forward['updatedAt'] != forward['forwardedAt']) ...[
                   SizedBox(height: isMobile ? 6 : 8),
                   Text(
-                    'Updated: ${TrackingHelpers.formatDate(forward['updatedAt'])}',
+                    '${AppLocalizations.of(context)!.translate('updated_at')}: ${TrackingHelpers.formatDate(forward['updatedAt'])}',
                     style: TextStyle(
                       fontSize: isMobile ? 10 : 11,
                       color: TrackingColors.textMuted,
@@ -185,9 +190,9 @@ Widget buildTimelineStep({
   );
 }
 
-Widget _buildUserCard(Map<String, dynamic>? user, String label, IconData icon, Color color, bool isMobile) {
-  final userName = user?['name'] ?? 'Unknown';
-  final userGroup = user?['group'] ?? 'N/A';
+Widget _buildUserCard(BuildContext context, Map<String, dynamic>? user, String label, IconData icon, Color color, bool isMobile) {
+  final userName = user?['name'] ?? AppLocalizations.of(context)!.translate('unknown');
+  final userGroup = user?['group'] ?? AppLocalizations.of(context)!.translate('not_available');
 
   return Container(
     padding: EdgeInsets.all(isMobile ? 8 : 12),

@@ -210,6 +210,7 @@
 
 
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import './inbox_colors.dart';
 import './inbox_helpers.dart';
 
@@ -261,7 +262,7 @@ class InboxDesktopFilters extends StatelessWidget {
           child: TextField(
             controller: searchController,
             decoration: InputDecoration(
-              hintText: 'Search requests...',
+              hintText: AppLocalizations.of(context)!.translate('search_requests'),
               hintStyle: TextStyle(color: InboxColors.textMuted),
               prefixIcon: Icon(Icons.search_rounded, color: InboxColors.primary),
               border: OutlineInputBorder(
@@ -302,7 +303,8 @@ class InboxDesktopFilters extends StatelessWidget {
                     Icon(Icons.filter_alt_outlined, color: InboxColors.primary, size: 16),
                     const SizedBox(width: 6),
                     Text(
-                      'FILTERS',
+                      AppLocalizations.of(context)!.translate('status_filter_by_status_label') == 'status_filter_by_status_label' 
+                      ? 'FILTERS' : AppLocalizations.of(context)!.translate('status_filter_by_status_label'),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -317,6 +319,7 @@ class InboxDesktopFilters extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _buildDesktopFilterDropdown(
+                        context: context,
                         value: selectedPriority,
                         items: priorities,
                         label: "Priority",
@@ -327,6 +330,7 @@ class InboxDesktopFilters extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildDesktopFilterDropdown(
+                        context: context,
                         value: selectedType,
                         items: typeNames,
                         label: "Type",
@@ -337,6 +341,7 @@ class InboxDesktopFilters extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildDesktopFilterDropdown(
+                        context: context,
                         value: selectedStatus,
                         items: statuses,
                         label: "Status",
@@ -355,6 +360,7 @@ class InboxDesktopFilters extends StatelessWidget {
   }
 
   Widget _buildDesktopFilterDropdown({
+    required BuildContext context,
     required String value,
     required List<String> items,
     required String label,
@@ -391,7 +397,7 @@ class InboxDesktopFilters extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      item,
+                      AppLocalizations.of(context)!.translate(item.toLowerCase().replaceAll(' ', '_')),
                       style: TextStyle(
                         color: _getStatusTextColor(label, item),
                         fontWeight: _getStatusFontWeight(label, item),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'users_colors.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 class UsersEmptyState extends StatelessWidget {
   final String selectedFilter;
@@ -27,8 +28,8 @@ class UsersEmptyState extends StatelessWidget {
           SizedBox(height: isMobile ? 12 : 16),
           Text(
             selectedFilter != 'all'
-                ? 'No ${selectedFilter}s found'
-                : 'No users found',
+                ? (selectedFilter == 'admin' ? AppLocalizations.of(context)!.translate('no_admins_found') : AppLocalizations.of(context)!.translate('no_users_found'))
+                : AppLocalizations.of(context)!.translate('no_users_found'),
             style: TextStyle(
               fontSize: isMobile ? 16 : 18,
               color: AppColors.textSecondary,
@@ -38,7 +39,7 @@ class UsersEmptyState extends StatelessWidget {
             Padding(
               padding: EdgeInsets.only(top: isMobile ? 8 : 12),
               child: Text(
-                'Try loading more users or change filter',
+                AppLocalizations.of(context)!.translate('try_loading_more'),
                 style: TextStyle(
                   fontSize: isMobile ? 12 : 14,
                   color: AppColors.textMuted,

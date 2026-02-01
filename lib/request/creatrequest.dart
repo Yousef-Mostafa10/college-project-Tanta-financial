@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 // 🎨 COLOR PALETTE - Consistent with Dashboard and Inbox
 class CreateRequestColors {
@@ -238,12 +239,17 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
   Future<void> _uploadFiles() async {
     if (_selectedFiles.isEmpty) return;
+    _uploadedDocuments.clear(); // Clear previously uploaded docs for this submission
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
 
     for (var file in _selectedFiles) {
       try {
         final finalFileName = _generateUniqueFileName(file.name);
+        if (file.path == null) {
+          _showErrorMessage("Could not get file path for ${file.name}");
+          continue;
+        }
         final tempDir = await getTemporaryDirectory();
         final tempFile = File('${tempDir.path}/$finalFileName');
         final originalFile = File(file.path!);
@@ -267,14 +273,14 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           final documentURI =
           documentData["documentURI"].replaceAll('\\', '/');
           _uploadedDocuments.add(documentURI);
-          _showSuccessMessage('File ${file.name} uploaded');
+          _showSuccessMessage(AppLocalizations.of(context)!.translate('file_uploaded_success').replaceFirst('{fileName}', file.name));
         } else {
-          _showErrorMessage('Upload failed for ${file.name}');
+          _showErrorMessage(AppLocalizations.of(context)!.translate('upload_failed_error').replaceFirst('{fileName}', file.name));
         }
 
         if (await tempFile.exists()) await tempFile.delete();
       } catch (e) {
-        _showErrorMessage('Error uploading file: ${file.name}');
+        _showErrorMessage(AppLocalizations.of(context)!.translate('error_uploading_file').replaceFirst('{fileName}', file.name));
       }
     }
   }
@@ -295,12 +301,12 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       );
 
       if (response.statusCode == 200) {
-        _showSuccessMessage('Request sent to $_selectedReceiver');
+        _showSuccessMessage(AppLocalizations.of(context)!.translate('request_sent_to').replaceFirst('{user}', _selectedReceiver));
       } else {
-        _showErrorMessage('Failed to send request');
+        _showErrorMessage(AppLocalizations.of(context)!.translate('failed_send_request'));
       }
     } catch (e) {
-      _showErrorMessage('Error sending request');
+      _showErrorMessage(AppLocalizations.of(context)!.translate('failed_send_request'));
     }
   }
 
@@ -333,13 +339,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           final data = json.decode(response.body);
           final id = data["transaction"]["id"];
           await _forwardTransaction(id);
-          _showSuccessMessage('Request sent successfully');
+          _showSuccessMessage(AppLocalizations.of(context)!.translate('request_sent_success'));
           Navigator.pop(context);
         } else {
-          _showErrorMessage('Failed to create request');
+          _showErrorMessage(AppLocalizations.of(context)!.translate('failed_create_request'));
         }
       } catch (e) {
-        _showErrorMessage('Error: $e');
+        _showErrorMessage('${AppLocalizations.of(context)!.translate('error_label')}: $e');
       } finally {
         setState(() => _isSubmitting = false);
       }
@@ -347,14 +353,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   }
 
   Future<void> _pickFiles() async {
-    var status = await Permission.storage.status;
-    if (!status.isGranted) {
-      status = await Permission.storage.request();
-      if (!status.isGranted) {
-        _showErrorMessage('Storage permission required');
-        return;
-      }
-    }
+    try {
+      // Note: FilePicker handles permission internally on many platforms. 
+      // Manual storage permission check is often problematic on Android 13+.
 
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -371,9 +372,12 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       allowMultiple: true,
     );
 
-    if (result != null && result.files.isNotEmpty) {
-      setState(() => _selectedFiles = result.files);
-      _showSuccessMessage('Selected ${_selectedFiles.length} file(s)');
+      if (result != null && result.files.isNotEmpty) {
+        setState(() => _selectedFiles = result.files);
+        _showSuccessMessage(AppLocalizations.of(context)!.translate('selected_files_count').replaceFirst('{count}', '${_selectedFiles.length}'));
+      }
+    } catch (e) {
+      _showErrorMessage('Error picking files: $e');
     }
   }
 
@@ -413,7 +417,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Create New Request',
+          AppLocalizations.of(context)!.translate('create_new_request'),
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: min(width * 0.04, 20),
@@ -449,16 +453,16 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             SizedBox(height: isMobile ? 16 : 24),
 
             // المعلومات الأساسية
-            _buildSectionHeader('Basic Information'),
+            _buildSectionHeader(AppLocalizations.of(context)!.translate('basic_information')),
             SizedBox(height: isMobile ? 12 : 16),
 
             // العنوان
-            _buildLabel('Request Title *'),
+            _buildLabel('${AppLocalizations.of(context)!.translate('request_title')} *'),
             SizedBox(height: 8),
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
-                hintText: 'Enter request title',
+                hintText: AppLocalizations.of(context)!.translate('request_title_hint'),
                 hintStyle: TextStyle(color: CreateRequestColors.textMuted),
                 border: OutlineInputBorder(
                   borderSide: BorderSide(color: CreateRequestColors.borderColor),
@@ -475,13 +479,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 ),
               ),
               validator: (v) => (v == null || v.isEmpty)
-                  ? 'Please enter a request title'
+                  ? AppLocalizations.of(context)!.translate('request_title_error')
                   : null,
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
             // نوع الطلب
-            _buildLabel('Request Type *'),
+            _buildLabel('${AppLocalizations.of(context)!.translate('request_type_label')} *'),
             SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _selectedRequestType,
@@ -504,7 +508,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   .map((v) => DropdownMenuItem(
                 value: v,
                 child: Text(
-                  v,
+                  v == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : v,
                   style: TextStyle(
                     color: v == 'Request Type'
                         ? CreateRequestColors.textMuted
@@ -515,13 +519,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   .toList(),
               onChanged: (v) => setState(() => _selectedRequestType = v!),
               validator: (v) => v == 'Request Type'
-                  ? 'Please select a request type'
+                  ? AppLocalizations.of(context)!.translate('request_type_hint')
                   : null,
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
             // الأولوية
-            _buildLabel('Priority'),
+            _buildLabel(AppLocalizations.of(context)!.translate('priority_label')),
             SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _selectedPriority,
@@ -541,20 +545,26 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 ),
               ),
               items: ['Low', 'Medium', 'High']
-                  .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+                  .map((v) {
+                    String label = v;
+                    if (v == 'Low') label = AppLocalizations.of(context)!.translate('priority_low');
+                    if (v == 'Medium') label = AppLocalizations.of(context)!.translate('priority_medium');
+                    if (v == 'High') label = AppLocalizations.of(context)!.translate('priority_high');
+                    return DropdownMenuItem(value: v, child: Text(label));
+                  })
                   .toList(),
               onChanged: (v) => setState(() => _selectedPriority = v!),
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
             // الوصف
-            _buildLabel('Description *'),
+            _buildLabel('${AppLocalizations.of(context)!.translate('description_label')} *'),
             SizedBox(height: 8),
             TextFormField(
               controller: _descriptionController,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText: 'Enter detailed description',
+                hintText: AppLocalizations.of(context)!.translate('description_hint'),
                 hintStyle: TextStyle(color: CreateRequestColors.textMuted),
                 border: OutlineInputBorder(
                   borderSide: BorderSide(color: CreateRequestColors.borderColor),
@@ -571,17 +581,17 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 ),
               ),
               validator: (v) => (v == null || v.isEmpty)
-                  ? 'Please enter a description'
+                  ? AppLocalizations.of(context)!.translate('description_error')
                   : null,
             ),
             SizedBox(height: isMobile ? 24 : 32),
 
             // إرسال الطلب
-            _buildSectionHeader('Send Request'),
+            _buildSectionHeader(AppLocalizations.of(context)!.translate('send_request_section')),
             SizedBox(height: isMobile ? 12 : 16),
 
             // المستخدم المستلم مع البحث
-            _buildLabel('Send To User *'),
+            _buildLabel('${AppLocalizations.of(context)!.translate('send_to_user_label')} *'),
             SizedBox(height: 8),
 
             // زر اختيار المستخدم مع ديلوج البحث
@@ -608,7 +618,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        _selectedReceiver,
+                        _selectedReceiver == 'Select User' ? AppLocalizations.of(context)!.translate('select_user_hint') : _selectedReceiver,
                         style: TextStyle(
                           fontSize: isMobile ? 14 : 16,
                           color: _selectedReceiver == 'Select User'
@@ -641,7 +651,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     Icon(Icons.person_rounded, size: 14, color: CreateRequestColors.primary),
                     SizedBox(width: 6),
                     Text(
-                      'Selected: $_selectedReceiver',
+                      '${AppLocalizations.of(context)!.translate('selected_user')} $_selectedReceiver',
                       style: TextStyle(
                         fontSize: 12,
                         color: CreateRequestColors.primary,
@@ -666,7 +676,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             SizedBox(height: isMobile ? 24 : 32),
 
             // المستندات
-            _buildSectionHeader('Supporting Documents (Optional)'),
+            _buildSectionHeader(AppLocalizations.of(context)!.translate('supporting_documents')),
             SizedBox(height: isMobile ? 12 : 16),
 
             // زر اختيار الملفات
@@ -688,8 +698,8 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     SizedBox(height: isMobile ? 12 : 16),
                     Text(
                       _selectedFiles.isEmpty
-                          ? 'Add supporting documents (optional)'
-                          : 'Selected ${_selectedFiles.length} file(s)',
+                          ? AppLocalizations.of(context)!.translate('add_documents_hint')
+                          : AppLocalizations.of(context)!.translate('selected_files_count').replaceFirst('{count}', '${_selectedFiles.length}'),
                       style: TextStyle(
                         fontSize: isMobile ? 14 : 16,
                         color: CreateRequestColors.textSecondary,
@@ -707,7 +717,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                         ),
                       ),
                       child: Text(
-                        'Choose Files',
+                        AppLocalizations.of(context)!.translate('choose_files'),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: isMobile ? 14 : 16,
@@ -723,7 +733,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             if (_selectedFiles.isNotEmpty) ...[
               SizedBox(height: isMobile ? 12 : 16),
               Text(
-                'Selected Files:',
+                AppLocalizations.of(context)!.translate('selected_files_label'),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: isMobile ? 14 : 16,
@@ -767,7 +777,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                             setState(() {
                               _selectedFiles.remove(file);
                             });
-                            _showSuccessMessage('${file.name} removed');
+                            _showSuccessMessage(AppLocalizations.of(context)!.translate('files_removed').replaceFirst('{fileName}', file.name));
                           },
                         ),
                       ],
@@ -831,7 +841,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                         ),
                         SizedBox(width: 12),
                         Text(
-                          'Select User',
+                          AppLocalizations.of(context)!.translate('select_user_hint'),
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -846,7 +856,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     TextField(
                       controller: _userSearchController,
                       decoration: InputDecoration(
-                        hintText: 'Search users...',
+                        hintText: AppLocalizations.of(context)!.translate('search_users'),
                         prefixIcon: Icon(Icons.search_rounded, color: CreateRequestColors.primary),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -863,7 +873,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
                     // عدد النتائج
                     Text(
-                      '${_filteredUsers.length - 1} users found',
+                      '${_filteredUsers.length - 1} ${AppLocalizations.of(context)!.translate('users_count_label')}',
                       style: TextStyle(
                         fontSize: 12,
                         color: CreateRequestColors.textSecondary,
@@ -888,13 +898,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                                 color: CreateRequestColors.textMuted,
                               ),
                               title: Text(
-                                user,
+                                AppLocalizations.of(context)!.translate('select_user_hint'),
                                 style: TextStyle(
                                   color: CreateRequestColors.textMuted,
                                 ),
                               ),
                               onTap: () {
-                                setState(() => _selectedReceiver = user);
+                                setState(() => _selectedReceiver = 'Select User');
                                 Navigator.pop(context);
                               },
                             );
@@ -949,7 +959,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                               foregroundColor: CreateRequestColors.primary,
                               side: BorderSide(color: CreateRequestColors.primary),
                             ),
-                            child: Text('Cancel'),
+                            child: Text(AppLocalizations.of(context)!.translate('cancel')),
                           ),
                         ),
                         SizedBox(width: 12),
@@ -964,7 +974,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                               backgroundColor: CreateRequestColors.primary,
                             ),
                             child: Text(
-                              'Select',
+                              AppLocalizations.of(context)!.translate('select_button'),
                               style: TextStyle(color: Colors.white),
                             ),
                           ),
@@ -986,7 +996,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Create New Request',
+          AppLocalizations.of(context)!.translate('create_new_request'),
           style: TextStyle(
             fontSize: isMobile ? 22 : 28,
             fontWeight: FontWeight.bold,
@@ -995,7 +1005,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         ),
         SizedBox(height: 4),
         Text(
-          'Submit a request and send it to a user',
+          AppLocalizations.of(context)!.translate('create_request_subtitle'),
           style: TextStyle(
             fontSize: isMobile ? 14 : 16,
             color: CreateRequestColors.textSecondary,
@@ -1020,7 +1030,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             foregroundColor: CreateRequestColors.primary,
           ),
           child: Text(
-            'Cancel',
+            AppLocalizations.of(context)!.translate('cancel'),
             style: TextStyle(
               fontSize: isMobile ? 14 : 16,
             ),
@@ -1045,7 +1055,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             ),
           )
               : Text(
-            'Send Request',
+            AppLocalizations.of(context)!.translate('send_request_button'),
             style: TextStyle(
               color: Colors.white,
               fontSize: isMobile ? 14 : 16,

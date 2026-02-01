@@ -191,6 +191,7 @@
 
 
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import './inbox_colors.dart';
 
 class InboxMobileFilters extends StatelessWidget {
@@ -224,6 +225,7 @@ class InboxMobileFilters extends StatelessWidget {
   }) : super(key: key);
 
   Widget _buildMobileFilterChip({
+    required BuildContext context,
     required String label,
     required String value,
     required IconData icon,
@@ -298,7 +300,7 @@ class InboxMobileFilters extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              label,
+              AppLocalizations.of(context)!.translate(label.toLowerCase()),
               style: TextStyle(
                 fontSize: 9,
                 color: InboxColors.primary,
@@ -307,7 +309,7 @@ class InboxMobileFilters extends StatelessWidget {
             ),
             if (value != 'All' && value != 'All Types')
               Text(
-                value.length > 8 ? value.substring(0, 8) + '...' : value,
+                AppLocalizations.of(context)!.translate(value.toLowerCase().replaceAll(' ', '_')),
                 style: TextStyle(
                   fontSize: 8,
                   color: getTextColor(), // لون النص حسب الحالة
@@ -344,7 +346,7 @@ class InboxMobileFilters extends StatelessWidget {
           TextField(
             controller: searchController,
             decoration: InputDecoration(
-              hintText: 'Search requests...',
+              hintText: AppLocalizations.of(context)!.translate('search_requests'),
               hintStyle: TextStyle(color: InboxColors.textMuted),
               prefixIcon: const Icon(Icons.search_rounded, color: InboxColors.primary),
               border: OutlineInputBorder(
@@ -373,13 +375,14 @@ class InboxMobileFilters extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildMobileFilterChip(
+                  context: context,
                   label: "Priority",
                   value: selectedPriority,
                   icon: Icons.flag_outlined,
                   onTap: () {
                     if (onShowMobileFilterDialog != null) {
                       onShowMobileFilterDialog!(
-                        "Select Priority",
+                        AppLocalizations.of(context)!.translate("select_priority"),
                         priorities,
                         selectedPriority,
                         onPriorityChanged,
@@ -391,13 +394,14 @@ class InboxMobileFilters extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildMobileFilterChip(
+                  context: context,
                   label: "Type",
                   value: selectedType,
                   icon: Icons.category_outlined,
                   onTap: () {
                     if (onShowMobileFilterDialog != null) {
                       onShowMobileFilterDialog!(
-                        "Select Type",
+                        AppLocalizations.of(context)!.translate("select_type"),
                         typeNames,
                         selectedType,
                         onTypeChanged,
@@ -409,13 +413,14 @@ class InboxMobileFilters extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildMobileFilterChip(
+                  context: context,
                   label: "Status",
                   value: selectedStatus,
                   icon: Icons.hourglass_top_outlined,
                   onTap: () {
                     if (onShowMobileFilterDialog != null) {
                       onShowMobileFilterDialog!(
-                        "Select Status",
+                        AppLocalizations.of(context)!.translate("select_status"),
                         statuses,
                         selectedStatus,
                         onStatusChanged,

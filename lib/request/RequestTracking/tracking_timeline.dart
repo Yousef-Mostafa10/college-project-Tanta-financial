@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
+import 'package:flutter/cupertino.dart';
 import 'tracking_timeline_item.dart';
 
 Widget buildTrackingTimeline({
+  required BuildContext context,
   required List<dynamic> forwards,
   required bool isMobile,
   required bool isTablet,
@@ -19,6 +21,7 @@ Widget buildTrackingTimeline({
         final isLast = index == forwards.length - 1;
 
         return buildTimelineStep(
+          context: context,
           forward: forward,
           stepNumber: forwards.length - index,
           isFirst: isFirst,

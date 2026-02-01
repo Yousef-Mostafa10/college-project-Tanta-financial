@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'my_requests_colors.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
-Widget buildMobileStatsSection(int total, int approved, int rejected, int waiting) {
+Widget buildMobileStatsSection(BuildContext context, int total, int approved, int rejected, int waiting, int needsChange, int fulfilled) {
   final statItems = [
-    {"label": "Total", "value": total, "color": MyRequestsColors.textPrimary, "icon": Icons.dashboard_rounded},
-    {"label": "Approved", "value": approved, "color": MyRequestsColors.statusApproved, "icon": Icons.check_circle_rounded},
-    {"label": "Rejected", "value": rejected, "color": MyRequestsColors.statusRejected, "icon": Icons.cancel_rounded},
-    {"label": "Waiting", "value": waiting, "color": MyRequestsColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
+    {"label": AppLocalizations.of(context)!.translate('total_stat'), "value": total, "color": MyRequestsColors.textPrimary, "icon": Icons.dashboard_rounded},
+    {"label": AppLocalizations.of(context)!.translate('status_approved'), "value": approved, "color": MyRequestsColors.statusApproved, "icon": Icons.check_circle_rounded},
+    {"label": AppLocalizations.of(context)!.translate('status_rejected'), "value": rejected, "color": MyRequestsColors.statusRejected, "icon": Icons.cancel_rounded},
+    {"label": AppLocalizations.of(context)!.translate('status_waiting'), "value": waiting, "color": MyRequestsColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
+    {"label": AppLocalizations.of(context)!.translate('status_needs_change'), "value": needsChange, "color": MyRequestsColors.statusNeedsChange, "icon": Icons.edit_note_rounded},
+    {"label": AppLocalizations.of(context)!.translate('status_fulfilled'), "value": fulfilled, "color": MyRequestsColors.statusFulfilled, "icon": Icons.task_alt_rounded},
   ];
 
   return Container(
@@ -26,11 +29,13 @@ Widget buildMobileStatsSection(int total, int approved, int rejected, int waitin
     ),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: statItems.map((stat) => _buildMobileStatItem(
-        label: stat["label"] as String,
-        value: stat["value"] as int,
-        color: stat["color"] as Color,
-        icon: stat["icon"] as IconData,
+      children: statItems.map((stat) => Expanded(
+        child: _buildMobileStatItem(
+          label: stat["label"] as String,
+          value: stat["value"] as int,
+          color: stat["color"] as Color,
+          icon: stat["icon"] as IconData,
+        ),
       )).toList(),
     ),
   );

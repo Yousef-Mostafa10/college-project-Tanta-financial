@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'users_api.dart';
 import 'users_colors.dart';
 import 'users_helpers.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 class UserProfileDialog extends StatefulWidget {
   final String userName;
@@ -89,18 +90,18 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
           ),
           SizedBox(height: widget.isMobile ? 8 : 12),
           _buildProfileDetail(
-            "Group",
-            _userData!["group"] ?? "Unknown",
+            AppLocalizations.of(context)!.translate('user_type'),
+            _userData!["group"] == 'admin' ? AppLocalizations.of(context)!.translate('administrator') : AppLocalizations.of(context)!.translate('regular_user'),
             Icons.group_rounded,
           ),
           _buildProfileDetail(
-            "Created At",
-            UsersHelpers.formatDate(_userData!["createdAt"]),
+            AppLocalizations.of(context)!.translate('created_at'),
+            UsersHelpers.formatDate(_userData!["createdAt"], context),
             Icons.calendar_today_rounded,
           ),
           _buildProfileDetail(
-            "Updated At",
-            UsersHelpers.formatDate(_userData!["updatedAt"] ?? _userData!["createdAt"]),
+            AppLocalizations.of(context)!.translate('updated_at'),
+            UsersHelpers.formatDate(_userData!["updatedAt"] ?? _userData!["createdAt"], context),
             Icons.update_rounded,
           ),
         ],
@@ -109,7 +110,7 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
-            "Close",
+            AppLocalizations.of(context)!.translate('close'),
             style: TextStyle(
               color: AppColors.primary,
               fontSize: widget.isMobile ? 14 : 16,

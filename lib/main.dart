@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/app_localizations.dart';
+import 'providers/language_provider.dart';
 
 import 'Auth/login.dart';
 import 'home/dashboard.dart';
 import 'home/home.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => LanguageProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -20,27 +29,50 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: FutureBuilder<bool>(
-        future: checkLoginStatus(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            // لو فيه خطأ
-            print("❌ Error in checkLoginStatus: ${snapshot.error}");
-            return const LoginPage();
-          } else {
-            if (snapshot.data == true) {
-              return const AdministrativeDashboardPage();
-            } else {
-              return const LoginPage();
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'College Project',
+          locale: languageProvider.currentLocale,
+          supportedLocales: const [
+            Locale('en', ''),
+            Locale('ar', ''),
+          ],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          localeResolutionCallback: (locale, supportedLocales) {
+            for (var supportedLocale in supportedLocales) {
+              if (supportedLocale.languageCode == locale?.languageCode) {
+                return supportedLocale;
+              }
             }
-          }
-        },
-      ),
+            return supportedLocales.first; // Default to English
+          },
+          home: FutureBuilder<bool>(
+            future: checkLoginStatus(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                // لو فيه خطأ
+                print("❌ Error in checkLoginStatus: ${snapshot.error}");
+                return const LoginPage();
+              } else {
+                if (snapshot.data == true) {
+                  return const AdministrativeDashboardPage();
+                } else {
+                  return const LoginPage();
+                }
+              }
+            },
+          ),
+        );
+      },
     );
-
   }
 }

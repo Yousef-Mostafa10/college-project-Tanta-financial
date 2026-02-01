@@ -1372,6 +1372,7 @@
 
 
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import './inbox_colors.dart';
 import './inbox_helpers.dart';
 import './inbox_formatters.dart';
@@ -1400,7 +1401,7 @@ class InboxDesktopCard extends StatelessWidget {
     required this.onEditRequest,
   }) : super(key: key);
 
-  Widget _buildDesktopChip(String text, IconData icon, Color color) {
+  Widget _buildDesktopChip(BuildContext context, String text, IconData icon, Color color) {
     return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
@@ -1414,7 +1415,7 @@ class InboxDesktopCard extends StatelessWidget {
             Icon(icon, size: 14, color: color),
             const SizedBox(width: 6),
             Text(
-              text,
+              AppLocalizations.of(context)!.translate(text.toLowerCase().replaceAll(' ', '_')),
               style: TextStyle(
                 fontSize: 12,
                 color: color,
@@ -1494,8 +1495,14 @@ class InboxDesktopCard extends StatelessWidget {
     final fulfilled = request["fulfilled"] == true;
     final isUpdating = request['isUpdating'] == true;
     final statusLabel = fulfilled
-        ? "Fulfilled"
-        : (isApproved ? "Approved" : (needsChange ? "Needs Change" : (isPending ? "Waiting" : "Rejected")));
+        ? AppLocalizations.of(context)!.translate('fulfilled')
+        : (isApproved 
+            ? AppLocalizations.of(context)!.translate('approved') 
+            : (needsChange 
+                ? AppLocalizations.of(context)!.translate('needs_change') 
+                : (isPending 
+                    ? AppLocalizations.of(context)!.translate('waiting') 
+                    : AppLocalizations.of(context)!.translate('rejected'))));
     final statusColor = fulfilled
         ? InboxColors.statusFulfilled
         : (isApproved
@@ -1591,7 +1598,7 @@ class InboxDesktopCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
-                              'Updating...',
+                              AppLocalizations.of(context)!.translate('updating'),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.blue,
@@ -1643,7 +1650,7 @@ class InboxDesktopCard extends StatelessWidget {
                   Icon(Icons.person_rounded, size: 14, color: InboxColors.textSecondary),
                   const SizedBox(width: 6),
                   Text(
-                    "From: $senderName",
+                    "${AppLocalizations.of(context)!.translate('from_prefix')} $senderName",
                     style: TextStyle(fontSize: 13, color: InboxColors.textSecondary),
                   ),
                   const SizedBox(width: 24),
@@ -1664,9 +1671,9 @@ class InboxDesktopCard extends StatelessWidget {
               // 3️⃣ النوع والأولوية
               Row(
                 children: [
-                  _buildDesktopChip(type, Icons.category_outlined, InboxColors.primary),
+                  _buildDesktopChip(context, type, Icons.category_outlined, InboxColors.primary),
                   const SizedBox(width: 8),
-                  _buildDesktopChip(priority, Icons.flag_outlined, InboxHelpers.getPriorityColor(priority)),
+                  _buildDesktopChip(context, priority, Icons.flag_outlined, InboxHelpers.getPriorityColor(priority)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -1681,7 +1688,7 @@ class InboxDesktopCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Updating request...',
+                        AppLocalizations.of(context)!.translate('updating'),
                         style: TextStyle(
                           color: InboxColors.textSecondary,
                           fontSize: 12,
@@ -1698,20 +1705,20 @@ class InboxDesktopCard extends StatelessWidget {
                     Row(
                       children: [
                         _buildActionButton(
-                          text: 'View Details',
+                          text: AppLocalizations.of(context)!.translate('view_details'),
                           onPressed: onViewDetails,
                           color: InboxColors.primary,
                           isOutlined: true,
                         ),
                         const SizedBox(width: 12),
                         _buildActionButton(
-                          text: 'Approve',
+                          text: AppLocalizations.of(context)!.translate('approve'),
                           onPressed: onApprove,
                           color: InboxColors.accentGreen,
                         ),
                         const SizedBox(width: 12),
                         _buildActionButton(
-                          text: 'Need Change',
+                          text: AppLocalizations.of(context)!.translate('need_change'),
                           onPressed: onNeedChange,
                           color: Colors.orange,
                         ),
@@ -1728,7 +1735,7 @@ class InboxDesktopCard extends StatelessWidget {
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text('Reject'),
+                        child: Text(AppLocalizations.of(context)!.translate('reject')),
                       ),
                     ),
                   ],
@@ -1751,7 +1758,7 @@ class InboxDesktopCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              "Forwarded to ${lastForwardSentTo['receiverName']}",
+                              "${AppLocalizations.of(context)!.translate('forwarded_to_prefix') == 'forwarded_to_prefix' ? 'Forwarded to' : AppLocalizations.of(context)!.translate('forwarded_to_prefix')} ${lastForwardSentTo['receiverName']}",
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
@@ -1762,13 +1769,13 @@ class InboxDesktopCard extends StatelessWidget {
                           PopupMenuButton<String>(
                             icon: Icon(Icons.more_vert_rounded, size: 18, color: InboxColors.textSecondary),
                             itemBuilder: (context) => [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'cancel',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
-                                    SizedBox(width: 8),
-                                    Text('Cancel Forward'),
+                                    const Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
+                                    const SizedBox(width: 8),
+                                    Text(AppLocalizations.of(context)!.translate('cancel_forward')),
                                   ],
                                 ),
                               ),
@@ -1785,14 +1792,14 @@ class InboxDesktopCard extends StatelessWidget {
                     Row(
                       children: [
                         _buildActionButton(
-                          text: 'Edit Request',
+                          text: AppLocalizations.of(context)!.translate('edit_request'),
                           onPressed: onEditRequest,
                           color: Colors.blue,
                           isOutlined: true,
                         ),
                         const SizedBox(width: 12),
                         _buildActionButton(
-                          text: 'View Details',
+                          text: AppLocalizations.of(context)!.translate('view_details'),
                           onPressed: onViewDetails,
                           color: InboxColors.primary,
                           isOutlined: true,
@@ -1808,14 +1815,14 @@ class InboxDesktopCard extends StatelessWidget {
                     Row(
                       children: [
                         _buildActionButton(
-                          text: 'Edit Request',
+                          text: AppLocalizations.of(context)!.translate('edit_request'),
                           onPressed: onEditRequest,
                           color: Colors.blue,
                           isOutlined: true,
                         ),
                         const SizedBox(width: 12),
                         _buildActionButton(
-                          text: 'Forward',
+                          text: AppLocalizations.of(context)!.translate('forward'),
                           onPressed: onForward,
                           color: InboxColors.primary,
                         ),
@@ -1831,7 +1838,7 @@ class InboxDesktopCard extends StatelessWidget {
                           side: BorderSide(color: InboxColors.primary),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
-                        child: const Text('View Details'),
+                        child: Text(AppLocalizations.of(context)!.translate('view_details')),
                       ),
                     ),
                   ],
@@ -1850,7 +1857,7 @@ class InboxDesktopCard extends StatelessWidget {
                           side: BorderSide(color: Colors.blue),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text('Edit Request'),
+                        child: Text(AppLocalizations.of(context)!.translate('edit_request')),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1864,7 +1871,7 @@ class InboxDesktopCard extends StatelessWidget {
                           side: BorderSide(color: InboxColors.statusFulfilled),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
-                        child: const Text('View Details'),
+                        child: Text(AppLocalizations.of(context)!.translate('view_details')),
                       ),
                     ),
                   ],

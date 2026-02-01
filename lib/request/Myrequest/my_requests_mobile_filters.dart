@@ -142,8 +142,10 @@
 
 import 'package:flutter/material.dart';
 import 'my_requests_colors.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 Widget buildMobileFilterSection({
+  required BuildContext context,
   required TextEditingController searchController,
   required String selectedPriority,
   required String selectedType,
@@ -176,7 +178,7 @@ Widget buildMobileFilterSection({
         TextField(
           controller: searchController,
           decoration: InputDecoration(
-            hintText: 'Search transactions...',
+            hintText: AppLocalizations.of(context)!.translate('search_transactions'),
             hintStyle: TextStyle(color: MyRequestsColors.textMuted),
             prefixIcon: const Icon(Icons.search_rounded, color: MyRequestsColors.primary),
             border: OutlineInputBorder(
@@ -205,7 +207,8 @@ Widget buildMobileFilterSection({
           children: [
             Expanded(
               child: _buildMobileFilterChip(
-                label: "Priority",
+                context: context,
+                label: AppLocalizations.of(context)!.translate('priority_filter'),
                 value: selectedPriority,
                 icon: Icons.flag_outlined,
                 onTap: onPriorityTap,
@@ -214,7 +217,8 @@ Widget buildMobileFilterSection({
             const SizedBox(width: 8),
             Expanded(
               child: _buildMobileFilterChip(
-                label: "Type",
+                context: context,
+                label: AppLocalizations.of(context)!.translate('type_filter'),
                 value: selectedType,
                 icon: Icons.category_outlined,
                 onTap: onTypeTap,
@@ -223,7 +227,8 @@ Widget buildMobileFilterSection({
             const SizedBox(width: 8),
             Expanded(
               child: _buildMobileFilterChip(
-                label: "Status",
+                context: context,
+                label: AppLocalizations.of(context)!.translate('status_filter'),
                 value: selectedStatus,
                 icon: Icons.hourglass_top_outlined,
                 onTap: onStatusTap,
@@ -237,6 +242,7 @@ Widget buildMobileFilterSection({
 }
 
 Widget _buildMobileFilterChip({
+  required BuildContext context,
   required String label,
   required String value,
   required IconData icon,
@@ -244,7 +250,7 @@ Widget _buildMobileFilterChip({
 }) {
   // تحديد لون النص حسب الحالة
   Color getTextColor() {
-    if (label == "Status") {
+    if (label == AppLocalizations.of(context)!.translate('status_filter')) {
       switch (value.toLowerCase()) {
         case 'waiting':
           return MyRequestsColors.statusWaiting;
@@ -265,7 +271,7 @@ Widget _buildMobileFilterChip({
 
   // تحديد أيقونة حسب الحالة
   IconData getStatusIcon() {
-    if (label == "Status") {
+    if (label == AppLocalizations.of(context)!.translate('status_filter')) {
       switch (value.toLowerCase()) {
         case "approved":
           return Icons.check_circle_rounded;
@@ -288,11 +294,23 @@ Widget _buildMobileFilterChip({
 
   // تحديد لون الأيقونة
   Color getIconColor() {
-    if (label == "Status") {
+    if (label == AppLocalizations.of(context)!.translate('status_filter')) {
       return getTextColor();
     }
     return MyRequestsColors.primary;
   }
+
+  String displayValue = value;
+  if (value == 'All') displayValue = AppLocalizations.of(context)!.translate('all_filter');
+  if (value == 'All Types') displayValue = AppLocalizations.of(context)!.translate('all_types_filter');
+  if (value == 'Waiting') displayValue = AppLocalizations.of(context)!.translate('status_waiting');
+  if (value == 'Approved') displayValue = AppLocalizations.of(context)!.translate('status_approved');
+  if (value == 'Rejected') displayValue = AppLocalizations.of(context)!.translate('status_rejected');
+  if (value == 'Needs Change') displayValue = AppLocalizations.of(context)!.translate('status_needs_change');
+  if (value == 'Fulfilled') displayValue = AppLocalizations.of(context)!.translate('status_fulfilled');
+  if (value == 'High') displayValue = AppLocalizations.of(context)!.translate('priority_high');
+  if (value == 'Medium') displayValue = AppLocalizations.of(context)!.translate('priority_medium');
+  if (value == 'Low') displayValue = AppLocalizations.of(context)!.translate('priority_low');
 
   return GestureDetector(
     onTap: onTap,
@@ -322,7 +340,7 @@ Widget _buildMobileFilterChip({
           ),
           if (value != 'All' && value != 'All Types')
             Text(
-              value.length > 8 ? value.substring(0, 8) + '...' : value,
+              displayValue.length > 8 ? displayValue.substring(0, 8) + '...' : displayValue,
               style: TextStyle(
                 fontSize: 8,
                 color: getTextColor(), // لون النص حسب الحالة

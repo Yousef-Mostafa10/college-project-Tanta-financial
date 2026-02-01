@@ -1,7 +1,10 @@
+import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/request/RequestTracking/tracking_colors.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'tracking_colors.dart';
 
 Widget buildStatsSection({
+  required BuildContext context,
   required List<dynamic> forwards,
   required bool isMobile,
   required bool isTablet,
@@ -13,10 +16,10 @@ Widget buildStatsSection({
   final needsEditing = forwards.where((f) => f['status'] == 'needs-editing').length;
 
   final statItems = [
-    {"label": "Total", "value": total, "color": TrackingColors.textPrimary, "icon": Icons.dashboard_rounded},
-    {"label": "Waiting", "value": waiting, "color": TrackingColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
-    {"label": "Approved", "value": approved, "color": TrackingColors.statusApproved, "icon": Icons.check_circle_rounded},
-    {"label": "Others", "value": rejected + needsEditing, "color": TrackingColors.statusNeedsEditing, "icon": Icons.more_horiz_rounded},
+    {"label": AppLocalizations.of(context)!.translate('total_stat'), "value": total, "color": TrackingColors.textPrimary, "icon": Icons.dashboard_rounded},
+    {"label": AppLocalizations.of(context)!.translate('status_waiting'), "value": waiting, "color": TrackingColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
+    {"label": AppLocalizations.of(context)!.translate('status_approved'), "value": approved, "color": TrackingColors.statusApproved, "icon": Icons.check_circle_rounded},
+    {"label": AppLocalizations.of(context)!.translate('others_stat_label'), "value": rejected + needsEditing, "color": TrackingColors.statusNeedsEditing, "icon": Icons.more_horiz_rounded},
   ];
 
   return Container(

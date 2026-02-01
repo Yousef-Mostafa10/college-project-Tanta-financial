@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'package:college_project/l10n/app_localizations.dart';
 
 // 🎨 COLOR PALETTE - Consistent with the whole application
 class AppColors {
@@ -93,10 +94,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
     try {
       await _loadUserInfo();
       if (_userToken == null) {
-        setState(() {
-          _isLoading = false;
-        });
-        _showErrorSnackBar('Authentication token not found.');
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('auth_token_not_found'));
         return;
       }
       await Future.wait([
@@ -104,7 +102,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
         _fetchRequestDetails(),
       ]);
     } catch (e) {
-      _showErrorSnackBar('Error loading data: $e');
+      _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -178,10 +176,10 @@ class _EditRequestPageState extends State<EditRequestPage> {
           });
         }
       } else {
-        _showErrorSnackBar('Failed to load request details. Status: ${response.statusCode}');
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('failed_create_request')); // Fallback to a generic error if specific not found, or use status code
       }
     } catch (e) {
-      _showErrorSnackBar('Error fetching details: $e');
+      _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
     }
   }
 
@@ -258,10 +256,10 @@ class _EditRequestPageState extends State<EditRequestPage> {
         setState(() {
           _newFiles.addAll(uniqueFiles);
         });
-        _showSuccessSnackBar('${uniqueFiles.length} file(s) selected for upload');
+        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('files_selected_for_upload').replaceFirst('{count}', '${uniqueFiles.length}'));
       }
     } catch (e) {
-      _showErrorSnackBar('Error selecting files: $e');
+      _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_uploading_file').split(':')[0]}: $e');
     }
   }
 
@@ -270,10 +268,9 @@ class _EditRequestPageState extends State<EditRequestPage> {
     try {
       final documentURI = document["documentURI"]?.toString() ?? "";
 
-      // ✅ فصل الـ URI إلى أجزاء بشكل صحيح
       final parts = documentURI.split('/');
       if (parts.length != 2) {
-        _showErrorSnackBar('Invalid document URI format');
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('invalid_uri_format'));
         return;
       }
 
@@ -297,15 +294,15 @@ class _EditRequestPageState extends State<EditRequestPage> {
           setState(() {
             _documents.removeWhere((doc) => doc["documentURI"] == documentURI);
           });
-          _showSuccessSnackBar('File deleted successfully!');
+          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('file_deleted_success'));
         } else {
-          _showSuccessSnackBar('File detached from request');
+          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('file_detached_success'));
         }
       } else {
-        _showErrorSnackBar('Failed to detach file from request');
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('failed_detach_file'));
       }
     } catch (e) {
-      _showErrorSnackBar('Error deleting file: $e');
+      _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
     }
   }
 
@@ -364,14 +361,11 @@ class _EditRequestPageState extends State<EditRequestPage> {
           _newFiles.clear(); // تفريغ الملفات الجديدة
         });
 
-        // 🔥 تحديث قائمة الملفات من السيرفر
-        await _fetchRequestDetails();
-
-        _showSuccessSnackBar('${uploadedFiles.length} file(s) uploaded successfully!');
+        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('files_uploaded_success_count').replaceFirst('{count}', '${uploadedFiles.length}'));
       }
 
     } catch (e) {
-      _showErrorSnackBar('Error uploading files: $e');
+      _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_uploading_file').split(':')[0]}: $e');
     } finally {
       setState(() {
         _isUploadingFile = false;
@@ -408,20 +402,19 @@ class _EditRequestPageState extends State<EditRequestPage> {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         if (responseData["status"] == "success") {
-          // 2. رفع الملفات الجديدة إذا وجدت
           if (_newFiles.isNotEmpty) {
             await _uploadAndLinkNewFiles();
           }
 
-          _showSuccessSnackBar('Request updated successfully! You can add more files or click "Finish" to exit.');
+          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_updated_success_details'));
         } else {
-          _showErrorSnackBar('Failed to update: ${responseData["message"]}');
+          _showErrorSnackBar('${AppLocalizations.of(context)!.translate('login_failed')}: ${responseData["message"]}');
         }
       } else {
-        _showErrorSnackBar('Failed to update request. Status: ${response.statusCode}');
+        _showErrorSnackBar('${AppLocalizations.of(context)!.translate('login_failed')} Status: ${response.statusCode}');
       }
     } catch (e) {
-      _showErrorSnackBar('Error updating request: $e');
+      _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
     } finally {
       setState(() {
         _isUpdating = false;
@@ -431,7 +424,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
   // 🔥 دالة جديدة للخروج
   Future<void> _finishEditing() async {
-    _showSuccessSnackBar('Request editing completed!');
+    _showSuccessSnackBar(AppLocalizations.of(context)!.translate('editing_completed'));
     if (mounted) {
       Navigator.pop(context);
     }
@@ -443,7 +436,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Attached Documents',
+          AppLocalizations.of(context)!.translate('attached_documents'),
           style: TextStyle(
             fontSize: isMobile ? 18 : 20,
             fontWeight: FontWeight.bold,
@@ -479,7 +472,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                     SizedBox(width: isMobile ? 8 : 12),
                     Expanded(
                       child: Text(
-                        '${_recentlyUploadedFiles.length} file(s) uploaded recently',
+                        AppLocalizations.of(context)!.translate('recently_uploaded_files').replaceFirst('{count}', '${_recentlyUploadedFiles.length}'),
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: isMobile ? 14 : 16,
@@ -526,7 +519,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                 SizedBox(width: isMobile ? 8 : 12),
                 Expanded(
                   child: Text(
-                    'No documents attached to this request',
+                    AppLocalizations.of(context)!.translate('no_documents_attached'),
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: isMobile ? 14 : 16,
@@ -542,7 +535,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
         // الملفات الجديدة المحددة للرفع
         if (_newFiles.isNotEmpty) ...[
           Text(
-            'New Files to Upload:',
+            AppLocalizations.of(context)!.translate('new_files_to_upload'),
             style: TextStyle(
               fontSize: isMobile ? 14 : 16,
               fontWeight: FontWeight.bold,
@@ -559,7 +552,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
           onPressed: _uploadNewFile,
           icon: Icon(Icons.add, size: isMobile ? 18 : 20),
           label: Text(
-            'Add More Files',
+            AppLocalizations.of(context)!.translate('add_more_files'),
             style: TextStyle(fontSize: isMobile ? 14 : 16),
           ),
           style: ElevatedButton.styleFrom(
@@ -601,7 +594,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          'ID: $fileId',
+          '${AppLocalizations.of(context)!.translate('file_id_label')}: $fileId',
           style: TextStyle(
             fontSize: isMobile ? 11 : 12,
             color: AppColors.textSecondary,
@@ -686,7 +679,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
           ),
           SizedBox(height: 16),
           Text(
-            'Loading request details...',
+            AppLocalizations.of(context)!.translate('loading_request_details'),
             style: TextStyle(
               fontSize: 16,
               color: AppColors.textSecondary,
@@ -711,7 +704,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
           children: [
             // العنوان الرئيسي
             Text(
-              'Edit Request',
+              AppLocalizations.of(context)!.translate('edit_request'),
               style: TextStyle(
                 fontSize: isMobile ? 20 : 24,
                 fontWeight: FontWeight.bold,
@@ -720,7 +713,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
             SizedBox(height: isMobile ? 6 : 8),
             Text(
-              'Update the details of your existing request',
+              AppLocalizations.of(context)!.translate('edit_request_subtitle'),
               style: TextStyle(
                 fontSize: isMobile ? 14 : 16,
                 color: AppColors.textSecondary,
@@ -730,7 +723,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
             // المعلومات الأساسية
             Text(
-              'Basic Information',
+              AppLocalizations.of(context)!.translate('basic_information'),
               style: TextStyle(
                 fontSize: isMobile ? 18 : 20,
                 fontWeight: FontWeight.bold,
@@ -741,7 +734,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
             // حقل العنوان
             Text(
-              'Request Title *',
+              '${AppLocalizations.of(context)!.translate('request_title')} *',
               style: TextStyle(
                 fontSize: isMobile ? 14 : 16,
                 fontWeight: FontWeight.bold,
@@ -752,7 +745,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
-                hintText: 'Request Title',
+                hintText: AppLocalizations.of(context)!.translate('request_title'),
                 hintStyle: TextStyle(color: AppColors.textMuted),
                 border: OutlineInputBorder(
                   borderSide: BorderSide(color: AppColors.borderColor),
@@ -768,13 +761,13 @@ class _EditRequestPageState extends State<EditRequestPage> {
                   vertical: isMobile ? 14 : 16,
                 ),
               ),
-              validator: (value) => (value == null || value.isEmpty) ? 'Please enter a request title' : null,
+              validator: (value) => (value == null || value.isEmpty) ? AppLocalizations.of(context)!.translate('request_title_error') : null,
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
             // نوع الطلب
             Text(
-              'Request Type *',
+              '${AppLocalizations.of(context)!.translate('request_type_label')} *',
               style: TextStyle(
                 fontSize: isMobile ? 14 : 16,
                 fontWeight: FontWeight.bold,
@@ -803,7 +796,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                   DropdownMenuItem<String>(
                     value: value,
                     child: Text(
-                      value,
+                      value == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : value,
                       style: TextStyle(
                         fontSize: isMobile ? 14 : 16,
                         color: value == 'Request Type' ? AppColors.textMuted : AppColors.textPrimary,
@@ -813,13 +806,13 @@ class _EditRequestPageState extends State<EditRequestPage> {
               onChanged: (newValue) {
                 setState(() { _selectedRequestType = newValue!; });
               },
-              validator: (value) => (value == 'Request Type') ? 'Please select a request type' : null,
+              validator: (value) => (value == 'Request Type') ? AppLocalizations.of(context)!.translate('request_type_hint') : null,
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
             // الأولوية
             Text(
-              'Priority',
+              AppLocalizations.of(context)!.translate('priority_label'),
               style: TextStyle(
                 fontSize: isMobile ? 14 : 16,
                 fontWeight: FontWeight.bold,
@@ -844,17 +837,22 @@ class _EditRequestPageState extends State<EditRequestPage> {
                   vertical: isMobile ? 14 : 16,
                 ),
               ),
-              items: _priorityOptions.map((String value) =>
-                  DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: isMobile ? 14 : 16,
-                        color: AppColors.textPrimary,
-                      ),
+              items: _priorityOptions.map((String value) {
+                String label = value;
+                if (value == 'Low') label = AppLocalizations.of(context)!.translate('priority_low');
+                if (value == 'Medium') label = AppLocalizations.of(context)!.translate('priority_medium');
+                if (value == 'High') label = AppLocalizations.of(context)!.translate('priority_high');
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: isMobile ? 14 : 16,
+                      color: AppColors.textPrimary,
                     ),
-                  )).toList(),
+                  ),
+                );
+              }).toList(),
               onChanged: (newValue) {
                 setState(() { _selectedPriority = newValue!; });
               },
@@ -863,7 +861,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
             // الوصف
             Text(
-              'Description *',
+              '${AppLocalizations.of(context)!.translate('description_label')} *',
               style: TextStyle(
                 fontSize: isMobile ? 14 : 16,
                 fontWeight: FontWeight.bold,
@@ -875,7 +873,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
               controller: _descriptionController,
               maxLines: isMobile ? 4 : 5,
               decoration: InputDecoration(
-                hintText: 'Description',
+                hintText: AppLocalizations.of(context)!.translate('description_label'),
                 hintStyle: TextStyle(color: AppColors.textMuted),
                 border: OutlineInputBorder(
                   borderSide: BorderSide(color: AppColors.borderColor),
@@ -891,7 +889,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                   vertical: isMobile ? 14 : 16,
                 ),
               ),
-              validator: (value) => (value == null || value.isEmpty) ? 'Please enter a description' : null,
+              validator: (value) => (value == null || value.isEmpty) ? AppLocalizations.of(context)!.translate('description_error') : null,
             ),
             SizedBox(height: isMobile ? 20 : 32),
 
@@ -913,7 +911,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                     ),
                   ),
                   child: Text(
-                    'Cancel',
+                    AppLocalizations.of(context)!.translate('cancel'),
                     style: TextStyle(
                       fontSize: isMobile ? 14 : 16,
                     ),
@@ -932,7 +930,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                     ),
                   )
                       : Text(
-                    'Update Request',
+                    AppLocalizations.of(context)!.translate('update_request_button'),
                     style: TextStyle(fontSize: isMobile ? 14 : 16),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -956,7 +954,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                 onPressed: _finishEditing,
                 icon: Icon(Icons.task_alt_rounded, size: isMobile ? 22 : 26),
                 label: Text(
-                  'Finish',
+                  AppLocalizations.of(context)!.translate('finish_button'),
                   style: TextStyle(
                     fontSize: isMobile ? 16 : 18,
                     fontWeight: FontWeight.bold,
@@ -993,7 +991,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Edit Request'),
+          title: Text(AppLocalizations.of(context)!.translate('edit_request')),
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
         ),
@@ -1004,7 +1002,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
     final content = Scaffold(
       appBar: AppBar(
         title: Text(
-          'Edit Request',
+          AppLocalizations.of(context)!.translate('edit_request'),
           style: TextStyle(
             fontSize: isMobile ? 18 : 20,
             fontWeight: FontWeight.w600,
@@ -1021,7 +1019,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
     if (isDesktop) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Edit Request'),
+          title: Text(AppLocalizations.of(context)!.translate('edit_request')),
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
         ),

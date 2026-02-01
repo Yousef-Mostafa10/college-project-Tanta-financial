@@ -1,7 +1,10 @@
+import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/request/RequestTracking/tracking_colors.dart';
+import 'package:flutter/animation.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'tracking_colors.dart';
 
-Widget buildLoadingState(bool isMobile) {
+Widget buildLoadingState(BuildContext context, bool isMobile) {
   return Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -11,7 +14,7 @@ Widget buildLoadingState(bool isMobile) {
         ),
         SizedBox(height: isMobile ? 16 : 20),
         Text(
-          'Loading transaction tracking...',
+          AppLocalizations.of(context)!.translate('loading_tracking_msg'),
           style: TextStyle(
             fontSize: isMobile ? 16 : 18,
             color: TrackingColors.textSecondary,

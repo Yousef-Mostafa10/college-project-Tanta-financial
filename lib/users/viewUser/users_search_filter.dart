@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'users_colors.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 class UsersSearchFilter extends StatefulWidget {
   final String searchQuery;
@@ -42,7 +43,7 @@ class _UsersSearchFilterState extends State<UsersSearchFilter> {
           TextField(
             onChanged: widget.onSearchChanged,
             decoration: InputDecoration(
-              hintText: 'Search users...',
+              hintText: AppLocalizations.of(context)!.translate('search_users'),
               hintStyle: TextStyle(color: AppColors.textMuted),
               prefixIcon: Icon(
                 Icons.search,
@@ -84,9 +85,9 @@ class _UsersSearchFilterState extends State<UsersSearchFilter> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _buildFilterChip('All', 'all'),
-          _buildFilterChip('Admins', 'admin'),
-          _buildFilterChip('Users', 'user'),
+          _buildFilterChip(AppLocalizations.of(context)!.translate('all'), 'all'),
+          _buildFilterChip(AppLocalizations.of(context)!.translate('administrator'), 'admin'),
+          _buildFilterChip(AppLocalizations.of(context)!.translate('regular_user'), 'user'),
         ],
       ),
     );

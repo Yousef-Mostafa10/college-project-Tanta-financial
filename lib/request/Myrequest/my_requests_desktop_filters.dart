@@ -155,6 +155,7 @@
 
 import 'package:flutter/material.dart';
 import 'my_requests_colors.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 class MyRequestsDesktopFilters extends StatelessWidget {
   final String selectedPriority;
@@ -204,7 +205,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
           child: TextField(
             controller: searchController,
             decoration: InputDecoration(
-              hintText: 'Search requests...',
+              hintText: AppLocalizations.of(context)!.translate('search_transactions'),
               hintStyle: TextStyle(color: MyRequestsColors.textMuted),
               prefixIcon: Icon(Icons.search_rounded, color: MyRequestsColors.primary),
               border: OutlineInputBorder(
@@ -245,7 +246,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
                     Icon(Icons.filter_alt_outlined, color: MyRequestsColors.primary, size: 16),
                     const SizedBox(width: 6),
                     Text(
-                      'FILTERS',
+                      AppLocalizations.of(context)!.translate('management').toUpperCase(),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -260,9 +261,10 @@ class MyRequestsDesktopFilters extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _buildDesktopFilterDropdown(
+                        context: context,
                         value: selectedPriority,
                         items: priorities,
-                        label: "Priority",
+                        label: AppLocalizations.of(context)!.translate('priority_filter'),
                         icon: Icons.flag_outlined,
                         onChanged: (value) => onPriorityChanged(value),
                       ),
@@ -270,9 +272,10 @@ class MyRequestsDesktopFilters extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildDesktopFilterDropdown(
+                        context: context,
                         value: selectedType,
                         items: typeNames,
-                        label: "Type",
+                        label: AppLocalizations.of(context)!.translate('type_filter'),
                         icon: Icons.category_outlined,
                         onChanged: (value) => onTypeChanged(value),
                       ),
@@ -280,9 +283,10 @@ class MyRequestsDesktopFilters extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildDesktopFilterDropdown(
+                        context: context,
                         value: selectedStatus,
                         items: statuses,
-                        label: "Status",
+                        label: AppLocalizations.of(context)!.translate('status_filter'),
                         icon: Icons.hourglass_top_outlined,
                         onChanged: (value) => onStatusChanged(value),
                       ),
@@ -298,6 +302,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
   }
 
   Widget _buildDesktopFilterDropdown({
+    required BuildContext context,
     required String value,
     required List<String> items,
     required String label,
@@ -322,29 +327,43 @@ class MyRequestsDesktopFilters extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
             items: items
-                .map((item) => DropdownMenuItem(
-              value: item,
-              child: Row(
-                children: [
-                  Icon(
-                    _getStatusIcon(label, item),
-                    size: 18,
-                    color: _getStatusColor(label, item),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: TextStyle(
-                        color: _getStatusTextColor(label, item),
-                        fontWeight: _getStatusFontWeight(label, item),
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                .map((item) {
+                  String displayText = item;
+                  if (item == 'All') displayText = AppLocalizations.of(context)!.translate('all_filter');
+                  if (item == 'All Types') displayText = AppLocalizations.of(context)!.translate('all_types_filter');
+                  if (item == 'Waiting') displayText = AppLocalizations.of(context)!.translate('status_waiting');
+                  if (item == 'Approved') displayText = AppLocalizations.of(context)!.translate('status_approved');
+                  if (item == 'Rejected') displayText = AppLocalizations.of(context)!.translate('status_rejected');
+                  if (item == 'Needs Change') displayText = AppLocalizations.of(context)!.translate('status_needs_change');
+                  if (item == 'Fulfilled') displayText = AppLocalizations.of(context)!.translate('status_fulfilled');
+                  if (item == 'High') displayText = AppLocalizations.of(context)!.translate('priority_high');
+                  if (item == 'Medium') displayText = AppLocalizations.of(context)!.translate('priority_medium');
+                  if (item == 'Low') displayText = AppLocalizations.of(context)!.translate('priority_low');
+
+                  return DropdownMenuItem(
+                    value: item,
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getStatusIcon(context, label, item),
+                          size: 18,
+                          color: _getStatusColor(label, item),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            displayText,
+                            style: TextStyle(
+                              color: _getStatusTextColor(label, item),
+                              fontWeight: _getStatusFontWeight(label, item),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ))
+                  );
+                })
                 .toList(),
             onChanged: onChanged,
           ),
@@ -353,10 +372,10 @@ class MyRequestsDesktopFilters extends StatelessWidget {
     );
   }
 
-  IconData _getStatusIcon(String label, String item) {
-    if (label == "Status") {
+  IconData _getStatusIcon(BuildContext context, String label, String item) {
+    if (label == AppLocalizations.of(context)!.translate('status_filter')) {
       return _getStatusFilterIcon(item);
-    } else if (label == "Priority") {
+    } else if (label == AppLocalizations.of(context)!.translate('priority_filter')) {
       return Icons.flag_outlined;
     } else {
       return Icons.category_outlined;
@@ -383,25 +402,23 @@ class MyRequestsDesktopFilters extends StatelessWidget {
   }
 
   Color _getStatusColor(String label, String item) {
-    if (label == "Status") {
-      switch (item.toLowerCase()) {
-        case 'all':
-          return MyRequestsColors.primary;
-        case 'approved':
-          return MyRequestsColors.statusApproved;
-        case 'rejected':
-          return MyRequestsColors.statusRejected;
-        case 'waiting':
-          return MyRequestsColors.statusWaiting;
-        case 'needs change':
-          return MyRequestsColors.statusNeedsChange;
-        case 'fulfilled':
-          return MyRequestsColors.statusFulfilled;
-        default:
-          return MyRequestsColors.primary;
-      }
-    } else {
+    if (item.toLowerCase() == 'all' || item.toLowerCase() == 'all types') {
       return MyRequestsColors.primary;
+    }
+    switch (item.toLowerCase()) {
+      case 'approved':
+        return MyRequestsColors.statusApproved;
+      case 'rejected':
+        return MyRequestsColors.statusRejected;
+      case 'waiting':
+        return MyRequestsColors.statusWaiting;
+      case 'needs_change':
+      case 'needs change':
+        return MyRequestsColors.statusNeedsChange;
+      case 'fulfilled':
+        return MyRequestsColors.statusFulfilled;
+      default:
+        return MyRequestsColors.primary;
     }
   }
 
@@ -410,23 +427,20 @@ class MyRequestsDesktopFilters extends StatelessWidget {
       return MyRequestsColors.primary;
     }
 
-    if (label == "Status") {
-      switch (item.toLowerCase()) {
-        case 'approved':
-          return MyRequestsColors.statusApproved;
-        case 'rejected':
-          return MyRequestsColors.statusRejected;
-        case 'waiting':
-          return MyRequestsColors.statusWaiting;
-        case 'needs change':
-          return MyRequestsColors.statusNeedsChange;
-        case 'fulfilled':
-          return MyRequestsColors.statusFulfilled;
-        default:
-          return MyRequestsColors.textPrimary;
-      }
-    } else {
-      return MyRequestsColors.textPrimary;
+    switch (item.toLowerCase()) {
+      case 'approved':
+        return MyRequestsColors.statusApproved;
+      case 'rejected':
+        return MyRequestsColors.statusRejected;
+      case 'waiting':
+        return MyRequestsColors.statusWaiting;
+      case 'needs_change':
+      case 'needs change':
+        return MyRequestsColors.statusNeedsChange;
+      case 'fulfilled':
+        return MyRequestsColors.statusFulfilled;
+      default:
+        return MyRequestsColors.textPrimary;
     }
   }
 

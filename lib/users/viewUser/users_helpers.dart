@@ -1,13 +1,15 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'users_colors.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 class UsersHelpers {
-  static String formatDate(String? iso) {
+  static String formatDate(String? iso, BuildContext context) {
     if (iso == null || iso.isEmpty) return "Unknown";
     try {
       final dt = DateTime.parse(iso);
-      return DateFormat('dd/MM/yyyy').format(dt);
+      final locale = Localizations.localeOf(context).languageCode;
+      return DateFormat('dd/MM/yyyy', locale).format(dt);
     } catch (e) {
       return iso;
     }
@@ -25,13 +27,18 @@ class UsersHelpers {
   }
 
   static void showErrorMessage(BuildContext context, String message) {
+    // Remove "Exception: " if present
+    final cleanMessage = message.replaceAll('Exception: ', '');
+    // Try to translate, otherwise use original
+    final localizedMessage = AppLocalizations.of(context)?.translate(cleanMessage) ?? cleanMessage;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             const Icon(Icons.error, color: Colors.white, size: 20),
             const SizedBox(width: 8),
-            Expanded(child: Text(message)),
+            Expanded(child: Text(localizedMessage)),
           ],
         ),
         backgroundColor: AppColors.statusRejected,
@@ -43,13 +50,16 @@ class UsersHelpers {
   }
 
   static void showSuccessMessage(BuildContext context, String message) {
+     // Try to translate, otherwise use original
+    final localizedMessage = AppLocalizations.of(context)?.translate(message) ?? message;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             const Icon(Icons.check_circle, color: Colors.white, size: 20),
             const SizedBox(width: 8),
-            Expanded(child: Text(message)),
+            Expanded(child: Text(localizedMessage)),
           ],
         ),
         backgroundColor: AppColors.statusApproved,

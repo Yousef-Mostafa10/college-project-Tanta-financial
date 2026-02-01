@@ -14,7 +14,7 @@ class UsersApiService {
   Future<Map<String, dynamic>> fetchUsers(int pageNumber, int pageSize) async {
     final token = await _getToken();
     if (token == null) {
-      throw Exception("No authentication token found");
+      throw Exception('no_token_error');
     }
 
     final url = Uri.parse("$baseUrl/users?pageNumber=$pageNumber&pageSize=$pageSize");
@@ -30,16 +30,16 @@ class UsersApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else if (response.statusCode == 401) {
-      throw Exception("Unauthorized — Please log in again.");
+      throw Exception('unauthorized_error');
     } else {
-      throw Exception("Error: ${response.statusCode}");
+      throw Exception('error_code: ${response.statusCode}');
     }
   }
 
   Future<Map<String, dynamic>> getUserDetails(String userName) async {
     final token = await _getToken();
     if (token == null) {
-      throw Exception("No authentication token found");
+      throw Exception('no_token_error');
     }
 
     final url = Uri.parse("$baseUrl/users/$userName");
@@ -55,18 +55,18 @@ class UsersApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else if (response.statusCode == 401) {
-      throw Exception("Unauthorized — Please log in again.");
+      throw Exception('unauthorized_error');
     } else if (response.statusCode == 404) {
-      throw Exception("User not found");
+      throw Exception('user_not_found');
     } else {
-      throw Exception("Error: ${response.statusCode}");
+      throw Exception('error_code: ${response.statusCode}');
     }
   }
 
   Future<void> changePassword(String userName, String newPassword) async {
     final token = await _getToken();
     if (token == null) {
-      throw Exception("No authentication token found");
+      throw Exception('no_token_error');
     }
 
     final url = Uri.parse("$baseUrl/users/$userName");
@@ -83,16 +83,16 @@ class UsersApiService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data["status"] != "success") {
-        throw Exception(data["message"] ?? "Failed to change password");
+        throw Exception(data["message"] ?? 'failed_to_change_password');
       }
     } else if (response.statusCode == 403) {
-      throw Exception("You don't have permission to change this user's password");
+      throw Exception('permission_error');
     } else if (response.statusCode == 404) {
-      throw Exception("User not found");
+      throw Exception('user_not_found');
     } else if (response.statusCode == 401) {
-      throw Exception("Unauthorized — Please log in again.");
+      throw Exception('unauthorized_error');
     } else {
-      throw Exception("Error: ${response.statusCode}");
+      throw Exception('error_code: ${response.statusCode}');
     }
   }
 }

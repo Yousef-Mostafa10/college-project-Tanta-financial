@@ -9,6 +9,7 @@
 // import '../drawer.dart';
 // import '../request/Ditalis_Request/ditalis_request.dart';
 // import '../request/RequestTracking/request_tracking.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 //
 // // 🎨 COLOR PALETTE - Based on CSS Variables
 // class AppColors {
@@ -2644,19 +2645,19 @@ class _AdministrativeDashboardPageState
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Request'),
-          content: const Text(
-              'Are you sure you want to delete this request? This action cannot be undone.'),
+          title: Text(AppLocalizations.of(context)!.translate('delete_request_title')),
+          content: Text(
+              AppLocalizations.of(context)!.translate('delete_request_confirm')),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.translate('cancel')),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: Colors.red),
+              child: Text(
+                AppLocalizations.of(context)!.translate('delete'),
+                style: const TextStyle(color: Colors.red),
               ),
             ),
           ],
@@ -2675,15 +2676,15 @@ class _AdministrativeDashboardPageState
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Request deleted successfully!'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('request_deleted_success')),
             backgroundColor: AppColors.accentGreen,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to delete request'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('failed_to_delete')),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -2691,7 +2692,7 @@ class _AdministrativeDashboardPageState
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Network error: ${e.toString()}'),
+          content: Text('${AppLocalizations.of(context)!.translate('network_error')}: ${e.toString()}'),
           backgroundColor: AppColors.accentRed,
         ),
       );
@@ -2778,11 +2779,11 @@ class _AdministrativeDashboardPageState
   void _handleTokenExpired() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text("Session expired. Please login again."),
+        content: Text(AppLocalizations.of(context)!.translate('session_expired')),
         backgroundColor: AppColors.accentRed,
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
-          label: 'Login',
+          label: AppLocalizations.of(context)!.translate('login'),
           textColor: Colors.white,
           onPressed: () {
             logout();
@@ -2821,7 +2822,7 @@ class _AdministrativeDashboardPageState
           ),
           const SizedBox(height: 16),
           Text(
-            'Loading transactions...',
+            AppLocalizations.of(context)!.translate('loading_transactions'),
             style: TextStyle(
               fontSize: 16,
               color: AppColors.textSecondary,
@@ -2843,7 +2844,7 @@ class _AdministrativeDashboardPageState
         backgroundColor: AppColors.primary,
         elevation: 0,
         title: Text(
-          'Administrative Dashboard',
+          AppLocalizations.of(context)!.translate('administrative_dashboard'),
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: min(width * 0.04, 20),
@@ -3140,7 +3141,7 @@ class _AdministrativeDashboardPageState
         ),
         const SizedBox(height: 2),
         Text(
-          label,
+          AppLocalizations.of(context)?.translate(label.toLowerCase().replaceAll(' ', '_')) ?? label,
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w500,
@@ -3171,7 +3172,7 @@ class _AdministrativeDashboardPageState
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Search transactions...',
+              hintText: AppLocalizations.of(context)!.translate('search_transactions'),
               hintStyle: TextStyle(color: AppColors.textMuted),
               prefixIcon:
               const Icon(Icons.search_rounded, color: AppColors.primary),
@@ -3200,11 +3201,11 @@ class _AdministrativeDashboardPageState
             children: [
               Expanded(
                 child: _buildMobileFilterChip(
-                  label: "Priority",
+                  label: AppLocalizations.of(context)!.translate('priority'),
                   value: selectedPriority,
                   icon: Icons.flag_outlined,
                   onTap: () => _showMobileFilterDialog(
-                    "Select Priority",
+                    AppLocalizations.of(context)!.translate('select_priority'),
                     priorities,
                     selectedPriority,
                         (value) {
@@ -3217,11 +3218,11 @@ class _AdministrativeDashboardPageState
               const SizedBox(width: 8),
               Expanded(
                 child: _buildMobileFilterChip(
-                  label: "Type",
+                  label: AppLocalizations.of(context)!.translate('type'),
                   value: selectedType,
                   icon: Icons.category_outlined,
                   onTap: () => _showMobileFilterDialog(
-                    "Select Type",
+                    AppLocalizations.of(context)!.translate('select_type'),
                     typeNames,
                     selectedType,
                         (value) {
@@ -3234,11 +3235,11 @@ class _AdministrativeDashboardPageState
               const SizedBox(width: 8),
               Expanded(
                 child: _buildMobileFilterChip(
-                  label: "Status",
+                  label: AppLocalizations.of(context)!.translate('status'),
                   value: selectedStatus,
                   icon: Icons.hourglass_top_outlined,
                   onTap: () => _showMobileFilterDialog(
-                    "Select Status",
+                    AppLocalizations.of(context)!.translate('select_status'),
                     statuses,
                     selectedStatus,
                         (value) {
@@ -3261,6 +3262,11 @@ class _AdministrativeDashboardPageState
     required IconData icon,
     required VoidCallback onTap,
   }) {
+    String displayValue = value;
+    if (value != 'All' && value != 'All Types') {
+        displayValue = AppLocalizations.of(context)?.translate(value.toLowerCase().replaceAll(' ', '_')) ?? value;
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -3285,7 +3291,7 @@ class _AdministrativeDashboardPageState
             ),
             if (value != 'All' && value != 'All Types')
               Text(
-                value.length > 8 ? value.substring(0, 8) + '...' : value,
+                displayValue.length > 8 ? displayValue.substring(0, 8) + '...' : displayValue,
                 style: TextStyle(
                   fontSize: 8,
                   color: AppColors.textPrimary,

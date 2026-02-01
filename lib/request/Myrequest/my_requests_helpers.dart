@@ -92,12 +92,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../l10n/app_localizations.dart';
+
 class MyRequestsHelpers {
   // 🔹 دالة لتحويل التاريخ
-  static String formatDate(dynamic dateValue) {
+  static String formatDate(BuildContext context, dynamic dateValue) {
     try {
       if (dateValue == null || dateValue == "N/A" || dateValue.toString().isEmpty) {
-        return "N/A";
+        return AppLocalizations.of(context)!.translate('not_available');
       }
 
       String dateString = dateValue.toString();
@@ -109,7 +111,7 @@ class MyRequestsHelpers {
       return dateString;
     } catch (e) {
       print("❌ Error formatting date: $dateValue - $e");
-      return "N/A";
+      return AppLocalizations.of(context)!.translate('not_available');
     }
   }
 

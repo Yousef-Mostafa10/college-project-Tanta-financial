@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'my_requests_colors.dart';
 import '../Ditalis_Request/ditalis_request.dart';
 import '../editerequest.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 Widget buildMobileRequestCard({
   required String id,
@@ -30,6 +31,12 @@ Widget buildMobileRequestCard({
 
   final priorityColor = getPriorityColor(priority);
   final priorityIcon = _getPriorityIcon(priority);
+
+  // Translate priority if it's a known value
+  String displayPriority = priority;
+  if (priority.toLowerCase() == 'high') displayPriority = AppLocalizations.of(context)!.translate('priority_high');
+  else if (priority.toLowerCase() == 'medium') displayPriority = AppLocalizations.of(context)!.translate('priority_medium');
+  else if (priority.toLowerCase() == 'low') displayPriority = AppLocalizations.of(context)!.translate('priority_low');
 
   return Container(
     margin: const EdgeInsets.only(bottom: 8),
@@ -110,7 +117,7 @@ Widget buildMobileRequestCard({
               children: [
                 _buildMobileChip(type, Icons.category_outlined, MyRequestsColors.primary),
                 const SizedBox(width: 6),
-                _buildMobileChip(priority, priorityIcon, priorityColor),
+                _buildMobileChip(displayPriority, priorityIcon, priorityColor),
                 const Spacer(),
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert_rounded, size: 16, color: MyRequestsColors.textSecondary),
@@ -143,7 +150,7 @@ Widget buildMobileRequestCard({
                         children: [
                           Icon(Icons.remove_red_eye_outlined, size: 16, color: MyRequestsColors.primary),
                           SizedBox(width: 8),
-                          Text("View Details", style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
+                          Text(AppLocalizations.of(context)!.translate('view_details'), style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
                         ],
                       ),
                     ),
@@ -153,7 +160,7 @@ Widget buildMobileRequestCard({
                         children: [
                           Icon(Icons.edit_outlined, size: 16, color: MyRequestsColors.primary),
                           SizedBox(width: 8),
-                          Text("Edit Request", style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
+                          Text(AppLocalizations.of(context)!.translate('edit_request'), style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
                         ],
                       ),
                     ),
@@ -163,7 +170,7 @@ Widget buildMobileRequestCard({
                         children: [
                           Icon(Icons.delete_outlined, size: 16, color: MyRequestsColors.accentRed),
                           SizedBox(width: 8),
-                          Text("Delete", style: TextStyle(fontSize: 12, color: MyRequestsColors.accentRed)),
+                          Text(AppLocalizations.of(context)!.translate('delete_button'), style: TextStyle(fontSize: 12, color: MyRequestsColors.accentRed)),
                         ],
                       ),
                     ),

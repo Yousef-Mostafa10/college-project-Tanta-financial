@@ -1891,6 +1891,7 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import './inbox_colors.dart';
 import './inbox_helpers.dart';
 import './inbox_formatters.dart';
@@ -1919,7 +1920,7 @@ class InboxMobileCard extends StatelessWidget {
     required this.onEditRequest,
   }) : super(key: key);
 
-  Widget _buildMobileChip(String text, IconData icon, Color color) {
+  Widget _buildMobileChip(BuildContext context, String text, IconData icon, Color color) {
     return Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
@@ -1933,7 +1934,7 @@ class InboxMobileCard extends StatelessWidget {
             Icon(icon, size: 10, color: color),
             const SizedBox(width: 2),
             Text(
-              text.length > 8 ? text.substring(0, 8) + '...' : text,
+              AppLocalizations.of(context)!.translate(text.toLowerCase()),
               style: TextStyle(
                 fontSize: 9,
                 color: color,
@@ -2014,8 +2015,14 @@ class InboxMobileCard extends StatelessWidget {
     final fulfilled = request["fulfilled"] == true;
     final isUpdating = request['isUpdating'] == true;
     final statusLabel = fulfilled
-        ? "Fulfilled"
-        : (isApproved ? "Approved" : (needsChange ? "Needs Change" : (isPending ? "Waiting" : "Rejected")));
+        ? AppLocalizations.of(context)!.translate('fulfilled')
+        : (isApproved 
+            ? AppLocalizations.of(context)!.translate('approved') 
+            : (needsChange 
+                ? AppLocalizations.of(context)!.translate('needs_change') 
+                : (isPending 
+                    ? AppLocalizations.of(context)!.translate('waiting') 
+                    : AppLocalizations.of(context)!.translate('rejected'))));
     final statusColor = fulfilled
         ? InboxColors.statusFulfilled
         : (isApproved
@@ -2109,7 +2116,7 @@ class InboxMobileCard extends StatelessWidget {
                         ),
                         if (isUpdating)
                           Text(
-                            'Updating...',
+                            AppLocalizations.of(context)!.translate('updating'),
                             style: TextStyle(
                               fontSize: 10,
                               color: Colors.blue,
@@ -2161,7 +2168,7 @@ class InboxMobileCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      "From: $senderName",
+                      "${AppLocalizations.of(context)!.translate('from_prefix')} $senderName",
                       style: TextStyle(fontSize: 11, color: InboxColors.textSecondary),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -2191,9 +2198,9 @@ class InboxMobileCard extends StatelessWidget {
               // النوع والأولوية
               Row(
                 children: [
-                  _buildMobileChip(type, Icons.category_outlined, InboxColors.primary),
+                  _buildMobileChip(context, type, Icons.category_outlined, InboxColors.primary),
                   const SizedBox(width: 6),
-                  _buildMobileChip(priority, Icons.flag_outlined, InboxHelpers.getPriorityColor(priority)),
+                  _buildMobileChip(context, priority, Icons.flag_outlined, InboxHelpers.getPriorityColor(priority)),
                 ],
               ),
               const SizedBox(height: 8),
@@ -2213,7 +2220,7 @@ class InboxMobileCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Updating...',
+                        AppLocalizations.of(context)!.translate('updating'),
                         style: TextStyle(
                           color: InboxColors.textSecondary,
                           fontSize: 11,
@@ -2229,14 +2236,14 @@ class InboxMobileCard extends StatelessWidget {
                     Row(
                       children: [
                         _buildMobileActionButton(
-                          text: 'View',
+                          text: AppLocalizations.of(context)!.translate('view'),
                           onPressed: onViewDetails,
                           color: InboxColors.primary,
                           isOutlined: true,
                         ),
                         const SizedBox(width: 6),
                         _buildMobileActionButton(
-                          text: 'Approve',
+                          text: AppLocalizations.of(context)!.translate('approve'),
                           onPressed: onApprove,
                           color: InboxColors.accentGreen,
                         ),
@@ -2246,13 +2253,13 @@ class InboxMobileCard extends StatelessWidget {
                     Row(
                       children: [
                         _buildMobileActionButton(
-                          text: 'Need Change',
+                          text: AppLocalizations.of(context)!.translate('need_change'),
                           onPressed: onNeedChange,
                           color: Colors.orange,
                         ),
                         const SizedBox(width: 6),
                         _buildMobileActionButton(
-                          text: 'Reject',
+                          text: AppLocalizations.of(context)!.translate('reject'),
                           onPressed: onReject,
                           color: InboxColors.accentRed,
                         ),
@@ -2278,7 +2285,7 @@ class InboxMobileCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              "Forwarded to ${lastForwardSentTo['receiverName']}",
+                              "${AppLocalizations.of(context)!.translate('forwarded_to_prefix') == 'forwarded_to_prefix' ? 'Forwarded to' : AppLocalizations.of(context)!.translate('forwarded_to_prefix')} ${lastForwardSentTo['receiverName']}",
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
@@ -2289,9 +2296,9 @@ class InboxMobileCard extends StatelessWidget {
                           PopupMenuButton<String>(
                             icon: Icon(Icons.more_vert_rounded, size: 16, color: InboxColors.textSecondary),
                             itemBuilder: (context) => [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'cancel',
-                                child: Text('Cancel Forward'),
+                                child: Text(AppLocalizations.of(context)!.translate('cancel_forward')),
                               ),
                             ],
                             onSelected: (value) {
@@ -2306,14 +2313,14 @@ class InboxMobileCard extends StatelessWidget {
                     Row(
                       children: [
                         _buildMobileActionButton(
-                          text: 'Edit',
+                          text: AppLocalizations.of(context)!.translate('edit'),
                           onPressed: onEditRequest,
                           color: Colors.blue,
                           isOutlined: true,
                         ),
                         const SizedBox(width: 6),
                         _buildMobileActionButton(
-                          text: 'View',
+                          text: AppLocalizations.of(context)!.translate('view'),
                           onPressed: onViewDetails,
                           color: InboxColors.primary,
                           isOutlined: true,
@@ -2329,14 +2336,14 @@ class InboxMobileCard extends StatelessWidget {
                     Row(
                       children: [
                         _buildMobileActionButton(
-                          text: 'Edit',
+                          text: AppLocalizations.of(context)!.translate('edit'),
                           onPressed: onEditRequest,
                           color: Colors.blue,
                           isOutlined: true,
                         ),
                         const SizedBox(width: 6),
                         _buildMobileActionButton(
-                          text: 'Forward',
+                          text: AppLocalizations.of(context)!.translate('forward'),
                           onPressed: onForward,
                           color: InboxColors.primary,
                         ),
@@ -2353,7 +2360,7 @@ class InboxMobileCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           minimumSize: const Size(0, 30),
                         ),
-                        child: const Text('View Details', style: TextStyle(fontSize: 11)),
+                        child: Text(AppLocalizations.of(context)!.translate('view_details'), style: const TextStyle(fontSize: 11)),
                       ),
                     ),
                   ],
@@ -2373,7 +2380,7 @@ class InboxMobileCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           minimumSize: const Size(0, 30),
                         ),
-                        child: const Text('Edit Request', style: TextStyle(fontSize: 11)),
+                        child: Text(AppLocalizations.of(context)!.translate('edit_request'), style: const TextStyle(fontSize: 11)),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -2388,7 +2395,7 @@ class InboxMobileCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           minimumSize: const Size(0, 30),
                         ),
-                        child: const Text('View Details', style: TextStyle(fontSize: 11)),
+                        child: Text(AppLocalizations.of(context)!.translate('view_details'), style: const TextStyle(fontSize: 11)),
                       ),
                     ),
                   ],

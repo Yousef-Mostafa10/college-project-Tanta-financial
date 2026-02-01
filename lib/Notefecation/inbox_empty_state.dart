@@ -1,5 +1,6 @@
 // Notefecation/inbox_empty_state.dart
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import './inbox_colors.dart';
 
 class InboxEmptyState extends StatelessWidget {
@@ -28,7 +29,7 @@ class InboxEmptyState extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                "No requests found",
+                AppLocalizations.of(context)!.translate("no_requests_found"),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -37,7 +38,7 @@ class InboxEmptyState extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                customMessage ?? "Try adjusting your filters or check back later",
+                customMessage ?? AppLocalizations.of(context)!.translate("try_adjust_filters"),
                 style: TextStyle(
                   fontSize: 12,
                   color: InboxColors.textMuted,
@@ -48,7 +49,7 @@ class InboxEmptyState extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onResetFilters,
                 icon: const Icon(Icons.refresh_rounded, size: 16),
-                label: const Text("Reset Filters"),
+                label: Text(AppLocalizations.of(context)!.translate("reset_filters")),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: InboxColors.primary,
                   foregroundColor: Colors.white,

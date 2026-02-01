@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'users_colors.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 
 class UsersListHeader extends StatelessWidget {
   final int filteredUsersCount;
@@ -34,7 +35,7 @@ class UsersListHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Showing $filteredUsersCount ${selectedFilter != 'all' ? selectedFilter + 's' : 'users'}',
+            '${AppLocalizations.of(context)!.translate('showing')} $filteredUsersCount ${selectedFilter != 'all' ? (selectedFilter == 'admin' ? AppLocalizations.of(context)!.translate('administrator') : AppLocalizations.of(context)!.translate('regular_user')) : AppLocalizations.of(context)!.translate('users_management').toLowerCase()}',
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: isMobile ? 12 : 14,
@@ -42,7 +43,7 @@ class UsersListHeader extends StatelessWidget {
           ),
           if (hasMore && searchQuery.isEmpty && selectedFilter == 'all')
             Text(
-              'Scroll to load more',
+              AppLocalizations.of(context)!.translate('scroll_to_load_more'),
               style: TextStyle(
                 color: AppColors.primary,
                 fontSize: isMobile ? 10 : 12,
