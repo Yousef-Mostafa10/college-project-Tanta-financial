@@ -1,26 +1,23 @@
-import 'package:college_project/l10n/app_localizations.dart';
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// استيراد الملفات الجديدة
-import '../request/editerequest.dart';
-import './inbox_colors.dart';
-import './inbox_api.dart';
-import './inbox_helpers.dart';
-import './inbox_formatters.dart';
-import './inbox_desktop_card.dart';
-import './inbox_mobile_card.dart';
-import './inbox_desktop_filters.dart';
-import './inbox_mobile_filters.dart';
-import './inbox_mobile_stats.dart';
-import './inbox_stats_widget.dart';
-import './inbox_empty_state.dart';
-import './inbox_header.dart';
+import '../l10n/app_localizations.dart';
 import '../request/Ditalis_Request/ditalis_request.dart';
+import '../request/creatrequest.dart';
+import '../request/editerequest.dart';
+import 'inbox_api.dart';
+import 'inbox_colors.dart';
+import 'inbox_desktop_card.dart';
+import 'inbox_desktop_filters.dart';
+import 'inbox_empty_state.dart';
+import 'inbox_header.dart';
+import 'inbox_helpers.dart';
+import 'inbox_mobile_card.dart';
+import 'inbox_mobile_filters.dart';
+import 'inbox_mobile_stats.dart';
+import 'inbox_stats_widget.dart';
 
 class InboxPage extends StatefulWidget {
   const InboxPage({super.key});
@@ -301,59 +298,84 @@ class _InboxPageState extends State<InboxPage> {
       'isUpdating': true, // علامة للتحديث
     });
 
-    setState(() {
-      _isLoading = true;
-    });
+    try {
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
 
-    final success = await _apiService.performActionUpdated(
-      requestId,
-      action,
-      _userToken,
-      _userName,
-    );
-
-    if (success) {
-      // إزالة علامة التحديث
-      _updateRequestInList(requestId, {'isUpdating': null});
-
-      // إعادة جلب البيانات الحقيقية من السيرفر بعد 500 مللي ثانية
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _recalculateRequestData(requestId);
-      });
-
-      String successMessage = actionLower == 'approve' 
-          ? AppLocalizations.of(context)!.translate('action_approved_success')
-          : AppLocalizations.of(context)!.translate('action_rejected_success');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(successMessage),
-          backgroundColor: snackBarColor,
-          behavior: SnackBarBehavior.floating,
-        ),
+      final success = await _apiService.performActionUpdated(
+        requestId,
+        action,
+        _userToken,
+        _userName,
       );
 
-      print('✅ $action successful for request $requestId');
-    } else {
-      // في حالة الفشل، إرجاع الحالة الأصلية
-      _updateRequestInList(requestId, {
-        'yourCurrentStatus': request['yourCurrentStatus'],
-        'isUpdating': null,
-      });
+      if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.translate('failed_to_perform_action')),
-          backgroundColor: InboxColors.accentRed,
-        ),
-      );
+      if (success) {
+        // إزالة علامة التحديث
+        _updateRequestInList(requestId, {'isUpdating': null});
 
-      print('❌ $action failed for request $requestId');
+        // إعادة جلب البيانات الحقيقية من السيرفر بعد 500 مللي ثانية
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _recalculateRequestData(requestId);
+          }
+        });
+
+        String successMessage = actionLower == 'approve'
+            ? AppLocalizations.of(context)!.translate('action_approved_success')
+            : AppLocalizations.of(context)!.translate('action_rejected_success');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(successMessage),
+            backgroundColor: snackBarColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        print('✅ $action successful for request $requestId');
+      } else {
+        // في حالة الفشل، إرجاع الحالة الأصلية
+        _updateRequestInList(requestId, {
+          'yourCurrentStatus': request['yourCurrentStatus'],
+          'isUpdating': null,
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('failed_to_perform_action')),
+            backgroundColor: InboxColors.accentRed,
+          ),
+        );
+
+        print('❌ $action failed for request $requestId');
+      }
+    } catch (e) {
+      print('❌ Exception in _performAction: $e');
+      if (mounted) {
+        _updateRequestInList(requestId, {
+          'yourCurrentStatus': request['yourCurrentStatus'],
+          'isUpdating': null,
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)!.translate('failed_to_perform_action')}: ${e.toString()}'),
+            backgroundColor: InboxColors.accentRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   // 🔹 دالة لإظهار dialog لطلب التعديل
@@ -395,7 +417,7 @@ class _InboxPageState extends State<InboxPage> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                   Text(AppLocalizations.of(context)!.translate('specify_changes_hint')),
+                  Text(AppLocalizations.of(context)!.translate('specify_changes_hint')),
                   const SizedBox(height: 16),
                   TextField(
                     maxLines: 4,
@@ -447,47 +469,76 @@ class _InboxPageState extends State<InboxPage> {
       'isUpdating': true,
     });
 
-    setState(() {
-      _isLoading = true;
-    });
+    try {
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
 
-    // TODO: سيتم إضافة الـ endpoint لاحقاً
-    bool success = true;
+      // TODO: سيتم إضافة الـ endpoint لاحقاً
+      bool success = true;
 
-    if (success) {
-      // إزالة علامة التحديث
-      _updateRequestInList(requestId, {'isUpdating': null});
+      if (!mounted) return;
 
-      // إعادة جلب البيانات الحقيقية
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _recalculateRequestData(requestId);
-      });
+      if (success) {
+        // إزالة علامة التحديث
+        _updateRequestInList(requestId, {'isUpdating': null});
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.translate('change_request_sent_success')),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } else {
-      // في حالة الفشل، إرجاع الحالة الأصلية
-      _updateRequestInList(requestId, {
-        'yourCurrentStatus': request['yourCurrentStatus'],
-        'isUpdating': null,
-      });
+        // إعادة جلب البيانات الحقيقية
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _recalculateRequestData(requestId);
+          }
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.translate('failed_to_send_change_request')),
-          backgroundColor: InboxColors.accentRed,
-        ),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('change_request_sent_success')),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        print('✅ Need change request sent for request $requestId');
+      } else {
+        // في حالة الفشل، إرجاع الحالة الأصلية
+        _updateRequestInList(requestId, {
+          'yourCurrentStatus': request['yourCurrentStatus'],
+          'isUpdating': null,
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('failed_to_send_change_request')),
+            backgroundColor: InboxColors.accentRed,
+          ),
+        );
+
+        print('❌ Need change request failed for request $requestId');
+      }
+    } catch (e) {
+      print('❌ Exception in _sendNeedChangeRequest: $e');
+      if (mounted) {
+        _updateRequestInList(requestId, {
+          'yourCurrentStatus': request['yourCurrentStatus'],
+          'isUpdating': null,
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)!.translate('failed_to_send_change_request')}: ${e.toString()}'),
+            backgroundColor: InboxColors.accentRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   // 🔹 دالة لإظهار dialog لسبب الرفض
@@ -504,7 +555,7 @@ class _InboxPageState extends State<InboxPage> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                   Text(AppLocalizations.of(context)!.translate('reject_reason_hint')),
+                  Text(AppLocalizations.of(context)!.translate('reject_reason_hint')),
                   const SizedBox(height: 16),
                   TextField(
                     maxLines: 4,
@@ -570,120 +621,294 @@ class _InboxPageState extends State<InboxPage> {
       String transactionId,
       Map<String, dynamic> request,
       ) async {
-    final users = await _apiService.fetchUsers(_userToken);
+    try {
+      final users = await _apiService.fetchUsers(_userToken);
 
-    if (users.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.translate('no_users_available'))),
+      if (users.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.translate('no_users_available')),
+              backgroundColor: InboxColors.accentRed,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (!mounted) return;
+
+      String? selectedUser;
+      List<String> userNames = users.map<String>((user) => user["name"]?.toString() ?? "Unknown").toList(); List<String> filteredUsers = List.from(userNames);
+      TextEditingController searchController = TextEditingController();
+
+      void filterUsers(String query) {
+        if (query.isEmpty) {
+          filteredUsers = List.from(userNames);
+        } else {
+          filteredUsers = userNames
+              .where((user) => user.toLowerCase().contains(query.toLowerCase()))
+              .toList();
+        }
+      }
+
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setStateDialog) {
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  constraints: BoxConstraints(maxHeight: 500),
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // عنوان الديلوج
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person_search_rounded,
+                            color: CreateRequestColors.primary,
+                            size: 24,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            AppLocalizations.of(context)!.translate('select_user_hint'),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: CreateRequestColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 16),
+
+                      // شريط البحث
+                      TextField(
+                        controller: searchController,
+                        decoration: InputDecoration(
+                          hintText: AppLocalizations.of(context)!.translate('search_users'),
+                          prefixIcon: Icon(Icons.search_rounded, color: CreateRequestColors.primary),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        onChanged: (value) {
+                          setStateDialog(() {
+                            filterUsers(value);
+                          });
+                        },
+                      ),
+                      SizedBox(height: 16),
+
+                      // عدد النتائج
+                      Text(
+                        '${filteredUsers.length} ${AppLocalizations.of(context)!.translate('users_count_label')}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: CreateRequestColors.textSecondary,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+
+                      // قائمة المستخدمين
+                      Expanded(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: filteredUsers.length,
+                          itemBuilder: (context, index) {
+                            final user = filteredUsers[index];
+                            final isSelected = user == selectedUser;
+
+                            return ListTile(
+                              leading: Icon(
+                                Icons.person_rounded,
+                                color: isSelected
+                                    ? CreateRequestColors.primary
+                                    : CreateRequestColors.textSecondary,
+                              ),
+                              title: Text(
+                                user,
+                                style: TextStyle(
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color: isSelected
+                                      ? CreateRequestColors.primary
+                                      : CreateRequestColors.textPrimary,
+                                ),
+                              ),
+                              trailing: isSelected
+                                  ? Icon(
+                                Icons.check_rounded,
+                                color: CreateRequestColors.primary,
+                              )
+                                  : null,
+                              onTap: () {
+                                setStateDialog(() => selectedUser = user);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // أزرار الإجراء
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                searchController.clear();
+                                Navigator.pop(context);
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: CreateRequestColors.primary,
+                                side: BorderSide(color: CreateRequestColors.primary),
+                              ),
+                              child: Text(AppLocalizations.of(context)!.translate('cancel')),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: selectedUser == null
+                                  ? null
+                                  : () {
+                                Navigator.pop(context);
+                                searchController.clear();
+                                _performForwardAction(transactionId, selectedUser!, request);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: CreateRequestColors.primary,
+                              ),
+                              child: Text(
+                                AppLocalizations.of(context)!.translate('forward'),
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
       );
-      return;
-    }
-
-    String? selectedUser;
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: Text(AppLocalizations.of(context)!.translate('forward_transaction')),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text("${AppLocalizations.of(context)!.translate('choose_user')} (${users.length})"),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: selectedUser,
-                      hint: Text(AppLocalizations.of(context)!.translate('choose_user')),
-                      isExpanded: true,
-                      onChanged: (value) => setStateDialog(() => selectedUser = value),
-                      items: users.map<DropdownMenuItem<String>>((user) {
-                        final name = user["name"] ?? "Unknown";
-                        return DropdownMenuItem<String>(
-                          value: name,
-                          child: Text(name),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(AppLocalizations.of(context)!.translate('cancel')),
-                ),
-                ElevatedButton(
-                  onPressed: selectedUser == null ? null : () async {
-                    Navigator.pop(context);
-
-                    final requestId = transactionId;
-
-                    // تحديث حالة الطلب فوراً في الـ UI
-                    _updateRequestInList(requestId, {
-                      'isUpdating': true,
-                      'lastForwardSentTo': {
-                        'receiverName': selectedUser,
-                        'status': 'pending',
-                      },
-                      'hasForwarded': true, // تحديث حالة hasForwarded بعد التوجيه
-                    });
-
-                    setState(() {
-                      _isLoading = true;
-                    });
-
-                    final success = await _apiService.forwardTransaction(
-                      transactionId,
-                      selectedUser!,
-                      _userToken,
-                    );
-
-                    if (success) {
-                      // إزالة علامة التحديث
-                      _updateRequestInList(requestId, {'isUpdating': null});
-
-                      // إعادة جلب البيانات الحقيقية
-                      Future.delayed(const Duration(milliseconds: 500), () {
-                        _recalculateRequestData(requestId);
-                      });
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(AppLocalizations.of(context)!.translate('transaction_forwarded_success')),
-                          backgroundColor: InboxColors.accentGreen,
-                        ),
-                      );
-                    } else {
-                      // في حالة الفشل، إرجاع الحالة الأصلية
-                      _updateRequestInList(requestId, {
-                        'isUpdating': null,
-                        'lastForwardSentTo': request['lastForwardSentTo'],
-                        'hasForwarded': request['hasForwarded'],
-                      });
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(AppLocalizations.of(context)!.translate('failed_to_forward')),
-                          backgroundColor: InboxColors.accentRed,
-                        ),
-                      );
-                    }
-
-                    setState(() {
-                      _isLoading = false;
-                    });
-                  },
-                  child: Text(AppLocalizations.of(context)!.translate('forward')),
-                ),
-              ],
-            );
-          },
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)!.translate('error_forwarding')}: $e'),
+            backgroundColor: InboxColors.accentRed,
+          ),
         );
+      }
+    }
+  }
+
+  Future<void> _performForwardAction(
+      String transactionId,
+      String selectedUser,
+      Map<String, dynamic> request,
+      ) async {
+    final requestId = transactionId;
+
+    // تحديث حالة الطلب فوراً في الـ UI
+    _updateRequestInList(requestId, {
+      'isUpdating': true,
+      'lastForwardSentTo': {
+        'receiverName': selectedUser,
+        'status': 'pending',
       },
-    );
+      'hasForwarded': true,
+    });
+
+    try {
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
+
+      final success = await _apiService.forwardTransaction(
+        transactionId,
+        selectedUser,
+        _userToken,
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        // إزالة علامة التحديث
+        _updateRequestInList(requestId, {'isUpdating': null});
+
+        // إعادة جلب البيانات الحقيقية
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _recalculateRequestData(requestId);
+          }
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('transaction_forwarded_success')),
+            backgroundColor: InboxColors.accentGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        print('✅ Forward successful for request $requestId');
+      } else {
+        // في حالة الفشل، إرجاع الحالة الأصلية
+        _updateRequestInList(requestId, {
+          'isUpdating': null,
+          'lastForwardSentTo': request['lastForwardSentTo'],
+          'hasForwarded': request['hasForwarded'],
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('failed_to_forward')),
+            backgroundColor: InboxColors.accentRed,
+          ),
+        );
+
+        print('❌ Forward failed for request $requestId');
+      }
+    } catch (e) {
+      print('❌ Exception in _performForwardAction: $e');
+      if (mounted) {
+        _updateRequestInList(requestId, {
+          'isUpdating': null,
+          'lastForwardSentTo': request['lastForwardSentTo'],
+          'hasForwarded': request['hasForwarded'],
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)!.translate('failed_to_forward')}: ${e.toString()}'),
+            backgroundColor: InboxColors.accentRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _cancelForward(
@@ -721,49 +946,80 @@ class _InboxPageState extends State<InboxPage> {
     _updateRequestInList(requestId, {
       'isUpdating': true,
       'lastForwardSentTo': null,
-      'hasForwarded': false, // إعادة تعيين حالة hasForwarded بعد الإلغاء
+      'hasForwarded': false,
     });
 
-    setState(() {
-      _isLoading = true;
-    });
+    try {
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
 
-    final success = await _apiService.cancelForward(transactionId, forwardId, _userToken);
+      final success = await _apiService.cancelForward(transactionId, forwardId, _userToken);
 
-    if (success) {
-      // إزالة علامة التحديث
-      _updateRequestInList(requestId, {'isUpdating': null});
+      if (!mounted) return;
 
-      // إعادة جلب البيانات الحقيقية
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _recalculateRequestData(requestId);
-      });
+      if (success) {
+        // إزالة علامة التحديث
+        _updateRequestInList(requestId, {'isUpdating': null});
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.translate('forward_cancelled_success')),
-          backgroundColor: InboxColors.accentGreen,
-        ),
-      );
-    } else {
-      // في حالة الفشل، إرجاع الحالة الأصلية
-      _updateRequestInList(requestId, {
-        'isUpdating': null,
-        'lastForwardSentTo': request['lastForwardSentTo'],
-        'hasForwarded': request['hasForwarded'],
-      });
+        // إعادة جلب البيانات الحقيقية
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _recalculateRequestData(requestId);
+          }
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.translate('failed_to_cancel_forward')),
-          backgroundColor: InboxColors.accentRed,
-        ),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('forward_cancelled_success')),
+            backgroundColor: InboxColors.accentGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        print('✅ Cancel forward successful for request $requestId');
+      } else {
+        // في حالة الفشل، إرجاع الحالة الأصلية
+        _updateRequestInList(requestId, {
+          'isUpdating': null,
+          'lastForwardSentTo': request['lastForwardSentTo'],
+          'hasForwarded': request['hasForwarded'],
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('failed_to_cancel_forward')),
+            backgroundColor: InboxColors.accentRed,
+          ),
+        );
+
+        print('❌ Cancel forward failed for request $requestId');
+      }
+    } catch (e) {
+      print('❌ Exception in _cancelForward: $e');
+      if (mounted) {
+        _updateRequestInList(requestId, {
+          'isUpdating': null,
+          'lastForwardSentTo': request['lastForwardSentTo'],
+          'hasForwarded': request['hasForwarded'],
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)!.translate('failed_to_cancel_forward')}: ${e.toString()}'),
+            backgroundColor: InboxColors.accentRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   void _resetFilters() {
@@ -942,7 +1198,7 @@ class _InboxPageState extends State<InboxPage> {
           waiting: stats['waiting']!,
           approved: stats['approved']!,
           rejected: stats['rejected']!,
-          fulfilled: stats['fulfilled']!, 
+          fulfilled: stats['fulfilled']!,
           needsChange: stats['needs_change']!,
         ),
 
