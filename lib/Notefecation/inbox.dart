@@ -937,15 +937,14 @@ class _InboxPageState extends State<InboxPage> {
 
     return Column(
       children: [
-        if (_requests.isNotEmpty)
-          InboxMobileStats(
-            total: stats['total']!,
-            waiting: stats['waiting']!,
-            approved: stats['approved']!,
-            rejected: stats['rejected']!,
-            fulfilled: stats['fulfilled']!, 
-            needsChange: stats['needs_change']!,
-          ),
+        InboxMobileStats(
+          total: stats['total']!,
+          waiting: stats['waiting']!,
+          approved: stats['approved']!,
+          rejected: stats['rejected']!,
+          fulfilled: stats['fulfilled']!, 
+          needsChange: stats['needs_change']!,
+        ),
 
         InboxMobileFilters(
           selectedPriority: _selectedPriority,
@@ -1029,7 +1028,7 @@ class _InboxPageState extends State<InboxPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_requests.isNotEmpty) InboxStatsWidget(requests: _requests),
+            InboxStatsWidget(requests: _requests),
             const SizedBox(height: 16),
 
             InboxDesktopFilters(

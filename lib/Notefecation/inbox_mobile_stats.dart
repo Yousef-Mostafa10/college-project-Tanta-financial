@@ -143,7 +143,6 @@ class InboxMobileStats extends StatelessWidget {
         border: Border.all(color: InboxColors.statBorder),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min, // تغيير السطر ده
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: statItems.map((stat) => _buildMobileStatItem(
           label: stat["label"] as String,
