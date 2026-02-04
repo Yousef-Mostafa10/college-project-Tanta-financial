@@ -1,5 +1,6 @@
 // home/mobile_request_card.dart
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import 'dashboard_colors.dart';
 import 'dashboard_helpers.dart';
 
@@ -34,6 +35,12 @@ class MobileRequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final priorityColor = DashboardHelpers.getPriorityColor(priority);
+
+    // Translate priority
+    String displayPriority = priority;
+    if (priority.toLowerCase() == 'high') displayPriority = AppLocalizations.of(context)!.translate('high');
+    else if (priority.toLowerCase() == 'medium') displayPriority = AppLocalizations.of(context)!.translate('medium');
+    else if (priority.toLowerCase() == 'low') displayPriority = AppLocalizations.of(context)!.translate('low');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -80,7 +87,7 @@ class MobileRequestCard extends StatelessWidget {
                       border: Border.all(color: statusColor.withOpacity(0.3)),
                     ),
                     child: Text(
-                      statusText,
+                      AppLocalizations.of(context)!.translate(statusText.toLowerCase().replaceAll(' ', '_')),
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
@@ -99,7 +106,7 @@ class MobileRequestCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      "By: $creator",
+                      "${AppLocalizations.of(context)!.translate('by')}: $creator",
                       style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -114,7 +121,7 @@ class MobileRequestCard extends StatelessWidget {
                 children: [
                   _buildChip(type, Icons.category_outlined, AppColors.primary),
                   const SizedBox(width: 6),
-                  _buildChip(priority, Icons.flag_outlined, priorityColor),
+                  _buildChip(displayPriority, Icons.flag_outlined, priorityColor),
                   const Spacer(),
                   PopupMenuButton<String>(
                     icon: Icon(Icons.more_vert_rounded, size: 16, color: AppColors.textSecondary),
@@ -137,7 +144,7 @@ class MobileRequestCard extends StatelessWidget {
                           children: [
                             Icon(Icons.remove_red_eye_outlined, size: 16, color: AppColors.primary),
                             const SizedBox(width: 8),
-                            Text("View Details", style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+                            Text(AppLocalizations.of(context)!.translate('view_details'), style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
                           ],
                         ),
                       ),
@@ -147,7 +154,7 @@ class MobileRequestCard extends StatelessWidget {
                           children: [
                             Icon(Icons.track_changes_outlined, size: 16, color: AppColors.primary),
                             const SizedBox(width: 8),
-                            Text("Track Request", style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+                            Text(AppLocalizations.of(context)!.translate('track_request'), style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
                           ],
                         ),
                       ),
@@ -157,7 +164,7 @@ class MobileRequestCard extends StatelessWidget {
                           children: [
                             Icon(Icons.delete_outlined, size: 16, color: AppColors.accentRed),
                             const SizedBox(width: 8),
-                            Text("Delete", style: TextStyle(fontSize: 12, color: AppColors.accentRed)),
+                            Text(AppLocalizations.of(context)!.translate('delete'), style: TextStyle(fontSize: 12, color: AppColors.accentRed)),
                           ],
                         ),
                       ),

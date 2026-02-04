@@ -1,5 +1,6 @@
 // home/header_widget.dart
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import 'dashboard_colors.dart';
 
 class HeaderWidget extends StatelessWidget {
@@ -24,7 +25,7 @@ class HeaderWidget extends StatelessWidget {
               Icon(Icons.list_alt_outlined, color: AppColors.primary, size: isMobile ? 14 : 18),
               const SizedBox(width: 6),
               Text(
-                'TRANSACTIONS',
+                AppLocalizations.of(context)?.translate('transaction') ?? 'TRANSACTIONS',
                 style: TextStyle(
                   fontSize: isMobile ? 12 : 14,
                   fontWeight: FontWeight.w600,
@@ -42,7 +43,7 @@ class HeaderWidget extends StatelessWidget {
               border: Border.all(color: AppColors.primary.withOpacity(0.3)),
             ),
             child: Text(
-              '$itemCount items',
+              AppLocalizations.of(context)!.translate('transactions_count').replaceAll('{count}', itemCount.toString()),
               style: TextStyle(
                 fontSize: isMobile ? 10 : 12,
                 color: AppColors.primary,

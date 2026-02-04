@@ -124,6 +124,7 @@
 
 
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import './inbox_colors.dart';
 import './inbox_helpers.dart';
 
@@ -174,16 +175,16 @@ class InboxStatsWidget extends StatelessWidget {
   }
 
   // إحصائيات الديسكتوب
-  Widget _buildDesktopStatsRow() {
+  Widget _buildDesktopStatsRow(BuildContext context) {
     final stats = _calculateStats();
 
     final statItems = [
-      {"label": "Total", "value": stats['total']!, "color": InboxColors.textPrimary, "icon": Icons.dashboard_rounded},
-      {"label": "Waiting", "value": stats['waiting']!, "color": InboxColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
-      {"label": "Approved", "value": stats['approved']!, "color": InboxColors.statusApproved, "icon": Icons.check_circle_rounded},
-      {"label": "Rejected", "value": stats['rejected']!, "color": InboxColors.statusRejected, "icon": Icons.cancel_rounded},
-      {"label": "Needs Change", "value": stats['needs_change']!, "color": Colors.orange, "icon": Icons.edit_note_rounded},
-      {"label": "Fulfilled", "value": stats['fulfilled']!, "color": InboxColors.statusFulfilled, "icon": Icons.task_alt_rounded},
+      {"label": AppLocalizations.of(context)!.translate('total_stat'), "value": stats['total']!, "color": InboxColors.textPrimary, "icon": Icons.dashboard_rounded},
+      {"label": AppLocalizations.of(context)!.translate('waiting'), "value": stats['waiting']!, "color": InboxColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
+      {"label": AppLocalizations.of(context)!.translate('approved'), "value": stats['approved']!, "color": InboxColors.statusApproved, "icon": Icons.check_circle_rounded},
+      {"label": AppLocalizations.of(context)!.translate('rejected'), "value": stats['rejected']!, "color": InboxColors.statusRejected, "icon": Icons.cancel_rounded},
+      {"label": AppLocalizations.of(context)!.translate('needs_change'), "value": stats['needs_change']!, "color": Colors.orange, "icon": Icons.edit_note_rounded},
+      {"label": AppLocalizations.of(context)!.translate('fulfilled'), "value": stats['fulfilled']!, "color": InboxColors.statusFulfilled, "icon": Icons.task_alt_rounded},
     ];
 
     return Container(
@@ -253,6 +254,6 @@ class InboxStatsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _buildDesktopStatsRow();
+    return _buildDesktopStatsRow(context);
   }
 }

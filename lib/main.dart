@@ -46,8 +46,10 @@ class MyApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
           localeResolutionCallback: (locale, supportedLocales) {
+            if (locale == null) return supportedLocales.first;
+
             for (var supportedLocale in supportedLocales) {
-              if (supportedLocale.languageCode == locale?.languageCode) {
+              if (supportedLocale.languageCode == locale.languageCode) {
                 return supportedLocale;
               }
             }
@@ -59,7 +61,6 @@ class MyApp extends StatelessWidget {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               } else if (snapshot.hasError) {
-                // لو فيه خطأ
                 print("❌ Error in checkLoginStatus: ${snapshot.error}");
                 return const LoginPage();
               } else {

@@ -95,6 +95,7 @@
 
 
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import './inbox_colors.dart';
 
 class InboxMobileStats extends StatelessWidget {
@@ -118,12 +119,12 @@ class InboxMobileStats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statItems = [
-      {"label": "Total", "value": total, "color": InboxColors.textPrimary, "icon": Icons.dashboard_rounded},
-      {"label": "Waiting", "value": waiting, "color": InboxColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
-      {"label": "Approved", "value": approved, "color": InboxColors.statusApproved, "icon": Icons.check_circle_rounded},
-      {"label": "Rejected", "value": rejected, "color": InboxColors.statusRejected, "icon": Icons.cancel_rounded},
-      {"label": "Needs Change", "value": needsChange, "color": Colors.orange, "icon": Icons.edit_note_rounded}, // إضافة هذا الصف
-      {"label": "Fulfilled", "value": fulfilled, "color": InboxColors.statusFulfilled, "icon": Icons.task_alt_rounded},
+      {"label": AppLocalizations.of(context)!.translate('total_stat'), "value": total, "color": InboxColors.textPrimary, "icon": Icons.dashboard_rounded},
+      {"label": AppLocalizations.of(context)!.translate('waiting'), "value": waiting, "color": InboxColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
+      {"label": AppLocalizations.of(context)!.translate('approved'), "value": approved, "color": InboxColors.statusApproved, "icon": Icons.check_circle_rounded},
+      {"label": AppLocalizations.of(context)!.translate('rejected'), "value": rejected, "color": InboxColors.statusRejected, "icon": Icons.cancel_rounded},
+      {"label": AppLocalizations.of(context)!.translate('needs_change'), "value": needsChange, "color": Colors.orange, "icon": Icons.edit_note_rounded}, // إضافة هذا الصف
+      {"label": AppLocalizations.of(context)!.translate('fulfilled'), "value": fulfilled, "color": InboxColors.statusFulfilled, "icon": Icons.task_alt_rounded},
     ];
 
     return Container(
@@ -142,6 +143,7 @@ class InboxMobileStats extends StatelessWidget {
         border: Border.all(color: InboxColors.statBorder),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min, // تغيير السطر ده
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: statItems.map((stat) => _buildMobileStatItem(
           label: stat["label"] as String,

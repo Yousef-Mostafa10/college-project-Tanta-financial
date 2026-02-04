@@ -10,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 
+import '../../app_config.dart';
+
 // 🎨 COLOR PALETTE - Consistent with Dashboard and Inbox
 class AppColors {
   // Primary Colors
@@ -58,7 +60,7 @@ class CourseApprovalRequestPage extends StatefulWidget {
 }
 
 class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
-  final String _baseUrl = "http://192.168.1.3:3000";
+  final String _baseUrl = AppConfig.baseUrl;
   String? _userToken;
   Map<String, dynamic>? _requestData;
   bool _isLoading = true;

@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../app_config.dart';
 import 'user_model.dart';
 
 class UsersApiService {
-  final String baseUrl = "http://192.168.1.3:3000";
+  final String baseUrl = AppConfig.baseUrl;
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();

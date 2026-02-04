@@ -93,6 +93,7 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import 'dashboard_colors.dart';
 
 class StatsWidget extends StatelessWidget {
@@ -118,13 +119,13 @@ class StatsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stats = [
-      {"label": "Total", "value": total, "color": AppColors.textPrimary, "icon": Icons.dashboard_rounded},
-      {"label": "Approved", "value": approved, "color": AppColors.statusApproved, "icon": Icons.check_circle_rounded},
-      {"label": "Rejected", "value": rejected, "color": AppColors.statusRejected, "icon": Icons.cancel_rounded},
-      {"label": "Waiting", "value": waiting, "color": AppColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
+      {"label": AppLocalizations.of(context)!.translate('total'), "value": total, "color": AppColors.textPrimary, "icon": Icons.dashboard_rounded},
+      {"label": AppLocalizations.of(context)!.translate('approved'), "value": approved, "color": AppColors.statusApproved, "icon": Icons.check_circle_rounded},
+      {"label": AppLocalizations.of(context)!.translate('rejected'), "value": rejected, "color": AppColors.statusRejected, "icon": Icons.cancel_rounded},
+      {"label": AppLocalizations.of(context)!.translate('waiting'), "value": waiting, "color": AppColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
       // إضافة الحالتين الجديدتين:
-      {"label": "Needs Change", "value": needsChange, "color": AppColors.statusNeedsChange, "icon": Icons.edit_note_rounded},
-      {"label": "Fulfilled", "value": fulfilled, "color": AppColors.statusFulfilled, "icon": Icons.task_alt_rounded},
+      {"label": AppLocalizations.of(context)!.translate('needs_change'), "value": needsChange, "color": AppColors.statusNeedsChange, "icon": Icons.edit_note_rounded},
+      {"label": AppLocalizations.of(context)!.translate('fulfilled'), "value": fulfilled, "color": AppColors.statusFulfilled, "icon": Icons.task_alt_rounded},
     ];
 
     return Container(

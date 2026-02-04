@@ -52,7 +52,7 @@
 // }
 //
 // class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
-//   final String baseUrl = "http://192.168.1.3:3000";
+//   final String baseUrl = AppConfig.baseUrl;
 //   String? _userToken;
 //   List<dynamic> _forwards = [];
 //   bool _isLoading = true;
@@ -880,6 +880,7 @@
 
 import 'package:college_project/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import '../../app_config.dart';
 import 'tracking_colors.dart';
 import 'tracking_api.dart';
 import 'tracking_helpers.dart';
@@ -901,7 +902,7 @@ class TransactionTrackingPage extends StatefulWidget {
 }
 
 class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
-  final String baseUrl = "http://192.168.1.3:3000";
+  final String baseUrl = AppConfig.baseUrl;
   String? _userToken;
   List<dynamic> _forwards = [];
   bool _isLoading = true;

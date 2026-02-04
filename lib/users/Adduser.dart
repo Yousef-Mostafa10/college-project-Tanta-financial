@@ -66,7 +66,7 @@ class _AddUserPageState extends State<AddUserPage> {
     setState(() => _isLoading = true);
 
     try {
-      final url = Uri.parse("http://192.168.1.3:3000/users");
+      final url = Uri.parse("http://77.83.242.94:3000/users");
 
       // 🟢 استرجاع التوكن من SharedPreferences
       final prefs = await SharedPreferences.getInstance();

@@ -31,7 +31,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<Map<String, dynamic>> _fetchUserData(
       String token, String username) async {
     try {
-      final url = Uri.parse("http://192.168.1.3:3000/users/$username");
+      final url = Uri.parse("http://77.83.242.94:3000/users/$username");
       final response = await http.get(
         url,
         headers: {
@@ -59,7 +59,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => isLoading = true);
 
     try {
-      final url = Uri.parse("http://192.168.1.3:3000/auth");
+      final url = Uri.parse("http://77.83.242.94:3000/auth");
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},

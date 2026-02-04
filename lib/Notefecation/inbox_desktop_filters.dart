@@ -303,8 +303,7 @@ class InboxDesktopFilters extends StatelessWidget {
                     Icon(Icons.filter_alt_outlined, color: InboxColors.primary, size: 16),
                     const SizedBox(width: 6),
                     Text(
-                      AppLocalizations.of(context)!.translate('status_filter_by_status_label') == 'status_filter_by_status_label' 
-                      ? 'FILTERS' : AppLocalizations.of(context)!.translate('status_filter_by_status_label'),
+                      AppLocalizations.of(context)!.translate('filters_label'),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

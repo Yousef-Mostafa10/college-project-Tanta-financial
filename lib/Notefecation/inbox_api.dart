@@ -3,7 +3,7 @@
 // import 'package:shared_preferences/shared_preferences.dart';
 //
 // class InboxApi {
-//   final String baseUrl = "http://192.168.1.3:3000";
+//   final String baseUrl = AppConfig.baseUrl;
 //
 //   // 🔹 جلب معلومات المستخدم المسجل
 //   Future<Map<String, String?>> getUserInfo() async {
@@ -640,8 +640,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../app_config.dart';
+
 class InboxApi {
-  final String baseUrl = "http://192.168.1.3:3000";
+  final String baseUrl = AppConfig.baseUrl;
 
   // 🔹 جلب معلومات المستخدم المسجل
   Future<Map<String, String?>> getUserInfo() async {

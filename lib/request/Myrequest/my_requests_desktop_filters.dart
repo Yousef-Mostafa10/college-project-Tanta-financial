@@ -246,7 +246,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
                     Icon(Icons.filter_alt_outlined, color: MyRequestsColors.primary, size: 16),
                     const SizedBox(width: 6),
                     Text(
-                      AppLocalizations.of(context)!.translate('management').toUpperCase(),
+                      AppLocalizations.of(context)!.translate('filters_label').toUpperCase(),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -334,7 +334,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
                   if (item == 'Waiting') displayText = AppLocalizations.of(context)!.translate('status_waiting');
                   if (item == 'Approved') displayText = AppLocalizations.of(context)!.translate('status_approved');
                   if (item == 'Rejected') displayText = AppLocalizations.of(context)!.translate('status_rejected');
-                  if (item == 'Needs Change') displayText = AppLocalizations.of(context)!.translate('status_needs_change');
+                  if (item == 'Needs Change') displayText = AppLocalizations.of(context)!.translate('status_needs_editing');
                   if (item == 'Fulfilled') displayText = AppLocalizations.of(context)!.translate('status_fulfilled');
                   if (item == 'High') displayText = AppLocalizations.of(context)!.translate('priority_high');
                   if (item == 'Medium') displayText = AppLocalizations.of(context)!.translate('priority_medium');

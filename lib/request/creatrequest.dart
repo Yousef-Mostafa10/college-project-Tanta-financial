@@ -100,7 +100,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       final token = prefs.getString('token') ?? '';
 
       final response = await http.get(
-        Uri.parse('http://192.168.1.3:3000/transactions/types'),
+        Uri.parse('http://77.83.242.94:3000/transactions/types'),
         headers: {"Authorization": "Bearer $token"},
       );
 
@@ -138,7 +138,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       final token = prefs.getString('token') ?? '';
 
       final response = await http.get(
-        Uri.parse('http://192.168.1.3:3000/users?pageNumber=1&pageSize=100'),
+        Uri.parse('http://77.83.242.94:3000/users?pageNumber=1&pageSize=100'),
         headers: {"Authorization": "Bearer $token"},
       );
 
@@ -260,7 +260,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse('http://192.168.1.3:3000/documents'),
+          Uri.parse('http://77.83.242.94:3000/documents'),
         );
         request.files.add(await http.MultipartFile.fromPath('file', tempFile.path,
             filename: finalFileName));
@@ -292,7 +292,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     try {
       final response = await http.post(
         Uri.parse(
-            'http://192.168.1.3:3000/transactions/$transactionId/forwards'),
+            'http://77.83.242.94:3000/transactions/$transactionId/forwards'),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token"
@@ -327,7 +327,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         };
 
         final response = await http.post(
-          Uri.parse('http://192.168.1.3:3000/transactions'),
+          Uri.parse('http://77.83.242.94:3000/transactions'),
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer $token"

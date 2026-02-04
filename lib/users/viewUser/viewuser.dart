@@ -126,7 +126,7 @@
 //       final prefs = await SharedPreferences.getInstance();
 //       final token = prefs.getString('token') ?? '';
 //
-//       final url = Uri.parse("http://192.168.1.3:3000/users?pageNumber=$_pageNumber&pageSize=$_pageSize");
+//       final url = Uri.parse("http://77.83.242.94:3000/users?pageNumber=$_pageNumber&pageSize=$_pageSize");
 //
 //       final response = await http.get(
 //         url,
@@ -820,7 +820,7 @@
 //       final prefs = await SharedPreferences.getInstance();
 //       final token = prefs.getString('token') ?? '';
 //
-//       final url = Uri.parse("http://192.168.1.3:3000/users/$userName");
+//       final url = Uri.parse("http://77.83.242.94:3000/users/$userName");
 //
 //       final response = await http.patch(
 //         url,
@@ -870,7 +870,7 @@
 //       final prefs = await SharedPreferences.getInstance();
 //       final token = prefs.getString('token') ?? '';
 //
-//       final url = Uri.parse("http://192.168.1.3:3000/users/$userName");
+//       final url = Uri.parse("http://77.83.242.94:3000/users/$userName");
 //       final response = await http.get(url, headers: {
 //         "Content-Type": "application/json",
 //         "Authorization": "Bearer $token",

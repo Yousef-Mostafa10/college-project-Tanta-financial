@@ -142,7 +142,14 @@ class AppLocalizations {
       'select_type': 'Select Type',
       'select_status': 'Select Status',
       'view_details': 'View Details',
+      'inbox_title': 'Inbox',
+      'action_approved_success': 'Transaction has been approved successfully',
+      'action_rejected_success': 'Transaction has been rejected successfully',
+      'failed_to_perform_action': 'Failed to perform action',
+      'loading_your_inbox': 'Loading your inbox...',
       'not_available': 'N/A',
+      'n_a': 'N/A',
+      'need_change': 'Need Change',
 
       // Login
       'login_title': 'Login',
@@ -227,6 +234,11 @@ class AppLocalizations {
       'select_priority': 'Select Priority',
       'select_type': 'Select Type',
       'select_status': 'Select Status',
+
+      // Dashboard
+      'filters_label': 'FILTERS',
+      'transaction': 'TRANSACTIONS',
+      'items_label': 'items',
 
       // Request Card
       'by': 'By',
@@ -378,7 +390,7 @@ class AppLocalizations {
       'view': 'عرض',
       'approve': 'موافقة',
       'reject': 'رفض',
-      'need_change': 'مطلوب تعديل',
+      'need_change': 'يحتاج تعديل',
 
       // Edit Request
       'edit_request': 'تعديل الطلب',
@@ -453,7 +465,13 @@ class AppLocalizations {
       'select_type': 'اختر النوع',
       'select_status': 'اختر الحالة',
       'view_details': 'عرض التفاصيل',
+      'inbox_title': 'الوارد',
+      'action_approved_success': 'تمت الموافقة على المعاملة بنجاح',
+      'action_rejected_success': 'تم رفض المعاملة بنجاح',
+      'failed_to_perform_action': 'فشل تنفيذ الإجراء',
+      'loading_your_inbox': 'جاري تحميل الوارد...',
       'not_available': 'غير متوفر',
+      'n_a': 'غير متوفر',
 
       // Login
       'login_title': 'تسجيل الدخول',
@@ -522,7 +540,7 @@ class AppLocalizations {
       'waiting': 'قيد الانتظار',
       'pending': 'معلق',
       'fulfilled': 'مكتمل',
-      'needs_change': 'مطلوب تعديل',
+      'needs_change': 'يحتاج تعديل',
 
       // Search & Filters
       'search_transactions': 'البحث في المعاملات...',
@@ -537,6 +555,11 @@ class AppLocalizations {
       'select_priority': 'اختر الأولوية',
       'select_type': 'اختر النوع',
       'select_status': 'اختر الحالة',
+
+      // Dashboard
+      'filters_label': 'تصفية النتائج',
+      'transaction': 'المعاملات',
+      'items_label': 'معاملة',
 
       // Request Card
       'by': 'بواسطة',

@@ -52,7 +52,7 @@
 // }
 //
 // class _MyRequestsPageState extends State<MyRequestsPage> {
-//   final String baseUrl = "http://192.168.1.3:3000";
+//   final String baseUrl = AppConfig.baseUrl;
 //   final TextEditingController _searchController = TextEditingController();
 //
 //   List<dynamic> _requests = [];
@@ -1790,7 +1790,7 @@
 // }
 //
 // class _MyRequestsPageState extends State<MyRequestsPage> {
-//   final String baseUrl = "http://192.168.1.3:3000";
+//   final String baseUrl = AppConfig.baseUrl;
 //   final TextEditingController _searchController = TextEditingController();
 //
 //   List<dynamic> _requests = [];
@@ -2432,6 +2432,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 
+import '../../app_config.dart';
 import 'my_requests_colors.dart';
 import 'my_requests_api.dart';
 import 'my_requests_helpers.dart';
@@ -2455,7 +2456,7 @@ class MyRequestsPage extends StatefulWidget {
 }
 
 class _MyRequestsPageState extends State<MyRequestsPage> {
-  final String baseUrl = "http://192.168.1.3:3000";
+  final String baseUrl = AppConfig.baseUrl;
   final TextEditingController _searchController = TextEditingController();
 
   List<dynamic> _requests = [];
@@ -2723,7 +2724,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                     if (option == 'Waiting') displayText = AppLocalizations.of(context)!.translate('status_waiting');
                     if (option == 'Approved') displayText = AppLocalizations.of(context)!.translate('status_approved');
                     if (option == 'Rejected') displayText = AppLocalizations.of(context)!.translate('status_rejected');
-                    if (option == 'Needs Change') displayText = AppLocalizations.of(context)!.translate('status_needs_change');
+                    if (option == 'Needs Change') displayText = AppLocalizations.of(context)!.translate('status_needs_editing');
                     if (option == 'Fulfilled') displayText = AppLocalizations.of(context)!.translate('status_fulfilled');
                     if (option == 'High') displayText = AppLocalizations.of(context)!.translate('priority_high');
                     if (option == 'Medium') displayText = AppLocalizations.of(context)!.translate('priority_medium');
@@ -2927,7 +2928,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
               statusIcon = Icons.hourglass_empty_rounded;
               break;
             case "needs_change":
-              status = AppLocalizations.of(context)!.translate('status_needs_change');
+              status = AppLocalizations.of(context)!.translate('status_needs_editing');
               statusColor = MyRequestsColors.statusNeedsChange;
               statusIcon = Icons.edit_note_rounded;
               break;
@@ -3090,7 +3091,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                 statusIcon = Icons.hourglass_empty_rounded;
                 break;
               case "needs_change":
-                status = AppLocalizations.of(context)!.translate('status_needs_change');
+                status = AppLocalizations.of(context)!.translate('status_needs_editing');
                 statusColor = MyRequestsColors.statusNeedsChange;
                 statusIcon = Icons.edit_note_rounded;
                 break;

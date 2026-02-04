@@ -1,5 +1,6 @@
 // home/empty_state.dart
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import 'dashboard_colors.dart';
 
 class EmptyState extends StatelessWidget {
@@ -21,7 +22,7 @@ class EmptyState extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                "No transactions found",
+                AppLocalizations.of(context)!.translate('no_transactions_found'),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -30,7 +31,7 @@ class EmptyState extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "Try adjusting your filters or check back later",
+                AppLocalizations.of(context)!.translate('try_adjust_filters'),
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textMuted,
@@ -43,7 +44,7 @@ class EmptyState extends StatelessWidget {
                   // يمكن إضافة دالة reset من parent إذا لزم الأمر
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 16),
-                label: const Text("Reset Filters"),
+                label: Text(AppLocalizations.of(context)!.translate('reset_filters')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,

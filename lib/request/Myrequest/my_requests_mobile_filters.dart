@@ -306,7 +306,7 @@ Widget _buildMobileFilterChip({
   if (value == 'Waiting') displayValue = AppLocalizations.of(context)!.translate('status_waiting');
   if (value == 'Approved') displayValue = AppLocalizations.of(context)!.translate('status_approved');
   if (value == 'Rejected') displayValue = AppLocalizations.of(context)!.translate('status_rejected');
-  if (value == 'Needs Change') displayValue = AppLocalizations.of(context)!.translate('status_needs_change');
+  if (value == 'Needs Change') displayValue = AppLocalizations.of(context)!.translate('status_needs_editing');
   if (value == 'Fulfilled') displayValue = AppLocalizations.of(context)!.translate('status_fulfilled');
   if (value == 'High') displayValue = AppLocalizations.of(context)!.translate('priority_high');
   if (value == 'Medium') displayValue = AppLocalizations.of(context)!.translate('priority_medium');

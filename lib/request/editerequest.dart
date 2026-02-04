@@ -76,7 +76,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
   bool _isUpdating = false;
   bool _isUploadingFile = false;
 
-  final String _baseUrl = 'http://192.168.1.3:3000';
+  final String _baseUrl = 'http://77.83.242.94:3000';
 
   List<dynamic> _documents = [];
   List<PlatformFile> _newFiles = [];

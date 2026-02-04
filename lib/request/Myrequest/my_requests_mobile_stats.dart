@@ -8,7 +8,7 @@ Widget buildMobileStatsSection(BuildContext context, int total, int approved, in
     {"label": AppLocalizations.of(context)!.translate('status_approved'), "value": approved, "color": MyRequestsColors.statusApproved, "icon": Icons.check_circle_rounded},
     {"label": AppLocalizations.of(context)!.translate('status_rejected'), "value": rejected, "color": MyRequestsColors.statusRejected, "icon": Icons.cancel_rounded},
     {"label": AppLocalizations.of(context)!.translate('status_waiting'), "value": waiting, "color": MyRequestsColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
-    {"label": AppLocalizations.of(context)!.translate('status_needs_change'), "value": needsChange, "color": MyRequestsColors.statusNeedsChange, "icon": Icons.edit_note_rounded},
+    {"label": AppLocalizations.of(context)!.translate('status_needs_editing'), "value": needsChange, "color": MyRequestsColors.statusNeedsChange, "icon": Icons.edit_note_rounded},
     {"label": AppLocalizations.of(context)!.translate('status_fulfilled'), "value": fulfilled, "color": MyRequestsColors.statusFulfilled, "icon": Icons.task_alt_rounded},
   ];
 
