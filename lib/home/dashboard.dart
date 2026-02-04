@@ -692,6 +692,58 @@ class _AdministrativeDashboardPageState
     required IconData icon,
     required VoidCallback onTap,
   }) {
+    // تحديد لون النص حسب الحالة
+    Color getTextColor() {
+      if (label == AppLocalizations.of(context)!.translate('status')) {
+        switch (value.toLowerCase()) {
+          case 'waiting':
+            return AppColors.statusWaiting;
+          case 'approved':
+            return AppColors.statusApproved;
+          case 'rejected':
+            return AppColors.statusRejected;
+          case 'needs change':
+            return AppColors.statusNeedsChange;
+          case 'fulfilled':
+            return AppColors.statusFulfilled;
+          default:
+            return AppColors.textPrimary;
+        }
+      }
+      return AppColors.textPrimary;
+    }
+
+    // تحديد أيقونة حسب الحالة
+    IconData getStatusIcon() {
+      if (label == AppLocalizations.of(context)!.translate('status')) {
+        switch (value.toLowerCase()) {
+          case "approved":
+            return Icons.check_circle_rounded;
+          case "rejected":
+            return Icons.cancel_rounded;
+          case "waiting":
+            return Icons.hourglass_empty_rounded;
+          case "needs change":
+            return Icons.edit_note_rounded;
+          case "fulfilled":
+            return Icons.task_alt_rounded;
+          case "all":
+            return Icons.filter_list_rounded;
+          default:
+            return icon;
+        }
+      }
+      return icon;
+    }
+
+    // تحديد لون الأيقونة
+    Color getIconColor() {
+      if (label == AppLocalizations.of(context)!.translate('status')) {
+        return getTextColor();
+      }
+      return AppColors.primary;
+    }
+
     String displayValue = value;
     if (value != 'All' && value != 'All Types') {
         displayValue = AppLocalizations.of(context)?.translate(value.toLowerCase().replaceAll(' ', '_')) ?? value;
@@ -709,7 +761,11 @@ class _AdministrativeDashboardPageState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 14, color: AppColors.primary),
+            Icon(
+              getStatusIcon(), // استخدم الأيقونة المناسبة للحالة
+              size: 14,
+              color: getIconColor(), // لون الأيقونة حسب الحالة
+            ),
             const SizedBox(height: 2),
             Text(
               label,
@@ -724,7 +780,7 @@ class _AdministrativeDashboardPageState
                 displayValue.length > 8 ? displayValue.substring(0, 8) + '...' : displayValue,
                 style: TextStyle(
                   fontSize: 8,
-                  color: AppColors.textPrimary,
+                  color: getTextColor(), // لون النص حسب الحالة
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
