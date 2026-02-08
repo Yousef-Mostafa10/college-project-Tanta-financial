@@ -1,5 +1,5 @@
 import 'dart:math';
-
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 
 import '../../app_config.dart';
+import '../../utils/storage_permission_helper.dart';
 
 // 🎨 COLOR PALETTE - Consistent with Dashboard and Inbox
 class AppColors {
@@ -59,6 +60,14 @@ class CourseApprovalRequestPage extends StatefulWidget {
   State<CourseApprovalRequestPage> createState() => _CourseApprovalRequestPageState();
 }
 
+class TimeoutException implements Exception {
+  final String message;
+  TimeoutException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   final String _baseUrl = AppConfig.baseUrl;
   String? _userToken;
@@ -78,6 +87,8 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     super.initState();
     _getUserToken();
   }
+
+
 
   Future<void> _getUserToken() async {
     try {
@@ -160,32 +171,36 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   }
 
   Future<bool> _requestPermission() async {
-    if (await Permission.storage.request().isGranted) {
-      return true;
-    }
-    return false;
+    return await StoragePermissionHelper.requestStoragePermission();
   }
 
   Future<void> _downloadFile(String documentURI, String fileName) async {
-    if (!await _requestPermission()) {
+    // 1️⃣ التحقق من الأذونات أولاً
+    final hasPermission = await StoragePermissionHelper.checkAndRequestPermission();
+
+    if (!hasPermission) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!.translate('storage_permission_denied')),
             backgroundColor: AppColors.accentRed,
+            action: SnackBarAction(
+              label: AppLocalizations.of(context)!.translate('settings'),
+              onPressed: () => StoragePermissionHelper.openSettings(),
+            ),
           ),
         );
       }
       return;
     }
 
-    // فصل uploaderName و documentName من documentURI
+    // 2️⃣ التحقق من صحة الـ URI
     final parts = documentURI.split('/');
     if (parts.length != 2) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('invalid_document_uri_error').replaceFirst('{uri}', documentURI)),
+            content: Text('❌ Invalid document URI: $documentURI'),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -196,147 +211,248 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     final uploaderName = parts[0];
     final documentName = parts[1];
 
-    // 🔥 محاولة endpoints مختلفة للملفات القديمة
-    List<String> downloadUrls = [
-      // المحاولة الأولى: الـ endpoint العادي
-      "$_baseUrl/documents/$uploaderName/$documentName",
-      // المحاولة الثانية: endpoint بديل عبر الـ transaction
-      "$_baseUrl/transactions/${widget.requestId}/documents/$fileName",
-      // المحاولة الثالثة: endpoint بديل آخر
-      "$_baseUrl/documents/download/$documentURI",
-    ];
-
+    // 3️⃣ تحديث حالة التنزيل
     setState(() {
       _downloadingFiles[fileName] = true;
       _downloadProgress[fileName] = AppLocalizations.of(context)!.translate('starting_download_msg');
     });
 
-    Directory? dir = await getDownloadsDirectory();
+    // 4️⃣ الحصول على مسار التخزين الآمن
+    Directory? downloadDir;
     String? storagePath;
-    if (dir == null) {
-      dir = await getExternalStorageDirectory();
-      if (dir == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context)!.translate('error_loading_data_msg')),
-              backgroundColor: AppColors.accentRed,
-            ),
-          );
-        }
-        return;
+
+    try {
+      // 🔥 المحاولة الأولى: استخدام Downloads directory (الطريقة الصحيحة)
+      downloadDir = await getDownloadsDirectory();
+      print('📱 Downloads Directory: ${downloadDir?.path}');
+
+      // 🔥 إذا لم يعمل، استخدم getExternalCacheDir
+      if (downloadDir == null) {
+        print('⚠️ Downloads directory is null, trying cache dir');
+        downloadDir = Directory((await getTemporaryDirectory()).path);
       }
+
+      storagePath = downloadDir.path;
+      print('📁 Final Download path: $storagePath');
+
+      // إنشاء المجلد إذا لم يكن موجوداً
+      if (!await downloadDir.exists()) {
+        await downloadDir.create(recursive: true);
+        print('✅ Created directory: $storagePath');
+      }
+
+    } catch (e) {
+      print('❌ Error getting download directory: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error: ${e.toString()}'),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
+
+      setState(() {
+        _downloadingFiles[fileName] = false;
+        _downloadProgress.remove(fileName);
+      });
+      return;
     }
 
-    storagePath = dir.path;
-    final filePath = '${dir.path}/$fileName';
+    final filePath = '${downloadDir.path}/$fileName';
+    print('💾 File will be saved to: $filePath');
 
-    // 🔥 محاولة التحميل من endpoints مختلفة
+    // 5️⃣ محاولة التحميل من endpoints مختلفة
+    List<String> downloadUrls = [
+      "$_baseUrl/documents/$uploaderName/$documentName",
+      "$_baseUrl/transactions/${widget.requestId}/documents/$fileName",
+      "$_baseUrl/documents/download/$documentURI",
+    ];
+
+    bool downloadSuccessful = false;
+
     for (int i = 0; i < downloadUrls.length; i++) {
       final downloadUrl = downloadUrls[i];
 
       try {
-        print("Attempt ${i + 1}: Downloading from: $downloadUrl");
+        print('🔄 Attempt ${i + 1}/${downloadUrls.length}: Downloading from: $downloadUrl');
+
+        setState(() {
+          _downloadProgress[fileName] = '📥 Downloading... (${i + 1}/${downloadUrls.length})';
+        });
 
         final response = await http.get(
           Uri.parse(downloadUrl),
           headers: {
             'Authorization': 'Bearer $_userToken',
           },
+        ).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () => throw TimeoutException('Download timeout'),
         );
 
-        print("Attempt ${i + 1} response status: ${response.statusCode}");
+        print('✅ Response status: ${response.statusCode}');
+        print('📦 Response body size: ${response.bodyBytes.length} bytes');
 
         if (response.statusCode == 200) {
           setState(() {
             _downloadProgress[fileName] = AppLocalizations.of(context)!.translate('saving_file_msg');
           });
 
-          final file = File(filePath);
-          await file.writeAsBytes(response.bodyBytes);
+          // 6️⃣ حفظ الملف
+          try {
+            final file = File(filePath);
+            await file.writeAsBytes(response.bodyBytes);
 
-          setState(() {
-            _downloadingFiles[fileName] = false;
-            _downloadProgress.remove(fileName);
-            _downloadedFilePaths[fileName] = filePath;
-          });
+            // التحقق من أن الملف تم حفظه بنجاح
+            if (await file.exists()) {
+              final fileSize = await file.length();
+              print('✅ File saved successfully: $filePath (Size: $fileSize bytes)');
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(AppLocalizations.of(context)!.translate('download_complete_title'),
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                    SizedBox(height: 4),
-                    Text(fileName, style: TextStyle(fontSize: 12, color: Colors.white)),
-                    SizedBox(height: 4),
-                    Text('${AppLocalizations.of(context)!.translate('open_folder_button')}: $storagePath',
-                        style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.8))),
-                  ],
-                ),
-                backgroundColor: AppColors.accentGreen,
-                duration: Duration(seconds: 6),
-              ),
-            );
+              downloadSuccessful = true;
+
+              setState(() {
+                _downloadingFiles[fileName] = false;
+                _downloadProgress.remove(fileName);
+                _downloadedFilePaths[fileName] = filePath;
+              });
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context)!.translate('download_complete_title'),
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          fileName,
+                          style: const TextStyle(fontSize: 12, color: Colors.white),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '📁 Location: $storagePath',
+                          style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.8)),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                    backgroundColor: AppColors.accentGreen,
+                    duration: const Duration(seconds: 6),
+                  ),
+                );
+              }
+
+              return; // نجح التحميل، نخرج من الدالة
+            } else {
+              print('❌ File was not created at: $filePath');
+            }
+          } catch (e) {
+            print('❌ Error writing file: $e');
+            // جرب الـ endpoint التالي
+            continue;
           }
-          return; // نجح التحميل، نخرج من الدالة
-        } else if (response.statusCode == 400) {
-          print("Attempt ${i + 1} failed with 400, trying next endpoint...");
+        } else {
+          print('⚠️ Attempt ${i + 1} returned status: ${response.statusCode}');
 
-          // 🔥 إضافة رسالة توضيحية للمستخدم
-          if (i == downloadUrls.length - 1) {
+          if (response.statusCode == 401) {
+            // Token expired
+            print('❌ Authentication failed - Token expired');
+
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(AppLocalizations.of(context)!.translate('download_failed_title'),
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                      SizedBox(height: 4),
-                      Text(fileName, style: TextStyle(fontSize: 12, color: Colors.white)),
-                    ],
-                  ),
+                  content: Text(AppLocalizations.of(context)!.translate('session_expired')),
                   backgroundColor: AppColors.accentRed,
-                  duration: Duration(seconds: 8),
                 ),
               );
             }
+            break;
           }
-          continue; // جرب الـ endpoint التالي
-        }
-      } catch (e) {
-        print("Attempt ${i + 1} error: $e");
-        if (i == downloadUrls.length - 1) {
-          // إذا كانت آخر محاولة وفشلت
-          setState(() {
-            _downloadingFiles[fileName] = false;
-            _downloadProgress.remove(fileName);
-          });
 
+          // جرب الـ endpoint التالي
+          continue;
+        }
+      } on TimeoutException catch (e) {
+        print('⏱️ Timeout on attempt ${i + 1}: $e');
+
+        if (i == downloadUrls.length - 1) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('All download attempts failed for: $fileName'),
+                content: const Text('⏱️ Download timeout. Please check your internet connection.'),
                 backgroundColor: AppColors.accentRed,
+                duration: const Duration(seconds: 5),
               ),
             );
           }
         }
+        continue;
+      } catch (e) {
+        print('❌ Error on attempt ${i + 1}: $e');
+
+        if (i == downloadUrls.length - 1) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('❌ Download failed: ${e.toString()}'),
+                backgroundColor: AppColors.accentRed,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+        }
+        continue;
       }
     }
 
-    // إذا وصلنا هنا، يعني كل المحاولات فشلت
-    setState(() {
-      _downloadingFiles[fileName] = false;
-      _downloadProgress.remove(fileName);
-    });
-  }
+    // 7️⃣ إذا وصلنا هنا، كل المحاولات فشلت
+    if (!downloadSuccessful) {
+      setState(() {
+        _downloadingFiles[fileName] = false;
+        _downloadProgress.remove(fileName);
+      });
 
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  AppLocalizations.of(context)!.translate('download_failed_title'),
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  fileName,
+                  style: const TextStyle(fontSize: 12, color: Colors.white),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.accentRed,
+            duration: const Duration(seconds: 8),
+            action: SnackBarAction(
+              label: AppLocalizations.of(context)!.translate('retry_button'),
+              textColor: Colors.white,
+              onPressed: () => _downloadFile(documentURI, fileName),
+            ),
+          ),
+        );
+      }
+    }
+  }
   // 🔥 دالة جديدة لعرض تفاصيل الملف المحمل
   void _showFileDetails(String fileName) {
     final filePath = _downloadedFilePaths[fileName];
@@ -347,10 +463,16 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.check_circle, color: AppColors.accentGreen),
+            Icon(Icons.check_circle, color: AppColors.accentGreen, size: 20),
             SizedBox(width: 8),
-            Text(AppLocalizations.of(context)!.translate('file_downloaded_success_title'),
-                style: TextStyle(color: AppColors.textPrimary)),
+            Expanded(
+              child: Text(
+                AppLocalizations.of(context)!.translate('file_downloaded_success_title'),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -621,15 +743,20 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                       fontSize: isMobile ? 12 : 14,
                       color: AppColors.textSecondary,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                SizedBox(width: 8),
                 Icon(Icons.calendar_today_rounded, size: isMobile ? 14 : 16, color: AppColors.textSecondary),
                 SizedBox(width: isMobile ? 4 : 6),
-                Text(
-                  createdAt,
-                  style: TextStyle(
-                    fontSize: isMobile ? 12 : 14,
-                    color: AppColors.textSecondary,
+                Flexible(
+                  child: Text(
+                    createdAt,
+                    style: TextStyle(
+                      fontSize: isMobile ? 12 : 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -893,25 +1020,28 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Wrap(
-          spacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text('${AppLocalizations.of(context)!.translate('by')}: $uploaderName',
-                style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-            if (fileId.isNotEmpty) ...[
-              Container(
-                width: 3,
-                height: 3,
-                decoration: BoxDecoration(
-                  color: AppColors.textMuted,
-                  shape: BoxShape.circle,
+        Flexible(
+          child: Wrap(
+            spacing: 4,
+            runSpacing: 2,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text('${AppLocalizations.of(context)!.translate('by')}: $uploaderName',
+                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+              if (fileId.isNotEmpty) ...[
+                Container(
+                  width: 3,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: AppColors.textMuted,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-              Text('ID: $fileId',
-                  style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                Text('ID: $fileId',
+                    style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+              ],
             ],
-          ],
+          ),
         ),
         if (isDownloading && downloadStatus != null)
           _buildDownloadProgress(downloadStatus, isMobile),

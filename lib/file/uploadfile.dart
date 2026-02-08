@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:college_project/utils/storage_permission_helper.dart';
 
 class FilePickerWidget extends StatelessWidget {
   final Function(List<PlatformFile>) onFilesPicked; // Callback عند اختيار الملفات
@@ -11,19 +11,19 @@ class FilePickerWidget extends StatelessWidget {
   });
 
   Future<void> _pickFiles(BuildContext context) async {
-    // التحقق من الأذونات
-    var status = await Permission.storage.status;
+    // التحقق من الأذونات باستخدام الدالة المساعدة الجديدة
+    final hasPermission = await StoragePermissionHelper.checkStoragePermission();
 
-    if (!status.isGranted) {
-      status = await Permission.storage.request();
+    if (!hasPermission) {
+      final granted = await StoragePermissionHelper.requestStoragePermission();
 
-      if (!status.isGranted) {
+      if (!granted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('يجب منح إذن التخزين لاختيار الملفات'),
             action: SnackBarAction(
               label: 'الإعدادات',
-              onPressed: () => openAppSettings(),
+              onPressed: () => StoragePermissionHelper.openSettings(),
             ),
           ),
         );
