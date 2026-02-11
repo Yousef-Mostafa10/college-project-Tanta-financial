@@ -283,8 +283,9 @@ class _InboxPageState extends State<InboxPage> {
   Future<void> _performAction(
       Map<String, dynamic> request,
       String action,
-      Color snackBarColor,
-      ) async {
+      Color snackBarColor, {
+        String? comment,
+      }) async {
     if (_isLoading) return;
 
     final requestId = request["id"].toString();
@@ -310,6 +311,7 @@ class _InboxPageState extends State<InboxPage> {
         action,
         _userToken,
         _userName,
+        comment: comment,
       );
 
       if (!mounted) return;
@@ -327,7 +329,9 @@ class _InboxPageState extends State<InboxPage> {
 
         String successMessage = actionLower == 'approve'
             ? AppLocalizations.of(context)!.translate('action_approved_success')
-            : AppLocalizations.of(context)!.translate('action_rejected_success');
+            : (actionLower == 'reject'
+            ? AppLocalizations.of(context)!.translate('action_rejected_success')
+            : AppLocalizations.of(context)!.translate('change_request_sent_success'));
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -476,8 +480,9 @@ class _InboxPageState extends State<InboxPage> {
         });
       }
 
-      // TODO: سيتم إضافة الـ endpoint لاحقاً
-      bool success = true;
+      // استخدام _performAction بدلاً من الكود المكرر
+      await _performAction(request, 'Needs Change', Colors.orange, comment: comment);
+      bool success = true; // _performAction handles the snackbar and UI update
 
       if (!mounted) return;
 
@@ -501,6 +506,7 @@ class _InboxPageState extends State<InboxPage> {
         );
 
         print('✅ Need change request sent for request $requestId');
+        return; // Already handled by _performAction
       } else {
         // في حالة الفشل، إرجاع الحالة الأصلية
         _updateRequestInList(requestId, {
@@ -599,7 +605,7 @@ class _InboxPageState extends State<InboxPage> {
   // 🔹 دالة للرفض مع التعليق
   Future<void> _rejectWithComment(
       Map<String, dynamic> request, String reason) async {
-    await _performAction(request, 'Reject', InboxColors.accentRed);
+    await _performAction(request, 'Reject', InboxColors.accentRed, comment: reason);
   }
 
   // 🔹 دالة للتنقل إلى صفحة التعديل

@@ -1,12 +1,16 @@
 class User {
   final String name;
-  final String group;
+  final String role;
+  final bool active;
+  final String? departmentName;
   final String createdAt;
   final String updatedAt;
 
   User({
     required this.name,
-    required this.group,
+    required this.role,
+    required this.active,
+    this.departmentName,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -14,7 +18,9 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       name: json["name"] ?? "Unknown",
-      group: json["group"] ?? "user",
+      role: json["role"] ?? "user",
+      active: json["active"] ?? true,
+      departmentName: json["departmentName"],
       createdAt: json["createdAt"] ?? "",
       updatedAt: json["updatedAt"] ?? json["createdAt"] ?? "",
     );

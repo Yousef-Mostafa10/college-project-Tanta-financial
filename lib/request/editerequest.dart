@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:college_project/l10n/app_localizations.dart';
+import '../app_config.dart';
+import 'transaction_type_model.dart';
 
 // 🎨 COLOR PALETTE - Consistent with the whole application
 class AppColors {
@@ -69,20 +71,38 @@ class _EditRequestPageState extends State<EditRequestPage> {
   String _selectedRequestType = 'Request Type';
   String _selectedPriority = 'Medium';
 
-  final List<String> _priorityOptions = ['Low', 'Medium', 'High'];
+  List<TransactionType> _requestTypesData = [];
   List<String> _requestTypes = ['Request Type'];
 
   bool _isLoading = true;
   bool _isUpdating = false;
   bool _isUploadingFile = false;
 
-  final String _baseUrl = 'http://77.83.242.94:3000';
+  final String _baseUrl = AppConfig.baseUrl;
+  final String _documentApiUrl = AppConfig.baseUrl;
 
   List<dynamic> _documents = [];
   List<PlatformFile> _newFiles = [];
 
   // 🔥 متغير لتتبع الملفات المرفوعة حديثاً
   List<String> _recentlyUploadedFiles = [];
+
+  final List<String> _priorityOptions = ['Low', 'Medium', 'High'];
+
+  InputDecoration _buildInputDecoration() {
+    return InputDecoration(
+      border: OutlineInputBorder(
+        borderSide: BorderSide(color: AppColors.borderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: AppColors.borderColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    );
+  }
 
   @override
   void initState() {
@@ -123,19 +143,28 @@ class _EditRequestPageState extends State<EditRequestPage> {
   Future<void> _fetchRequestTypes() async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/transactions/types'),
+        Uri.parse('$_documentApiUrl/transactions/types'),
         headers: {'Authorization': 'Bearer $_userToken'},
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final List<dynamic> transactionTypes = data["transactionTypes"] ?? [];
+        
+        List<dynamic> typesList = [];
+        if (data is List) {
+          typesList = data;
+        } else if (data is Map && data["transactionTypes"] != null) {
+          typesList = data["transactionTypes"];
+        }
+
+        final List<TransactionType> types = [];
+        for (var item in typesList) {
+          types.add(TransactionType.fromJson(item));
+        }
 
         setState(() {
-          _requestTypes = ['Request Type'];
-          for (var item in transactionTypes) {
-            _requestTypes.add(item["name"]);
-          }
+          _requestTypesData = types;
+          _requestTypes = ['Request Type', ...types.map((t) => t.name)];
         });
       } else {
         debugPrint('Error fetching types: ${response.statusCode}');
@@ -145,38 +174,160 @@ class _EditRequestPageState extends State<EditRequestPage> {
     }
   }
 
+  Future<void> _createNewRequestType(String name) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_documentApiUrl/transactions/types'),
+        headers: {
+          "Authorization": "Bearer $_userToken",
+          "Content-Type": "application/json",
+        },
+        body: json.encode({"name": name}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await _fetchRequestTypes(); // Refresh
+        _showSuccessSnackBar('Type created successfully!');
+      } else {
+        _showErrorSnackBar('Failed to create type: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error: $e');
+    }
+  }
+
+  Future<void> _deleteRequestType(String name) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.delete(
+        Uri.parse('$_documentApiUrl/transactions/types/$name'), // Using _documentApiUrl instead of AppConfig.baseUrl
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await _fetchRequestTypes();
+        _showSuccessSnackBar('Type deleted successfully!');
+      } else {
+        _showErrorSnackBar('Failed to delete: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error: $e');
+    }
+  }
+
+  void _showManageTypesDialog() {
+    final nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: Text('Manage Request Types'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(hintText: 'New type name'),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add_circle, color: AppColors.primary),
+                    onPressed: () {
+                      if (nameController.text.trim().isNotEmpty) {
+                        _createNewRequestType(nameController.text.trim());
+                        nameController.clear();
+                        Navigator.pop(context);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              Divider(),
+              SizedBox(
+                height: 200,
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _requestTypesData.length,
+                  itemBuilder: (context, index) {
+                    final type = _requestTypesData[index];
+                    return ListTile(
+                      title: Text(type.name),
+                      subtitle: Text('By: ${type.creatorName}', style: TextStyle(fontSize: 10)),
+                      trailing: IconButton(
+                        icon: Icon(Icons.delete_outline, color: AppColors.accentRed, size: 20),
+                        onPressed: () {
+                          _deleteRequestType(type.name);
+                          Navigator.pop(context);
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Close')),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _fetchRequestDetails() async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/transactions/${widget.requestId}'),
+      // استخدام الـ endpoint الصحيح من port 3300
+      var response = await http.get(
+        Uri.parse('$_documentApiUrl/transactions/${widget.requestId}'),
         headers: {'Authorization': 'Bearer $_userToken'},
       );
 
+      if (response.statusCode == 404) {
+        response = await http.get(
+          Uri.parse('$_documentApiUrl/transaction/${widget.requestId}'),
+          headers: {'Authorization': 'Bearer $_userToken'},
+        );
+      }
+
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data["status"] == "success" && data["transaction"] != null) {
-          final transaction = data["transaction"];
+        final rawData = json.decode(response.body);
+        final data = (rawData is Map && rawData["status"] == "success") 
+            ? rawData["transaction"] 
+            : rawData;
+            
+        debugPrint('📄 Transaction details: ${response.body}');
 
-          setState(() {
-            _titleController.text = transaction["title"] ?? '';
-            _descriptionController.text = transaction["description"] ?? '';
-
-            // تعيين نوع الطلب
-            final typeName = transaction["type"]?["name"];
-            if (typeName != null && _requestTypes.contains(typeName)) {
-              _selectedRequestType = typeName;
-            }
-
-            // تعيين الأولوية
-            final priority = transaction["priority"] ?? 'Medium';
-            _selectedPriority = _normalizePriority(priority);
-
-            // تعيين الملفات
-            _documents = transaction["documents"] ?? [];
-          });
+        if (data == null) {
+          _showErrorSnackBar('No transaction data found');
+          return;
         }
+
+        setState(() {
+          _titleController.text = data["title"] ?? '';
+          _descriptionController.text = data["description"] ?? '';
+
+          // تعيين نوع الطلب
+          final typeName = data["typeName"];
+          if (typeName != null && _requestTypes.contains(typeName)) {
+            _selectedRequestType = typeName;
+          }
+
+          // تعيين الأولوية
+          final priority = data["priority"] ?? 'Medium';
+          _selectedPriority = _normalizePriority(priority);
+
+          // تعيين الملفات
+          _documents = data["documents"] ?? [];
+          debugPrint('📋 Loaded ${_documents.length} documents');
+        });
       } else {
-        _showErrorSnackBar(AppLocalizations.of(context)!.translate('failed_create_request')); // Fallback to a generic error if specific not found, or use status code
+        _showErrorSnackBar('Failed to load request details: ${response.statusCode}');
       }
     } catch (e) {
       _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
@@ -235,14 +386,13 @@ class _EditRequestPageState extends State<EditRequestPage> {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'],
+        allowedExtensions: ['pdf'],
       );
 
       if (result != null && result.files.isNotEmpty) {
         final List<PlatformFile> uniqueFiles = [];
 
         for (var file in result.files) {
-          // 🔥 توليد اسم فريد للملف
           final uniqueFileName = _generateUniqueFileName(file.name);
           final uniqueFile = PlatformFile(
             name: uniqueFileName,
@@ -266,47 +416,32 @@ class _EditRequestPageState extends State<EditRequestPage> {
   // 🔹 دالة حذف ملف موجود
   Future<void> _deleteExistingFile(Map<String, dynamic> document) async {
     try {
-      final documentURI = document["documentURI"]?.toString() ?? "";
+      final dynamic rawId = document["id"];
+      final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
+      final fileName = document["title"] ?? "file";
 
-      final parts = documentURI.split('/');
-      if (parts.length != 2) {
-        _showErrorSnackBar(AppLocalizations.of(context)!.translate('invalid_uri_format'));
-        return;
-      }
-
-      final uploaderName = parts[0];
-      final fileName = parts[1];
-
-      // 1. فصل الملف من المعاملة أولاً
-      final detachResponse = await http.delete(
-        Uri.parse('$_baseUrl/transactions/${widget.requestId}/document/$uploaderName/$fileName'),
-        headers: {'Authorization': 'Bearer $_userToken'},
+      final response = await http.delete(
+        Uri.parse('$_documentApiUrl/documents/$documentId'),
+        headers: {
+          'accept': 'application/json',
+          'Authorization': 'Bearer $_userToken',
+        },
       );
 
-      if (detachResponse.statusCode == 200) {
-        // 2. حذف الملف من النظام (اختياري)
-        final deleteFileResponse = await http.delete(
-          Uri.parse('$_baseUrl/documents/$uploaderName/$fileName'),
-          headers: {'Authorization': 'Bearer $_userToken'},
-        );
-
-        if (deleteFileResponse.statusCode == 200) {
-          setState(() {
-            _documents.removeWhere((doc) => doc["documentURI"] == documentURI);
-          });
-          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('file_deleted_success'));
-        } else {
-          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('file_detached_success'));
-        }
+      if (response.statusCode == 200) {
+        setState(() {
+          _documents.removeWhere((doc) => doc["id"] == documentId);
+        });
+        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('file_deleted_success'));
       } else {
-        _showErrorSnackBar(AppLocalizations.of(context)!.translate('failed_detach_file'));
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('delete_failed_error').replaceFirst('{fileName}', fileName));
       }
     } catch (e) {
       _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
     }
   }
 
-  // 🔹 دالة رفع ملف جديد وربطه بالطلب - الطريقة المصححة
+  // 🔹 دالة رفع ملف جديد وربطه بالطلب - مصححة
   Future<void> _uploadAndLinkNewFiles() async {
     if (_newFiles.isEmpty) return;
 
@@ -316,19 +451,20 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
     try {
       List<String> uploadedFiles = [];
+      List<Map<String, dynamic>> newDocuments = [];
 
+      // 1. رفع الملفات الجديدة
       for (final file in _newFiles) {
-        final uniqueFileName = file.name; // تم توليده مسبقاً في _uploadNewFile
+        final uniqueFileName = file.name;
 
-        // 1. رفع الملف إلى السيرفر
         var uploadRequest = http.MultipartRequest(
           'POST',
-          Uri.parse('$_baseUrl/documents'),
+          Uri.parse('$_documentApiUrl/documents'),
         );
 
         uploadRequest.headers['Authorization'] = 'Bearer $_userToken';
+        uploadRequest.headers['accept'] = 'application/json';
 
-        // ✅ استخدام الاسم الفريد
         uploadRequest.files.add(await http.MultipartFile.fromPath(
           'file',
           file.path!,
@@ -336,32 +472,82 @@ class _EditRequestPageState extends State<EditRequestPage> {
         ));
 
         var uploadResponse = await uploadRequest.send();
+        debugPrint('📤 Upload Status: ${uploadResponse.statusCode}');
 
-        if (uploadResponse.statusCode == 200) {
-          await uploadResponse.stream.bytesToString();
+        if (uploadResponse.statusCode == 201 || uploadResponse.statusCode == 200) {
+          final responseData = await uploadResponse.stream.bytesToString();
+          final documentData = json.decode(responseData);
+          debugPrint('📄 Upload Response: $responseData');
 
-          // ✅ استخدام اسم الملف الفريد في الرابط
-          final linkResponse = await http.post(
-            Uri.parse('$_baseUrl/transactions/${widget.requestId}/document/${_userName}/$uniqueFileName'),
-            headers: {
-              'Authorization': 'Bearer $_userToken',
-            },
-          );
+          final dynamic rawId = documentData["id"];
+          final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
+          final String title = documentData["title"] ?? file.name;
+          final String uploadedAt = documentData["uploadedAt"] ?? DateTime.now().toIso8601String();
+          final String uploaderName = documentData["uploaderName"] ?? _userName ?? "user";
 
-          if (linkResponse.statusCode == 200) {
-            uploadedFiles.add(file.name);
-          }
+          // بناء كائن الملف بالشكل الصحيح كما في الـ response
+          final Map<String, dynamic> newDocument = {
+            "id": documentId,
+            "title": title,
+            "uploadedAt": uploadedAt,
+            "uploaderName": uploaderName,
+            "downloadURI": "/documents/$documentId/download"
+          };
+
+          newDocuments.add(newDocument);
+          uploadedFiles.add(file.name);
+          debugPrint('📎 Document created: ${newDocument["title"]}');
+        } else {
+          final errorData = await uploadResponse.stream.bytesToString();
+          debugPrint('❌ Upload failed: $errorData');
         }
       }
 
-      // 🔥 تحديث قائمة الملفات المرفوعة حديثاً
-      if (uploadedFiles.isNotEmpty) {
-        setState(() {
-          _recentlyUploadedFiles.addAll(uploadedFiles);
-          _newFiles.clear(); // تفريغ الملفات الجديدة
-        });
+      // 2. ربط كل الملفات الجديدة بالمعاملة
+      if (newDocuments.isNotEmpty) {
+        int linkedCount = 0;
 
-        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('files_uploaded_success_count').replaceFirst('{count}', '${uploadedFiles.length}'));
+        for (final document in newDocuments) {
+          final int documentId = document["id"];
+          debugPrint('🔗 Linking document $documentId to transaction ${widget.requestId}');
+
+          final linkResponse = await http.post(
+            Uri.parse('$_documentApiUrl/transactions/${widget.requestId}/document/$documentId'),
+            headers: {
+              'accept': 'application/json',
+              'Authorization': 'Bearer $_userToken',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({}),
+          );
+
+          debugPrint('🔗 Link Status: ${linkResponse.statusCode}');
+          if (linkResponse.statusCode == 200 || linkResponse.statusCode == 201) {
+            linkedCount++;
+
+            // ✅ إضافة الملف إلى القائمة مباشرة
+            setState(() {
+              _documents.add(document);
+            });
+
+            debugPrint('✅ Document $documentId linked and added to list');
+          } else {
+            debugPrint('❌ Link failed: ${linkResponse.body}');
+          }
+        }
+
+        if (linkedCount > 0) {
+          setState(() {
+            _recentlyUploadedFiles.addAll(uploadedFiles);
+            _newFiles.clear();
+          });
+
+          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('files_uploaded_success_count').replaceFirst('{count}', '$linkedCount'));
+        } else {
+          _showErrorSnackBar('Failed to link any documents to the request');
+        }
+      } else {
+        _showErrorSnackBar('No files were uploaded successfully');
       }
 
     } catch (e) {
@@ -382,13 +568,15 @@ class _EditRequestPageState extends State<EditRequestPage> {
     });
 
     try {
-      // 1. تحديث بيانات الطلب
+      // 1. تحديث بيانات الطلب الأساسية
       final requestData = {
         'title': _titleController.text,
         'description': _descriptionController.text,
         'typeName': _selectedRequestType,
-        'priority': _selectedPriority.toLowerCase(),
+        'priority': _selectedPriority.toUpperCase(),
       };
+
+      debugPrint('🚀 Updating request: $requestData');
 
       final response = await http.patch(
         Uri.parse('$_baseUrl/transactions/${widget.requestId}'),
@@ -399,19 +587,25 @@ class _EditRequestPageState extends State<EditRequestPage> {
         body: json.encode(requestData),
       );
 
+      debugPrint('📊 Update Status: ${response.statusCode}');
+      debugPrint('📄 Update Response: ${response.body}');
+
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         if (responseData["status"] == "success") {
+          // 2. إذا كانت هناك ملفات جديدة، رفعها وربطها
           if (_newFiles.isNotEmpty) {
             await _uploadAndLinkNewFiles();
+          } else {
+            _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_updated_success_details'));
+            // إعادة تحميل البيانات للتأكد من التحديث
+            await _fetchRequestDetails();
           }
-
-          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_updated_success_details'));
         } else {
-          _showErrorSnackBar('${AppLocalizations.of(context)!.translate('login_failed')}: ${responseData["message"]}');
+          _showErrorSnackBar('Update failed: ${responseData["message"]}');
         }
       } else {
-        _showErrorSnackBar('${AppLocalizations.of(context)!.translate('login_failed')} Status: ${response.statusCode}');
+        _showErrorSnackBar('Failed to update request with status: ${response.statusCode}');
       }
     } catch (e) {
       _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
@@ -427,6 +621,16 @@ class _EditRequestPageState extends State<EditRequestPage> {
     _showSuccessSnackBar(AppLocalizations.of(context)!.translate('editing_completed'));
     if (mounted) {
       Navigator.pop(context);
+    }
+  }
+
+  // دالة مساعدة لتنسيق التاريخ
+  String _formatDate(String isoDate) {
+    try {
+      final date = DateTime.parse(isoDate);
+      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return isoDate;
     }
   }
 
@@ -571,9 +775,10 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
   // 🔹 ويدجت لعرض ملف مرفق
   Widget _buildDocumentItem(Map<String, dynamic> document, bool isMobile, bool isTablet) {
-    final documentURI = document["documentURI"]?.toString() ?? "";
-    final fileName = documentURI.split('/').last;
+    final fileName = document["title"] ?? "document.pdf";
     final fileId = document["id"]?.toString() ?? "";
+    final uploadDate = document["uploadedAt"] ?? "";
+    final uploader = document["uploaderName"] ?? "";
 
     return Container(
       margin: EdgeInsets.only(bottom: isMobile ? 6 : 8),
@@ -593,12 +798,25 @@ class _EditRequestPageState extends State<EditRequestPage> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text(
-          '${AppLocalizations.of(context)!.translate('file_id_label')}: $fileId',
-          style: TextStyle(
-            fontSize: isMobile ? 11 : 12,
-            color: AppColors.textSecondary,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ID: $fileId | Uploaded by: $uploader',
+              style: TextStyle(
+                fontSize: isMobile ? 11 : 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            if (uploadDate.isNotEmpty)
+              Text(
+                'Uploaded: ${_formatDate(uploadDate)}',
+                style: TextStyle(
+                  fontSize: isMobile ? 10 : 11,
+                  color: AppColors.textMuted,
+                ),
+              ),
+          ],
         ),
         trailing: IconButton(
           icon: Icon(Icons.delete, color: AppColors.accentRed, size: isMobile ? 18 : 20),
@@ -765,44 +983,59 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
-            // نوع الطلب
-            Text(
-              '${AppLocalizations.of(context)!.translate('request_type_label')} *',
-              style: TextStyle(
-                fontSize: isMobile ? 14 : 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${AppLocalizations.of(context)!.translate('request_type_label')} *',
+                  style: TextStyle(
+                    fontSize: isMobile ? 14 : 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.settings, color: AppColors.primary, size: 20),
+                  onPressed: _showManageTypesDialog,
+                  tooltip: 'Manage Request Types',
+                ),
+              ],
             ),
             SizedBox(height: isMobile ? 6 : 8),
             DropdownButtonFormField<String>(
               value: _selectedRequestType,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 12 : 16,
-                  vertical: isMobile ? 14 : 16,
-                ),
-              ),
-              items: _requestTypes.map((String value) =>
-                  DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(
-                      value == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : value,
-                      style: TextStyle(
-                        fontSize: isMobile ? 14 : 16,
-                        color: value == 'Request Type' ? AppColors.textMuted : AppColors.textPrimary,
+              decoration: _buildInputDecoration(),
+              items: _requestTypes.map((v) {
+                final typeData = _requestTypesData.firstWhere(
+                  (t) => t.name == v,
+                  orElse: () => TransactionType(name: v, creatorName: ''),
+                );
+
+                return DropdownMenuItem(
+                  value: v,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        v == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : v,
+                        style: TextStyle(
+                          color: v == 'Request Type' ? AppColors.textMuted : AppColors.textPrimary,
+                        ),
                       ),
-                    ),
-                  )).toList(),
+                      if (v != 'Request Type' && typeData.creatorName != 'System' && typeData.creatorName != '')
+                        Text(
+                          'Created by: ${typeData.creatorName}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textSecondary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }).toList(),
               onChanged: (newValue) {
                 setState(() { _selectedRequestType = newValue!; });
               },
@@ -961,7 +1194,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary, // نفس لون الأزرار الأخرى
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(
                     horizontal: isMobile ? 24 : 32,

@@ -41,7 +41,7 @@ class UsersListHeader extends StatelessWidget {
               fontSize: isMobile ? 12 : 14,
             ),
           ),
-          if (hasMore && searchQuery.isEmpty && selectedFilter == 'all')
+          if (false) // Pagination removed
             Text(
               AppLocalizations.of(context)!.translate('scroll_to_load_more'),
               style: TextStyle(

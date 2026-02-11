@@ -79,7 +79,7 @@ class InboxApi {
       if (token == null) return null;
 
       final response = await http.get(
-        Uri.parse("$baseUrl/transactions/$transactionId/forwards"),
+        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -88,7 +88,9 @@ class InboxApi {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> forwards = data["transaction"]?["forwards"] ?? [];
+        final List<dynamic> forwards = data is List 
+            ? data 
+            : (data["transaction"]?["forwards"] ?? data["forwards"] ?? []);
 
         // 🔹 فلترة: جلب فقط الـ forwards التي قام بها المستخدم الحالي كـ sender
         final myForwards = forwards.where((forward) {
@@ -133,10 +135,18 @@ class InboxApi {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List<String> typeNames = ['All Types'];
-        final List<dynamic> transactionTypes =
-            data["transactionTypes"] ?? [];
-        for (var item in transactionTypes) {
-          typeNames.add(item["name"]);
+        
+        List<dynamic> typesList = [];
+        if (data is List) {
+          typesList = data;
+        } else if (data is Map && data["transactionTypes"] != null) {
+          typesList = data["transactionTypes"];
+        }
+
+        for (var item in typesList) {
+          if (item["name"] != null) {
+            typeNames.add(item["name"]);
+          }
         }
         return typeNames;
       }
@@ -154,7 +164,7 @@ class InboxApi {
       if (token == null || userName == null) return 'unknown';
 
       final res = await http.get(
-        Uri.parse("$baseUrl/transactions/${request['id']}/forwards"),
+        Uri.parse("$baseUrl/transaction/${request['id']}/forward"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -163,8 +173,9 @@ class InboxApi {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List<dynamic> forwards =
-            data['transaction']?['forwards'] ?? [];
+        final List<dynamic> forwards = data is List 
+            ? data 
+            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
 
         dynamic yourForward;
         try {
@@ -197,7 +208,7 @@ class InboxApi {
       if (token == null || userName == null) return 'unknown';
 
       final res = await http.get(
-        Uri.parse("$baseUrl/transactions/${request['id']}/forwards"),
+        Uri.parse("$baseUrl/transaction/${request['id']}/forward"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -206,7 +217,9 @@ class InboxApi {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List<dynamic> forwards = data['transaction']?['forwards'] ?? [];
+        final List<dynamic> forwards = data is List 
+            ? data 
+            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
 
         if (forwards.isEmpty) {
           return 'not-assigned';
@@ -244,7 +257,7 @@ class InboxApi {
       }
 
       final res = await http.get(
-        Uri.parse("$baseUrl/transactions/${request['id']}/forwards"),
+        Uri.parse("$baseUrl/transaction/${request['id']}/forward"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -253,8 +266,9 @@ class InboxApi {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List<dynamic> forwards =
-            data['transaction']?['forwards'] ?? [];
+        final List<dynamic> forwards = data is List 
+            ? data 
+            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
 
         dynamic yourForward;
         try {
@@ -286,7 +300,7 @@ class InboxApi {
       if (token == null || userName == null) return null;
 
       final res = await http.get(
-        Uri.parse("$baseUrl/transactions/${request['id']}/forwards"),
+        Uri.parse("$baseUrl/transaction/${request['id']}/forward"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -295,8 +309,9 @@ class InboxApi {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List<dynamic> forwards =
-            data['transaction']?['forwards'] ?? [];
+        final List<dynamic> forwards = data is List 
+            ? data 
+            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
 
         dynamic myForward;
         try {
@@ -334,7 +349,7 @@ class InboxApi {
 
     try {
       final res = await http.get(
-        Uri.parse("$baseUrl/transactions/$transactionId/forwards"),
+        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -343,7 +358,9 @@ class InboxApi {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List<dynamic> forwards = data['transaction']?['forwards'] ?? [];
+        final List<dynamic> forwards = data is List 
+            ? data 
+            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
 
         if (forwards.isEmpty) {
           return true;
@@ -403,11 +420,12 @@ class InboxApi {
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          final List<dynamic> pageRequests =
-              data["transactions"] ?? [];
+          final List<dynamic> pageRequests = data is List 
+              ? data 
+              : (data["transactions"] ?? []);
           allRequests.addAll(pageRequests);
 
-          lastPage = data["page"]?["last"] ?? 1;
+          lastPage = data is Map ? (data["page"]?["last"] ?? 1) : 1;
           currentPage++;
 
           if (pageRequests.isEmpty) break;
@@ -477,7 +495,7 @@ class InboxApi {
 
       final response = await http.patch(
         Uri.parse(
-            "$baseUrl/transactions/$transactionId/forwards/$forwardId"),
+            "$baseUrl/transaction/$transactionId/forward/$forwardId"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -492,18 +510,19 @@ class InboxApi {
     }
   }
 
-  // 🔹 تنفيذ الإجراءات (الموافقة، الرفض) - الجديدة (تتعامل مع الحالة الجديدة)
+  // 🔹 تنفيذ الإجراءات (الموافقة، الرفض، طلب التعديل) - الجديدة
   Future<bool> performActionUpdated(
       String transactionId,
       String action,
       String? token,
-      String? userName,
-      ) async {
+      String? userName, {
+        String? comment,
+      }) async {
     if (token == null || userName == null) return false;
 
     try {
       final forwardsResponse = await http.get(
-        Uri.parse("$baseUrl/transactions/$transactionId/forwards"),
+        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -512,8 +531,10 @@ class InboxApi {
 
       if (forwardsResponse.statusCode != 200) return false;
 
-      final forwardsData = json.decode(forwardsResponse.body);
-      final List<dynamic> forwards = forwardsData['transaction']?['forwards'] ?? [];
+      final data = json.decode(forwardsResponse.body);
+      final List<dynamic> forwards = data is List 
+          ? data 
+          : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
 
       if (forwards.isEmpty) return false;
 
@@ -540,17 +561,24 @@ class InboxApi {
 
       switch (action) {
         case 'Approve':
-          body['status'] = 'approved';
+          body['status'] = 'APPROVED';
           break;
         case 'Reject':
-          body['status'] = 'rejected';
+          body['status'] = 'REJECTED';
+          break;
+        case 'Needs Change':
+          body['status'] = 'NEEDS_CHANGE';
           break;
         default:
           return false;
       }
 
+      if (comment != null && comment.isNotEmpty) {
+        body['receiverComment'] = comment;
+      }
+
       final response = await http.patch(
-        Uri.parse("$baseUrl/transactions/$transactionId/forwards/$forwardId"),
+        Uri.parse("$baseUrl/transaction/$transactionId/forward/$forwardId"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -560,7 +588,7 @@ class InboxApi {
 
       return response.statusCode == 200;
     } catch (e) {
-      print("❌ Error in performAction: $e");
+      print("❌ Error in performActionUpdated: $e");
       return false;
     }
   }
@@ -575,12 +603,15 @@ class InboxApi {
 
     try {
       final response = await http.post(
-        Uri.parse("$baseUrl/transactions/$transactionId/forwards"),
+        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: json.encode({"receiverName": receiverName}),
+        body: json.encode({
+          "receiverName": receiverName,
+          "senderComment": "Forwarded via Mobile App"
+        }),
       );
 
       return response.statusCode == 200;
@@ -601,7 +632,7 @@ class InboxApi {
     try {
       final response = await http.delete(
         Uri.parse(
-            "$baseUrl/transactions/$transactionId/forwards/$forwardId"),
+            "$baseUrl/transaction/$transactionId/forward/$forwardId"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -685,7 +716,7 @@ class InboxApi {
     if (token == null) return false;
 
     try {
-      final response = await http.put(
+      final response = await http.patch(
         Uri.parse("$baseUrl/transactions/$requestId"),
         headers: {
           'Content-Type': 'application/json',

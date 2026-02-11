@@ -1104,30 +1104,13 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
 
   Future<void> _fetchUsers() async {
     try {
-      final data = await _apiService.fetchUsers(_pageNumber, _pageSize);
+      final List<User> fetchedUsers = await _apiService.fetchUsers();
 
-      if (data["status"] == "success") {
-        List<User> fetchedUsers = [];
-
-        for (var u in data["users"]) {
-          fetchedUsers.add(User.fromJson(u));
-        }
-
-        setState(() {
-          _users.addAll(fetchedUsers);
-
-          final pageInfo = data["page"];
-          if (pageInfo != null) {
-            final currentPage = pageInfo["number"] ?? _pageNumber;
-            final lastPage = pageInfo["last"] ?? 1;
-            _hasMore = currentPage < lastPage;
-            if (_hasMore) _pageNumber = currentPage + 1;
-          } else {
-            _hasMore = fetchedUsers.length == _pageSize;
-            if (_hasMore) _pageNumber++;
-          }
-        });
-      }
+      setState(() {
+        _users.clear(); // Since it's not paginated now, we reload everything
+        _users.addAll(fetchedUsers);
+        _hasMore = false; // API doesn't support pagination anymore
+      });
     } catch (e) {
       UsersHelpers.showErrorMessage(context, e.toString());
     }
@@ -1146,7 +1129,7 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
     // الفلتر المحلي حسب النوع
     if (_selectedFilter != 'all') {
       filtered = filtered
-          .where((u) => u.group.toLowerCase() == _selectedFilter)
+          .where((u) => u.role.toLowerCase() == _selectedFilter)
           .toList();
     }
 
@@ -1233,6 +1216,7 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
                         apiService: _apiService,
                         isMobile: isMobile,
                         isTablet: isTablet,
+                        onUpdate: _loadUsers,
                       );
                     },
                   ),

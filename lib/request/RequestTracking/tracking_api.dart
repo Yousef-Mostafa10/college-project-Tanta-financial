@@ -15,7 +15,7 @@ class TrackingApi {
   Future<Map<String, dynamic>> fetchTransactionForwards(String transactionId) async {
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/transactions/$transactionId/forwards"),
+        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $userToken',
@@ -24,10 +24,14 @@ class TrackingApi {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        final List<dynamic> forwards = data is List 
+            ? data 
+            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
+        
         return {
           'success': true,
-          'transaction': data['transaction'],
-          'forwards': data['transaction']?['forwards'] ?? [],
+          'transaction': data is Map ? (data['transaction'] ?? data) : null,
+          'forwards': forwards,
         };
       } else {
         return {

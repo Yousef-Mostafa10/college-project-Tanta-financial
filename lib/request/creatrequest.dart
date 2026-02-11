@@ -8,6 +8,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import '../app_config.dart';
+import 'transaction_type_model.dart';
 
 // 🎨 COLOR PALETTE - Consistent with Dashboard and Inbox
 class CreateRequestColors {
@@ -50,6 +52,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   String _selectedPriority = 'Medium';
   String _selectedReceiver = 'Select User';
 
+  List<TransactionType> _requestTypesData = []; // Store full objects
   List<String> _requestTypes = ['Request Type'];
   List<String> _availableUsers = ['Select User'];
   List<String> _filteredUsers = ['Select User'];
@@ -59,8 +62,10 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   bool _areRequestTypesLoaded = false;
   bool _areUsersLoaded = false;
 
-  List<String> _uploadedDocuments = [];
+  List<int> _uploadedDocumentIds = [];
   List<PlatformFile> _selectedFiles = [];
+
+  final String _documentApiUrl = AppConfig.baseUrl;
 
   @override
   void initState() {
@@ -100,28 +105,38 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       final token = prefs.getString('token') ?? '';
 
       final response = await http.get(
-        Uri.parse('http://77.83.242.94:3000/transactions/types'),
+        Uri.parse('$_documentApiUrl/transactions/types'),
         headers: {"Authorization": "Bearer $token"},
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data["status"] == "success") {
-          final List<String> types = [];
-          for (var type in data["transactionTypes"]) {
-            if (type["name"] != null) types.add(type["name"]);
-          }
-
-          setState(() {
-            _requestTypes = ['Request Type', ...types];
-            _selectedRequestType =
-            _requestTypes.length > 1 ? _requestTypes[1] : _requestTypes.first;
-            _areRequestTypesLoaded = true;
-            _checkLoadingStatus();
-          });
-        } else {
-          _showErrorMessage('API Error: ${data["message"]}');
+        
+        // The API now returns a list of objects based on latest documentation
+        // Handle both: dynamic list of objects OR object with "transactionTypes" list
+        List<dynamic> typesList = [];
+        if (data is List) {
+          typesList = data;
+        } else if (data is Map && data["transactionTypes"] != null) {
+          typesList = data["transactionTypes"];
         }
+
+        final List<TransactionType> types = [];
+        for (var item in typesList) {
+          types.add(TransactionType.fromJson(item));
+        }
+
+        setState(() {
+          _requestTypesData = types;
+          _requestTypes = ['Request Type', ...types.map((t) => t.name)];
+          
+          if (_selectedRequestType == 'Request Type' || !_requestTypes.contains(_selectedRequestType)) {
+            _selectedRequestType = _requestTypes.length > 1 ? _requestTypes[1] : _requestTypes.first;
+          }
+          
+          _areRequestTypesLoaded = true;
+          _checkLoadingStatus();
+        });
       } else {
         _showErrorMessage('HTTP Error: ${response.statusCode}');
         _loadFallbackData();
@@ -132,21 +147,134 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     }
   }
 
+  Future<void> _createNewRequestType(String name) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.post(
+        Uri.parse('$_documentApiUrl/transactions/types'),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+        body: json.encode({"name": name}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await fetchRequestTypes(); // Refresh list
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Type created successfully!'), backgroundColor: CreateRequestColors.accentGreen),
+        );
+      } else {
+        _showErrorMessage('Failed to create type: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showErrorMessage('Error: $e');
+    }
+  }
+
+  Future<void> _deleteRequestType(String name) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.delete(
+        Uri.parse('$_documentApiUrl/transactions/types/$name'),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await fetchRequestTypes();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Type deleted successfully!'), backgroundColor: CreateRequestColors.accentGreen),
+        );
+      } else {
+        _showErrorMessage('Failed to delete: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showErrorMessage('Error: $e');
+    }
+  }
+
+  void _showManageTypesDialog() {
+    final nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: Text('Manage Request Types'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(hintText: 'New type name'),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add_circle, color: CreateRequestColors.primary),
+                    onPressed: () {
+                      if (nameController.text.trim().isNotEmpty) {
+                        _createNewRequestType(nameController.text.trim());
+                        nameController.clear();
+                        Navigator.pop(context);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              Divider(),
+              SizedBox(
+                height: 200,
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _requestTypesData.length,
+                  itemBuilder: (context, index) {
+                    final type = _requestTypesData[index];
+                    return ListTile(
+                      title: Text(type.name),
+                      subtitle: Text('By: ${type.creatorName}', style: TextStyle(fontSize: 10)),
+                      trailing: IconButton(
+                        icon: Icon(Icons.delete_outline, color: CreateRequestColors.accentRed, size: 20),
+                        onPressed: () {
+                          _deleteRequestType(type.name);
+                          Navigator.pop(context);
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Close')),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> fetchUsers() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token') ?? '';
 
       final response = await http.get(
-        Uri.parse('http://77.83.242.94:3000/users?pageNumber=1&pageSize=100'),
+        Uri.parse('$_documentApiUrl/users'),
         headers: {"Authorization": "Bearer $token"},
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data["status"] == "success") {
+        if (data is List) {
           final List<String> users = [];
-          for (var user in data["users"]) {
+          for (var user in data) {
             if (user["name"] != null) users.add(user["name"]);
           }
 
@@ -158,7 +286,11 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             _checkLoadingStatus();
           });
         } else {
-          _showErrorMessage('API Error: ${data["message"]}');
+          _showErrorMessage('Invalid API response format');
+          setState(() {
+            _areUsersLoaded = true;
+            _checkLoadingStatus();
+          });
         }
       } else {
         _showErrorMessage('HTTP Error: ${response.statusCode}');
@@ -197,7 +329,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     }
   }
 
-  // 🔍 دالة البحث عن المستخدمين
   void _filterUsers(String query) {
     setState(() {
       if (query.isEmpty) {
@@ -209,7 +340,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             user != 'Select User')
             .toList();
 
-        // إضافة Select User في البداية إذا كان البحث فارغاً
         if (!_filteredUsers.contains('Select User')) {
           _filteredUsers.insert(0, 'Select User');
         }
@@ -239,7 +369,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
   Future<void> _uploadFiles() async {
     if (_selectedFiles.isEmpty) return;
-    _uploadedDocuments.clear(); // Clear previously uploaded docs for this submission
+    _uploadedDocumentIds.clear();
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
 
@@ -250,37 +380,45 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           _showErrorMessage("Could not get file path for ${file.name}");
           continue;
         }
-        final tempDir = await getTemporaryDirectory();
-        final tempFile = File('${tempDir.path}/$finalFileName');
-        final originalFile = File(file.path!);
-
-        if (await originalFile.exists()) {
-          await originalFile.copy(tempFile.path);
-        }
 
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse('http://77.83.242.94:3000/documents'),
+          Uri.parse('$_documentApiUrl/documents'),
         );
-        request.files.add(await http.MultipartFile.fromPath('file', tempFile.path,
-            filename: finalFileName));
-        request.headers['Authorization'] = 'Bearer $token';
 
+        request.headers['Authorization'] = 'Bearer $token';
+        request.headers['accept'] = 'application/json';
+
+        request.files.add(await http.MultipartFile.fromPath(
+          'file',
+          file.path!,
+          filename: finalFileName,
+        ));
+
+        debugPrint('📤 Uploading: $finalFileName');
         var response = await request.send();
-        if (response.statusCode == 200) {
+        debugPrint('📊 Upload Status: ${response.statusCode}');
+
+        if (response.statusCode == 201 || response.statusCode == 200) {
           final responseData = await response.stream.bytesToString();
+          debugPrint('✅ Upload Response: $responseData');
           final documentData = json.decode(responseData);
-          final documentURI =
-          documentData["documentURI"].replaceAll('\\', '/');
-          _uploadedDocuments.add(documentURI);
+
+          // الحصول على document ID
+          if (documentData["id"] != null) {
+            final dynamic rawId = documentData["id"];
+            final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
+            _uploadedDocumentIds.add(documentId);
+            debugPrint('📎 Document ID added: $documentId');
+          }
           _showSuccessMessage(AppLocalizations.of(context)!.translate('file_uploaded_success').replaceFirst('{fileName}', file.name));
         } else {
-          _showErrorMessage(AppLocalizations.of(context)!.translate('upload_failed_error').replaceFirst('{fileName}', file.name));
+          final responseData = await response.stream.bytesToString();
+          debugPrint('❌ Upload Error: $responseData');
+          _showErrorMessage('Upload failed with status ${response.statusCode}');
         }
-
-        if (await tempFile.exists()) await tempFile.delete();
       } catch (e) {
-        _showErrorMessage(AppLocalizations.of(context)!.translate('error_uploading_file').replaceFirst('{fileName}', file.name));
+        _showErrorMessage('${AppLocalizations.of(context)!.translate('error_uploading_file').replaceFirst('{fileName}', file.name)}: $e');
       }
     }
   }
@@ -291,22 +429,28 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
     try {
       final response = await http.post(
-        Uri.parse(
-            'http://77.83.242.94:3000/transactions/$transactionId/forwards'),
+        Uri.parse('$_documentApiUrl/transaction/$transactionId/forward'),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token"
         },
-        body: jsonEncode({"receiverName": _selectedReceiver}),
+        body: jsonEncode({
+          "receiverName": _selectedReceiver,
+          "senderComment": "Request forwarded from ${AppLocalizations.of(context)!.translate('app_name')}"
+        }),
       );
 
-      if (response.statusCode == 200) {
-        _showSuccessMessage(AppLocalizations.of(context)!.translate('request_sent_to').replaceFirst('{user}', _selectedReceiver));
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body);
+        debugPrint('✅ Forward successful: ${data["id"]}');
+        _showSuccessMessage(AppLocalizations.of(context)!
+            .translate('request_sent_to')
+            .replaceFirst('{user}', _selectedReceiver));
       } else {
-        _showErrorMessage(AppLocalizations.of(context)!.translate('failed_send_request'));
+        _showErrorMessage('Failed to forward request: ${response.statusCode}\n${response.body}');
       }
     } catch (e) {
-      _showErrorMessage(AppLocalizations.of(context)!.translate('failed_send_request'));
+      _showErrorMessage('Failed to forward request: $e');
     }
   }
 
@@ -314,20 +458,29 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isSubmitting = true);
       try {
-        if (_selectedFiles.isNotEmpty) await _uploadFiles();
+        // 1. رفع الملفات أولاً (إذا كان هناك ملفات)
+        if (_selectedFiles.isNotEmpty) {
+          await _uploadFiles();
+        }
 
         final prefs = await SharedPreferences.getInstance();
         final token = prefs.getString('token') ?? '';
+
+        // 2. إنشاء المعاملة مع documentsIds مباشرة
         final transactionData = {
           "title": _titleController.text,
           "description": _descriptionController.text,
           "typeName": _selectedRequestType,
-          "priority": _selectedPriority.toLowerCase(),
-          "documentsURIs": _uploadedDocuments,
+          "priority": _selectedPriority.toUpperCase(),
+          "documentsIds": _uploadedDocumentIds.isNotEmpty
+              ? _uploadedDocumentIds
+              : [],
         };
 
+        debugPrint('🚀 Creating transaction: $transactionData');
+
         final response = await http.post(
-          Uri.parse('http://77.83.242.94:3000/transactions'),
+          Uri.parse('$_documentApiUrl/transactions'),
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer $token"
@@ -335,14 +488,22 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           body: jsonEncode(transactionData),
         );
 
-        if (response.statusCode == 201) {
+        debugPrint('📊 Create Status: ${response.statusCode}');
+        debugPrint('📄 Create Response: ${response.body}');
+
+        if (response.statusCode == 201 || response.statusCode == 200) {
           final data = json.decode(response.body);
-          final id = data["transaction"]["id"];
-          await _forwardTransaction(id);
+          final transactionId = data["id"];
+
+          // 3. إرسال المعاملة للمستخدم المحدد
+          if (transactionId != null) {
+            await _forwardTransaction(transactionId);
+          }
+
           _showSuccessMessage(AppLocalizations.of(context)!.translate('request_sent_success'));
           Navigator.pop(context);
         } else {
-          _showErrorMessage(AppLocalizations.of(context)!.translate('failed_create_request'));
+          _showErrorMessage('Failed to create transaction: ${response.statusCode}\n${response.body}');
         }
       } catch (e) {
         _showErrorMessage('${AppLocalizations.of(context)!.translate('error_label')}: $e');
@@ -354,23 +515,11 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
   Future<void> _pickFiles() async {
     try {
-      // Note: FilePicker handles permission internally on many platforms. 
-      // Manual storage permission check is often problematic on Android 13+.
-
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: [
-        'pdf',
-        'doc',
-        'docx',
-        'xls',
-        'xlsx',
-        'jpg',
-        'png',
-        'jpeg'
-      ],
-      allowMultiple: true,
-    );
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        allowMultiple: true,
+      );
 
       if (result != null && result.files.isNotEmpty) {
         setState(() => _selectedFiles = result.files);
@@ -448,15 +597,12 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // الهيدر
             _buildHeader(isMobile),
             SizedBox(height: isMobile ? 16 : 24),
 
-            // المعلومات الأساسية
             _buildSectionHeader(AppLocalizations.of(context)!.translate('basic_information')),
             SizedBox(height: isMobile ? 12 : 16),
 
-            // العنوان
             _buildLabel('${AppLocalizations.of(context)!.translate('request_title')} *'),
             SizedBox(height: 8),
             TextFormField(
@@ -484,9 +630,17 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
-            // نوع الطلب
-            _buildLabel('${AppLocalizations.of(context)!.translate('request_type_label')} *'),
-            SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildLabel('${AppLocalizations.of(context)!.translate('request_type_label')} *'),
+                IconButton(
+                  icon: Icon(Icons.settings, color: CreateRequestColors.primary, size: 20),
+                  onPressed: _showManageTypesDialog,
+                  tooltip: 'Manage Request Types',
+                ),
+              ],
+            ),
             DropdownButtonFormField<String>(
               value: _selectedRequestType,
               decoration: InputDecoration(
@@ -504,19 +658,38 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   vertical: isMobile ? 12 : 16,
                 ),
               ),
-              items: _requestTypes
-                  .map((v) => DropdownMenuItem(
-                value: v,
-                child: Text(
-                  v == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : v,
-                  style: TextStyle(
-                    color: v == 'Request Type'
-                        ? CreateRequestColors.textMuted
-                        : CreateRequestColors.textPrimary,
+              items: _requestTypes.map((v) {
+                final typeData = _requestTypesData.firstWhere(
+                  (t) => t.name == v,
+                  orElse: () => TransactionType(name: v, creatorName: ''),
+                );
+
+                return DropdownMenuItem(
+                  value: v,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        v == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : v,
+                        style: TextStyle(
+                          fontWeight: v == 'Request Type' ? FontWeight.normal : FontWeight.w600,
+                          color: v == 'Request Type' ? CreateRequestColors.textMuted : CreateRequestColors.textPrimary,
+                        ),
+                      ),
+                      if (v != 'Request Type' && typeData.creatorName != 'System' && typeData.creatorName != '')
+                        Text(
+                          'Created by: ${typeData.creatorName}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: CreateRequestColors.textSecondary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                    ],
                   ),
-                ),
-              ))
-                  .toList(),
+                );
+              }).toList(),
               onChanged: (v) => setState(() => _selectedRequestType = v!),
               validator: (v) => v == 'Request Type'
                   ? AppLocalizations.of(context)!.translate('request_type_hint')
@@ -524,7 +697,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
-            // الأولوية
             _buildLabel(AppLocalizations.of(context)!.translate('priority_label')),
             SizedBox(height: 8),
             DropdownButtonFormField<String>(
@@ -546,18 +718,17 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
               ),
               items: ['Low', 'Medium', 'High']
                   .map((v) {
-                    String label = v;
-                    if (v == 'Low') label = AppLocalizations.of(context)!.translate('priority_low');
-                    if (v == 'Medium') label = AppLocalizations.of(context)!.translate('priority_medium');
-                    if (v == 'High') label = AppLocalizations.of(context)!.translate('priority_high');
-                    return DropdownMenuItem(value: v, child: Text(label));
-                  })
+                String label = v;
+                if (v == 'Low') label = AppLocalizations.of(context)!.translate('priority_low');
+                if (v == 'Medium') label = AppLocalizations.of(context)!.translate('priority_medium');
+                if (v == 'High') label = AppLocalizations.of(context)!.translate('priority_high');
+                return DropdownMenuItem(value: v, child: Text(label));
+              })
                   .toList(),
               onChanged: (v) => setState(() => _selectedPriority = v!),
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
-            // الوصف
             _buildLabel('${AppLocalizations.of(context)!.translate('description_label')} *'),
             SizedBox(height: 8),
             TextFormField(
@@ -586,15 +757,12 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             ),
             SizedBox(height: isMobile ? 24 : 32),
 
-            // إرسال الطلب
             _buildSectionHeader(AppLocalizations.of(context)!.translate('send_request_section')),
             SizedBox(height: isMobile ? 12 : 16),
 
-            // المستخدم المستلم مع البحث
             _buildLabel('${AppLocalizations.of(context)!.translate('send_to_user_label')} *'),
             SizedBox(height: 8),
 
-            // زر اختيار المستخدم مع ديلوج البحث
             InkWell(
               onTap: _showUserSelectionDialog,
               child: Container(
@@ -675,11 +843,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             ],
             SizedBox(height: isMobile ? 24 : 32),
 
-            // المستندات
             _buildSectionHeader(AppLocalizations.of(context)!.translate('supporting_documents')),
             SizedBox(height: isMobile ? 12 : 16),
 
-            // زر اختيار الملفات
             Center(
               child: Container(
                 padding: EdgeInsets.all(isMobile ? 16 : 24),
@@ -729,7 +895,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
               ),
             ),
 
-            // عرض الملفات المختارة
             if (_selectedFiles.isNotEmpty) ...[
               SizedBox(height: isMobile ? 12 : 16),
               Text(
@@ -789,7 +954,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
             SizedBox(height: isMobile ? 24 : 32),
 
-            // أزرار الإرسال والإلغاء
             _buildActionButtons(isMobile),
             SizedBox(height: isMobile ? 16 : 24),
           ],
@@ -812,7 +976,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     return content;
   }
 
-  // 🔍 دالة لعرض ديلوج اختيار المستخدم مع البحث
   void _showUserSelectionDialog() {
     showDialog(
       context: context,
@@ -831,7 +994,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // عنوان الديلوج
                     Row(
                       children: [
                         Icon(
@@ -852,7 +1014,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     ),
                     SizedBox(height: 16),
 
-                    // شريط البحث
                     TextField(
                       controller: _userSearchController,
                       decoration: InputDecoration(
@@ -871,7 +1032,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     ),
                     SizedBox(height: 16),
 
-                    // عدد النتائج
                     Text(
                       '${_filteredUsers.length - 1} ${AppLocalizations.of(context)!.translate('users_count_label')}',
                       style: TextStyle(
@@ -881,7 +1041,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     ),
                     SizedBox(height: 8),
 
-                    // قائمة المستخدمين
                     Expanded(
                       child: ListView.builder(
                         shrinkWrap: true,
@@ -945,7 +1104,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
                     SizedBox(height: 16),
 
-                    // أزرار الإجراء
                     Row(
                       children: [
                         Expanded(

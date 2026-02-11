@@ -28,8 +28,18 @@ class DashboardAPI {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final List<dynamic> transactionTypes = data["transactionTypes"] ?? [];
-      return transactionTypes.map<String>((item) => item["name"]).toList();
+      
+      List<dynamic> typesList = [];
+      if (data is List) {
+        typesList = data;
+      } else if (data is Map && data["transactionTypes"] != null) {
+        typesList = data["transactionTypes"];
+      }
+
+      return typesList
+          .where((item) => item["name"] != null)
+          .map<String>((item) => item["name"] as String)
+          .toList();
     } else if (response.statusCode == 401) {
       throw Exception("Unauthorized - Token may be expired");
     } else {
@@ -44,7 +54,7 @@ class DashboardAPI {
 
     try {
       final response = await http.get(
-        Uri.parse("$_baseUrl/transactions/$transactionId/forwards"),
+        Uri.parse("$_baseUrl/transaction/$transactionId/forward"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -53,7 +63,9 @@ class DashboardAPI {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> forwards = data["transaction"]?["forwards"] ?? [];
+        final List<dynamic> forwards = data is List 
+            ? data 
+            : (data["transaction"]?["forwards"] ?? data["forwards"] ?? []);
 
         if (forwards.isNotEmpty) {
           forwards.sort((a, b) {
@@ -103,10 +115,12 @@ class DashboardAPI {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> pageRequests = data["transactions"] ?? [];
+        final List<dynamic> pageRequests = data is List 
+            ? data 
+            : (data["transactions"] ?? []);
         allRequests.addAll(pageRequests);
 
-        lastPage = data["page"]["last"];
+        lastPage = data is Map ? (data["page"]?["last"] ?? 1) : 1;
         currentPage++;
       } else if (response.statusCode == 401) {
         throw Exception("Unauthorized - Token may be expired");

@@ -116,7 +116,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     }
 
     try {
-      final response = await http.get(
+      var response = await http.get(
         Uri.parse("$_baseUrl/transactions/${widget.requestId}"),
         headers: {
           'Content-Type': 'application/json',
@@ -124,11 +124,25 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         },
       );
 
+      if (response.statusCode == 404) {
+        response = await http.get(
+          Uri.parse("$_baseUrl/transaction/${widget.requestId}"),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_userToken',
+          },
+        );
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data["status"] == "success" && data["transaction"] != null) {
+        final transactionData = (data is Map && data["status"] == "success") 
+            ? data["transaction"] 
+            : data;
+            
+        if (transactionData != null) {
           setState(() {
-            _requestData = data["transaction"];
+            _requestData = transactionData;
             _isLoading = false;
           });
         } else {
@@ -174,7 +188,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     return await StoragePermissionHelper.requestStoragePermission();
   }
 
-  Future<void> _downloadFile(String documentURI, String fileName) async {
+  Future<void> _downloadFile(int documentId, String fileName) async {
     // 1️⃣ التحقق من الأذونات أولاً
     final hasPermission = await StoragePermissionHelper.checkAndRequestPermission();
 
@@ -194,65 +208,30 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       return;
     }
 
-    // 2️⃣ التحقق من صحة الـ URI
-    final parts = documentURI.split('/');
-    if (parts.length != 2) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Invalid document URI: $documentURI'),
-            backgroundColor: AppColors.accentRed,
-          ),
-        );
-      }
-      return;
-    }
-
-    final uploaderName = parts[0];
-    final documentName = parts[1];
-
-    // 3️⃣ تحديث حالة التنزيل
+    // 2️⃣ تحديث حالة التنزيل
     setState(() {
       _downloadingFiles[fileName] = true;
       _downloadProgress[fileName] = AppLocalizations.of(context)!.translate('starting_download_msg');
     });
 
-    // 4️⃣ الحصول على مسار التخزين الآمن
+    // 3️⃣ الحصول على مسار التخزين الآمن
     Directory? downloadDir;
     String? storagePath;
 
     try {
-      // 🔥 المحاولة الأولى: استخدام Downloads directory (الطريقة الصحيحة)
       downloadDir = await getDownloadsDirectory();
-      print('📱 Downloads Directory: ${downloadDir?.path}');
-
-      // 🔥 إذا لم يعمل، استخدم getExternalCacheDir
       if (downloadDir == null) {
-        print('⚠️ Downloads directory is null, trying cache dir');
         downloadDir = Directory((await getTemporaryDirectory()).path);
       }
 
       storagePath = downloadDir.path;
-      print('📁 Final Download path: $storagePath');
 
-      // إنشاء المجلد إذا لم يكن موجوداً
       if (!await downloadDir.exists()) {
         await downloadDir.create(recursive: true);
-        print('✅ Created directory: $storagePath');
       }
 
     } catch (e) {
-      print('❌ Error getting download directory: $e');
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Error: ${e.toString()}'),
-            backgroundColor: AppColors.accentRed,
-          ),
-        );
-      }
-
+      debugPrint('❌ Error getting download directory: $e');
       setState(() {
         _downloadingFiles[fileName] = false;
         _downloadProgress.remove(fileName);
@@ -261,161 +240,56 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     }
 
     final filePath = '${downloadDir.path}/$fileName';
-    print('💾 File will be saved to: $filePath');
 
-    // 5️⃣ محاولة التحميل من endpoints مختلفة
-    List<String> downloadUrls = [
-      "$_baseUrl/documents/$uploaderName/$documentName",
-      "$_baseUrl/transactions/${widget.requestId}/documents/$fileName",
-      "$_baseUrl/documents/download/$documentURI",
-    ];
+    // 4️⃣ التحميل من الـ API الجديد باستخدام الـ ID
+    final downloadUrl = "$_baseUrl/documents/$documentId/download";
 
-    bool downloadSuccessful = false;
+    try {
+      setState(() {
+        _downloadProgress[fileName] = '📥 Downloading...';
+      });
 
-    for (int i = 0; i < downloadUrls.length; i++) {
-      final downloadUrl = downloadUrls[i];
+      final response = await http.get(
+        Uri.parse(downloadUrl),
+        headers: {
+          'accept': '*/*',
+          'Authorization': 'Bearer $_userToken',
+        },
+      ).timeout(
+        const Duration(seconds: 40),
+        onTimeout: () => throw TimeoutException('Download timeout'),
+      );
 
-      try {
-        print('🔄 Attempt ${i + 1}/${downloadUrls.length}: Downloading from: $downloadUrl');
-
+      if (response.statusCode == 200) {
         setState(() {
-          _downloadProgress[fileName] = '📥 Downloading... (${i + 1}/${downloadUrls.length})';
+          _downloadProgress[fileName] = AppLocalizations.of(context)!.translate('saving_file_msg');
         });
 
-        final response = await http.get(
-          Uri.parse(downloadUrl),
-          headers: {
-            'Authorization': 'Bearer $_userToken',
-          },
-        ).timeout(
-          const Duration(seconds: 30),
-          onTimeout: () => throw TimeoutException('Download timeout'),
-        );
+        final file = File(filePath);
+        await file.writeAsBytes(response.bodyBytes);
 
-        print('✅ Response status: ${response.statusCode}');
-        print('📦 Response body size: ${response.bodyBytes.length} bytes');
-
-        if (response.statusCode == 200) {
+        if (await file.exists()) {
           setState(() {
-            _downloadProgress[fileName] = AppLocalizations.of(context)!.translate('saving_file_msg');
+            _downloadingFiles[fileName] = false;
+            _downloadProgress.remove(fileName);
+            _downloadedFilePaths[fileName] = filePath;
           });
 
-          // 6️⃣ حفظ الملف
-          try {
-            final file = File(filePath);
-            await file.writeAsBytes(response.bodyBytes);
-
-            // التحقق من أن الملف تم حفظه بنجاح
-            if (await file.exists()) {
-              final fileSize = await file.length();
-              print('✅ File saved successfully: $filePath (Size: $fileSize bytes)');
-
-              downloadSuccessful = true;
-
-              setState(() {
-                _downloadingFiles[fileName] = false;
-                _downloadProgress.remove(fileName);
-                _downloadedFilePaths[fileName] = filePath;
-              });
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          AppLocalizations.of(context)!.translate('download_complete_title'),
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          fileName,
-                          style: const TextStyle(fontSize: 12, color: Colors.white),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '📁 Location: $storagePath',
-                          style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.8)),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                    backgroundColor: AppColors.accentGreen,
-                    duration: const Duration(seconds: 6),
-                  ),
-                );
-              }
-
-              return; // نجح التحميل، نخرج من الدالة
-            } else {
-              print('❌ File was not created at: $filePath');
-            }
-          } catch (e) {
-            print('❌ Error writing file: $e');
-            // جرب الـ endpoint التالي
-            continue;
-          }
-        } else {
-          print('⚠️ Attempt ${i + 1} returned status: ${response.statusCode}');
-
-          if (response.statusCode == 401) {
-            // Token expired
-            print('❌ Authentication failed - Token expired');
-
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(AppLocalizations.of(context)!.translate('session_expired')),
-                  backgroundColor: AppColors.accentRed,
-                ),
-              );
-            }
-            break;
-          }
-
-          // جرب الـ endpoint التالي
-          continue;
-        }
-      } on TimeoutException catch (e) {
-        print('⏱️ Timeout on attempt ${i + 1}: $e');
-
-        if (i == downloadUrls.length - 1) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('⏱️ Download timeout. Please check your internet connection.'),
-                backgroundColor: AppColors.accentRed,
-                duration: const Duration(seconds: 5),
+                content: Text(AppLocalizations.of(context)!.translate('download_complete_title')),
+                backgroundColor: AppColors.accentGreen,
               ),
             );
           }
+          return;
         }
-        continue;
-      } catch (e) {
-        print('❌ Error on attempt ${i + 1}: $e');
-
-        if (i == downloadUrls.length - 1) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('❌ Download failed: ${e.toString()}'),
-                backgroundColor: AppColors.accentRed,
-                duration: const Duration(seconds: 5),
-              ),
-            );
-          }
-        }
-        continue;
+      } else {
+        throw Exception('Server returned ${response.statusCode}');
       }
-    }
-
-    // 7️⃣ إذا وصلنا هنا، كل المحاولات فشلت
-    if (!downloadSuccessful) {
+    } catch (e) {
+      debugPrint('❌ Download error: $e');
       setState(() {
         _downloadingFiles[fileName] = false;
         _downloadProgress.remove(fileName);
@@ -424,29 +298,12 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  AppLocalizations.of(context)!.translate('download_failed_title'),
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  fileName,
-                  style: const TextStyle(fontSize: 12, color: Colors.white),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+            content: Text(AppLocalizations.of(context)!.translate('download_failed_title')),
             backgroundColor: AppColors.accentRed,
-            duration: const Duration(seconds: 8),
             action: SnackBarAction(
               label: AppLocalizations.of(context)!.translate('retry_button'),
               textColor: Colors.white,
-              onPressed: () => _downloadFile(documentURI, fileName),
+              onPressed: () => _downloadFile(documentId, fileName),
             ),
           ),
         );
@@ -878,10 +735,9 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   }
 
   Widget _buildAttachmentItem(Map<String, dynamic> document, bool isMobile) {
-    final documentURI = document["documentURI"]?.toString() ?? "";
-    final fileName = documentURI.split('/').last;
-    final uploaderName = documentURI.split('/').first;
-    final fileId = document["id"]?.toString() ?? "";
+    final fileName = document["title"]?.toString() ?? "document.pdf";
+    final uploaderName = document["uploaderName"]?.toString() ?? "Admin";
+    final fileId = document["id"];
     final isDownloading = _downloadingFiles[fileName] == true;
     final downloadStatus = _downloadProgress[fileName];
     final isDownloaded = _downloadedFilePaths.containsKey(fileName);
@@ -896,18 +752,18 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       child: isMobile
           ? _buildMobileAttachmentItem(
           fileName, uploaderName, fileId, isDownloading,
-          downloadStatus, isDownloaded, documentURI, isMobile)
+          downloadStatus, isDownloaded, fileId, isMobile)
           : _buildDesktopAttachmentItem(
           fileName, uploaderName, fileId, isDownloading,
-          downloadStatus, isDownloaded, documentURI, isMobile),
+          downloadStatus, isDownloaded, fileId, isMobile),
     );
   }
 
   // تصميم للموبايل
   Widget _buildMobileAttachmentItem(
-      String fileName, String uploaderName, String fileId,
+      String fileName, String uploaderName, dynamic fileId,
       bool isDownloading, String? downloadStatus, bool isDownloaded,
-      String documentURI, bool isMobile) {
+      dynamic documentId, bool isMobile) {
     return ListTile(
       leading: _getFileIcon(fileName),
       title: Text(
@@ -919,9 +775,9 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       subtitle: Container(
         constraints: BoxConstraints(maxHeight: 40),
         child: _buildFileSubtitle(
-            uploaderName, fileId, isDownloading, downloadStatus, isDownloaded, fileName, isMobile),
+            uploaderName, fileId.toString(), isDownloading, downloadStatus, isDownloaded, fileName, isMobile),
       ),
-      trailing: _buildDownloadButton(isDownloading, isDownloaded, documentURI, fileName, isMobile),
+      trailing: _buildDownloadButton(isDownloading, isDownloaded, documentId, fileName, isMobile),
       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       isThreeLine: false,
     );
@@ -929,9 +785,9 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
   // تصميم جديد للديسكتوب - أكثر مرونة
   Widget _buildDesktopAttachmentItem(
-      String fileName, String uploaderName, String fileId,
+      String fileName, String uploaderName, dynamic fileId,
       bool isDownloading, String? downloadStatus, bool isDownloaded,
-      String documentURI, bool isMobile) {
+      dynamic documentId, bool isMobile) {
     return Padding(
       padding: EdgeInsets.all(16),
       child: Row(
@@ -971,7 +827,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                       '${AppLocalizations.of(context)!.translate('by')}: $uploaderName',
                       style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
-                    if (fileId.isNotEmpty) ...[
+                    if (fileId != null) ...[
                       Container(
                         width: 4,
                         height: 4,
@@ -1006,7 +862,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           SizedBox(width: 12),
 
           // Download Button
-          _buildDownloadButton(isDownloading, isDownloaded, documentURI, fileName, false),
+          _buildDownloadButton(isDownloading, isDownloaded, documentId, fileName, false),
         ],
       ),
     );
@@ -1100,7 +956,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   }
 
   // تحديث دالة بناء زر التحميل
-  Widget _buildDownloadButton(bool isDownloading, bool isDownloaded, String documentURI, String fileName, bool isMobile) {
+  Widget _buildDownloadButton(bool isDownloading, bool isDownloaded, dynamic documentId, String fileName, bool isMobile) {
     if (isDownloading) {
       return Container(
         width: isMobile ? 32 : 40,
@@ -1151,7 +1007,12 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           onPressed: () async {
             if (_isProcessing) return;
             setState(() => _isProcessing = true);
-            await _downloadFile(documentURI, fileName);
+            final int? id = documentId is int ? documentId : int.tryParse(documentId.toString());
+            if (id != null) {
+              await _downloadFile(id, fileName);
+            } else {
+              debugPrint('❌ Invalid document ID type: ${documentId.runtimeType}');
+            }
             setState(() => _isProcessing = false);
           },
         ),
@@ -1206,7 +1067,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             if (data["updatedAt"] != null)
               _buildInfoRow(AppLocalizations.of(context)!.translate('updated_at'), _formatDate(data["updatedAt"]), isMobile),
             if (data["creator"]?["group"] != null)
-              _buildInfoRow(AppLocalizations.of(context)!.translate('type'), data["creator"]?["group"] ?? AppLocalizations.of(context)!.translate('not_available'), isMobile),
+              _buildInfoRow(AppLocalizations.of(context)!.translate('role_label'), data["creator"]?["group"] ?? AppLocalizations.of(context)!.translate('not_available'), isMobile),
           ],
         ),
       ),

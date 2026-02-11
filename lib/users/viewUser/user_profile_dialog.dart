@@ -4,6 +4,8 @@ import 'users_colors.dart';
 import 'users_helpers.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 
+import 'user_model.dart';
+
 class UserProfileDialog extends StatefulWidget {
   final String userName;
   final UsersApiService apiService;
@@ -21,7 +23,7 @@ class UserProfileDialog extends StatefulWidget {
 }
 
 class _UserProfileDialogState extends State<UserProfileDialog> {
-  Map<String, dynamic>? _userData;
+  User? _userData;
   bool _isLoading = true;
 
   @override
@@ -32,13 +34,11 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
 
   Future<void> _loadUserData() async {
     try {
-      final response = await widget.apiService.getUserDetails(widget.userName);
-      if (response["status"] == "success") {
-        setState(() {
-          _userData = response["user"];
-          _isLoading = false;
-        });
-      }
+      final user = await widget.apiService.getUserDetails(widget.userName);
+      setState(() {
+        _userData = user;
+        _isLoading = false;
+      });
     } catch (e) {
       UsersHelpers.showErrorMessage(context, e.toString());
       Navigator.pop(context);
@@ -61,50 +61,63 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
           ),
         ),
       )
-          : Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: widget.isMobile ? 60 : 70,
-            height: widget.isMobile ? 60 : 70,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.gradientStart, AppColors.gradientEnd],
+          : SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: widget.isMobile ? 60 : 70,
+              height: widget.isMobile ? 60 : 70,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                ),
+                shape: BoxShape.circle,
               ),
-              shape: BoxShape.circle,
+              child: Icon(
+                Icons.person,
+                size: widget.isMobile ? 30 : 36,
+                color: AppColors.primary,
+              ),
             ),
-            child: Icon(
-              Icons.person,
-              size: widget.isMobile ? 30 : 36,
-              color: AppColors.primary,
+            SizedBox(height: widget.isMobile ? 12 : 16),
+            Text(
+              _userData!.name,
+              style: TextStyle(
+                fontSize: widget.isMobile ? 16 : 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
-          ),
-          SizedBox(height: widget.isMobile ? 12 : 16),
-          Text(
-            _userData!["name"] ?? "",
-            style: TextStyle(
-              fontSize: widget.isMobile ? 16 : 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+            SizedBox(height: widget.isMobile ? 8 : 12),
+            _buildProfileDetail(
+              AppLocalizations.of(context)!.translate('user_type'),
+              _userData!.role == 'admin' ? AppLocalizations.of(context)!.translate('administrator') : AppLocalizations.of(context)!.translate('regular_user'),
+              Icons.group_rounded,
             ),
-          ),
-          SizedBox(height: widget.isMobile ? 8 : 12),
-          _buildProfileDetail(
-            AppLocalizations.of(context)!.translate('user_type'),
-            _userData!["group"] == 'admin' ? AppLocalizations.of(context)!.translate('administrator') : AppLocalizations.of(context)!.translate('regular_user'),
-            Icons.group_rounded,
-          ),
-          _buildProfileDetail(
-            AppLocalizations.of(context)!.translate('created_at'),
-            UsersHelpers.formatDate(_userData!["createdAt"], context),
-            Icons.calendar_today_rounded,
-          ),
-          _buildProfileDetail(
-            AppLocalizations.of(context)!.translate('updated_at'),
-            UsersHelpers.formatDate(_userData!["updatedAt"] ?? _userData!["createdAt"], context),
-            Icons.update_rounded,
-          ),
-        ],
+            if (_userData!.departmentName != null)
+            _buildProfileDetail(
+              AppLocalizations.of(context)!.translate('department_name') ?? 'Department',
+              _userData!.departmentName!,
+              Icons.business_rounded,
+            ),
+            _buildProfileDetail(
+              AppLocalizations.of(context)!.translate('status') ?? 'Status',
+              _userData!.active ? (AppLocalizations.of(context)!.translate('active') ?? 'Active') : (AppLocalizations.of(context)!.translate('inactive') ?? 'Inactive'),
+              _userData!.active ? Icons.check_circle_rounded : Icons.cancel_rounded,
+            ),
+            _buildProfileDetail(
+              AppLocalizations.of(context)!.translate('created_at'),
+              UsersHelpers.formatDate(_userData!.createdAt, context),
+              Icons.calendar_today_rounded,
+            ),
+            _buildProfileDetail(
+              AppLocalizations.of(context)!.translate('updated_at'),
+              UsersHelpers.formatDate(_userData!.updatedAt, context),
+              Icons.update_rounded,
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(

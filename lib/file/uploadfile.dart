@@ -34,9 +34,7 @@ class FilePickerWidget extends StatelessWidget {
     // اختيار الملفات
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: [
-        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'png', 'jpeg'
-      ],
+      allowedExtensions: ['pdf'], // تم التقييد بـ PDF فقط لتوافق الـ Backend
       allowMultiple: true,
     );
 
@@ -80,7 +78,7 @@ class FilePickerWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Supported formats: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (Max 10MB each)',
+              'Supported formats: PDF (Max 10MB each)',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[500],

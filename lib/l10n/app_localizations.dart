@@ -533,6 +533,24 @@ class AppLocalizations {
       'administrative_dashboard': 'لوحة التحكم الإدارية',
       'refresh': 'تحديث',
 
+
+
+      'edit_user': 'تعديل المستخدم',
+      'enter_new_username': 'أدخل اسم مستخدم جديد',
+      'user_role': 'دور المستخدم',
+      'administrator': 'مدير النظام',
+      'regular_user': 'مستخدم عادي',
+      'account_status': 'حالة الحساب',
+      'status': 'الحالة',
+      'active': 'مفعل',
+      'inactive': 'معطل',
+      'no_department': 'لا يوجد قسم',
+      'changes_summary': 'التغييرات',
+      'no_changes': 'لم يتم إجراء أي تغييرات',
+      'passwords_do_not_match': 'كلمات المرور غير متطابقة',
+      'user_updated_success': 'تم تحديث المستخدم بنجاح',
+      'save_changes': 'حفظ التغييرات',
+
       // Stats
       'total': 'الكل',
       'approved': 'مقبول',

@@ -29,9 +29,18 @@ class MyRequestsApi {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List<String> typeNames = ['All Types'];
-        final List<dynamic> transactionTypes = data["transactionTypes"] ?? [];
-        for (var item in transactionTypes) {
-          typeNames.add(item["name"]);
+        
+        List<dynamic> typesList = [];
+        if (data is List) {
+          typesList = data;
+        } else if (data is Map && data["transactionTypes"] != null) {
+          typesList = data["transactionTypes"];
+        }
+
+        for (var item in typesList) {
+          if (item["name"] != null) {
+            typeNames.add(item["name"]);
+          }
         }
         return typeNames;
       }
@@ -48,7 +57,7 @@ class MyRequestsApi {
 
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/transactions/$transactionId/forwards"),
+        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $userToken',
@@ -57,7 +66,9 @@ class MyRequestsApi {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> forwards = data["transaction"]?["forwards"] ?? [];
+        final List<dynamic> forwards = data is List 
+            ? data 
+            : (data["transaction"]?["forwards"] ?? data["forwards"] ?? []);
 
         // البحث من الأحدث إلى الأقدم
         for (var i = forwards.length - 1; i >= 0; i--) {
@@ -119,9 +130,11 @@ class MyRequestsApi {
 
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
-            final List<dynamic> pageRequests = data["transactions"] ?? [];
+            final List<dynamic> pageRequests = data is List 
+                ? data 
+                : (data["transactions"] ?? []);
             allRequests.addAll(pageRequests);
-            lastPage = data["page"]?["last"] ?? 1;
+            lastPage = data is Map ? (data["page"]?["last"] ?? 1) : 1;
             currentPage++;
           } else {
             break;

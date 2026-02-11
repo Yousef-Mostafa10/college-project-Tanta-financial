@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../home/dashboard.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import '../app_config.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -31,7 +32,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<Map<String, dynamic>> _fetchUserData(
       String token, String username) async {
     try {
-      final url = Uri.parse("http://77.83.242.94:3000/users/$username");
+      final url = Uri.parse("${AppConfig.baseUrl}/users/$username");
       final response = await http.get(
         url,
         headers: {
@@ -43,8 +44,9 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data["status"] == "success") {
-          return data["user"];
+          return data["user"] ?? {};
         }
+        return data; // Fallback if no status wrapper
       }
     } catch (e) {
       debugPrint("Error fetching user data: $e");
@@ -59,7 +61,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => isLoading = true);
 
     try {
-      final url = Uri.parse("http://77.83.242.94:3000/auth");
+      final url = Uri.parse("${AppConfig.baseUrl}/auth");
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import '../app_config.dart';
 
 // 🎨 COLOR PALETTE - Consistent with the whole application
 class AppColors {
@@ -57,7 +58,89 @@ class _AddUserPageState extends State<AddUserPage> {
 
   bool _isLoading = false;
   bool _showPassword = false;
-  String _selectedGroup = 'user'; // القيمة الافتراضية
+  String _selectedRole = 'USER'; // القيمة الافتراضية
+  String? _selectedDepartment; // القسم المختار
+  List<String> _departments = []; // قائمة الأقسام
+  List<String> _users = []; // قائمة المستخدمين لاختيار المدير
+
+  final String _apiUrl = AppConfig.baseUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    // تحميل الأقسام والمستخدمين عند بداية الصفحة
+    _fetchDepartments();
+    _fetchUsers();
+  }
+
+  // ✅ دالة لتحميل الأقسام من الـ API
+  Future<void> _fetchDepartments() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null || token.isEmpty) return;
+
+      final response = await http.get(
+        Uri.parse('$_apiUrl/departments'),
+        headers: {
+          "Authorization": "Bearer $token",
+          "accept": "application/json",
+        },
+      );
+
+      debugPrint("Departments Status: ${response.statusCode}");
+      debugPrint("Departments Response: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          setState(() {
+            _departments = data.map((dept) => dept['name'].toString()).toList();
+            // إذا كانت هناك أقسام، اختيار الأول كقيمة افتراضية
+            if (_departments.isNotEmpty && _selectedDepartment == null) {
+              _selectedDepartment = _departments.first;
+            }
+          });
+        }
+      } else {
+        debugPrint("Failed to fetch departments: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("Error fetching departments: $e");
+    }
+  }
+
+  // ✅ دالة لتحميل المستخدمين من الـ API
+  Future<void> _fetchUsers() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null || token.isEmpty) return;
+
+      final response = await http.get(
+        Uri.parse('$_apiUrl/users'),
+        headers: {
+          "Authorization": "Bearer $token",
+          "accept": "application/json",
+        },
+      );
+
+      debugPrint("Users Status: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          setState(() {
+            _users = data.map((user) => user['name'].toString()).toList();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching users: $e");
+    }
+  }
 
   // ✅ الدالة المسؤولة عن إضافة مستخدم جديد
   Future<void> _addUser() async {
@@ -66,8 +149,6 @@ class _AddUserPageState extends State<AddUserPage> {
     setState(() => _isLoading = true);
 
     try {
-      final url = Uri.parse("http://77.83.242.94:3000/users");
-
       // 🟢 استرجاع التوكن من SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
@@ -78,29 +159,46 @@ class _AddUserPageState extends State<AddUserPage> {
         return;
       }
 
+      // 🟢 تحضير البيانات حسب الهيكل الجديد
+      Map<String, dynamic> userData = {
+        "name": _nameController.text.trim(),
+        "password": _passwordController.text.trim(),
+        "role": _selectedRole, // USER أو ADMIN
+      };
+
+      // إضافة القسم إذا تم اختياره
+      if (_selectedDepartment != null && _selectedDepartment!.isNotEmpty) {
+        userData["departmentName"] = _selectedDepartment;
+      }
+
+      debugPrint("User Data to send: $userData");
+
       // 🟢 إرسال الطلب مع التوكن في الهيدر
       final response = await http.post(
-        url,
+        Uri.parse('$_apiUrl/users'),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
+          "accept": "application/json",
         },
-        body: jsonEncode({
-          "name": _nameController.text.trim(),
-          "password": _passwordController.text.trim(),
-          "group": _selectedGroup, // إضافة حقل المجموعة
-        }),
+        body: jsonEncode(userData),
       );
 
       debugPrint("Status Code: ${response.statusCode}");
       debugPrint("Response Body: ${response.body}");
 
-      if (response.statusCode == 201) { // ✅ الـ API بيرجع 201 للنجاح
-        final data = jsonDecode(response.body);
-        if (data["status"] == "success") {
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          final data = jsonDecode(response.body);
+          // التحقق من الاستجابة
+          if (data["name"] == _nameController.text.trim()) {
+            _showSuccessMessage();
+          } else {
+            _showErrorMessage("User added but response format unexpected");
+          }
+        } catch (e) {
+          // إذا لم يكن الرد JSON، ولكن العملية نجحت
           _showSuccessMessage();
-        } else {
-          _showErrorMessage(data["message"] ?? "Failed to add user ❌");
         }
       } else if (response.statusCode == 409) {
         _showErrorMessage(AppLocalizations.of(context)!.translate('user_exists_error'));
@@ -109,17 +207,17 @@ class _AddUserPageState extends State<AddUserPage> {
       } else if (response.statusCode == 401) {
         _showErrorMessage(AppLocalizations.of(context)!.translate('unauthorized_error'));
       } else {
-        _showErrorMessage("Error: ${response.statusCode}");
+        _showErrorMessage("Error: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
       debugPrint("Error: $e");
-      _showErrorMessage(AppLocalizations.of(context)!.translate('connection_error'));
+      _showErrorMessage("${AppLocalizations.of(context)!.translate('connection_error')}: $e");
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  // ✅ رسائل النجاح والخطأ - بتعديل الالوان لتتوافق
+  // ✅ رسائل النجاح والخطأ
   void _showSuccessMessage() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -241,8 +339,16 @@ class _AddUserPageState extends State<AddUserPage> {
                   label: AppLocalizations.of(context)!.translate('username'),
                   icon: Icons.person_outline,
                   isMobile: isMobile,
-                  validator: (v) =>
-                  v == null || v.isEmpty ? AppLocalizations.of(context)!.translate('please_enter_username') : null,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) {
+                      return AppLocalizations.of(context)!.translate('please_enter_username');
+                    }
+                    // التحقق من أن اسم المستخدم غير موجود بالفعل
+                    if (_users.contains(v.trim())) {
+                      return AppLocalizations.of(context)!.translate('user_exists_error');
+                    }
+                    return null;
+                  },
                 ),
                 SizedBox(height: isMobile ? 16 : 20),
 
@@ -278,8 +384,13 @@ class _AddUserPageState extends State<AddUserPage> {
 
                 SizedBox(height: isMobile ? 16 : 20),
 
-                // User Group Selection
-                _buildUserGroupSelector(isMobile),
+                // User Role Selection
+                _buildUserRoleSelector(isMobile),
+
+                SizedBox(height: isMobile ? 16 : 20),
+
+                // Department Selection
+                _buildDepartmentSelector(isMobile),
 
                 SizedBox(height: isMobile ? 24 : 32),
 
@@ -314,15 +425,118 @@ class _AddUserPageState extends State<AddUserPage> {
     );
   }
 
-  // ✅ تصميم مودرن لاختيار نوع المستخدم
-  Widget _buildUserGroupSelector(bool isMobile) {
+  // ✅ تصميم حقل اختيار القسم
+  Widget _buildDepartmentSelector(bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
-            AppLocalizations.of(context)!.translate('user_type'),
+            AppLocalizations.of(context)!.translate('department') ?? 'Department',
+            style: TextStyle(
+              fontSize: isMobile ? 14 : 15,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: DropdownButtonFormField<String>(
+            value: _selectedDepartment,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+                borderSide: BorderSide(color: AppColors.borderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+                borderSide: BorderSide(color: AppColors.borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+                borderSide: BorderSide(
+                  color: AppColors.focusBorderColor,
+                  width: 1.5,
+                ),
+              ),
+              filled: true,
+              fillColor: AppColors.cardBg,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 16 : 20,
+                vertical: isMobile ? 14 : 16,
+              ),
+              prefixIcon: Icon(
+                Icons.business,
+                color: AppColors.primary,
+                size: isMobile ? 20 : 24,
+              ),
+            ),
+            hint: Text(
+              AppLocalizations.of(context)!.translate('select_department') ?? 'Select Department',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: isMobile ? 14 : 16,
+              ),
+            ),
+            items: _departments.map((department) {
+              return DropdownMenuItem<String>(
+                value: department,
+                child: Text(
+                  department,
+                  style: TextStyle(
+                    fontSize: isMobile ? 14 : 16,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedDepartment = value;
+              });
+            },
+            validator: (value) {
+              // يمكنك إزالة هذا الـ validator إذا كان القسم اختياري
+              return null;
+            },
+          ),
+        ),
+        if (_departments.isEmpty)
+          Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              AppLocalizations.of(context)!.translate('no_departments_found') ?? 'No departments found',
+              style: TextStyle(
+                fontSize: isMobile ? 12 : 14,
+                color: AppColors.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ✅ تصميم مودرن لاختيار نوع المستخدم (Role)
+  Widget _buildUserRoleSelector(bool isMobile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            AppLocalizations.of(context)!.translate('user_role'),
             style: TextStyle(
               fontSize: isMobile ? 14 : 15,
               fontWeight: FontWeight.w500,
@@ -349,23 +563,23 @@ class _AddUserPageState extends State<AddUserPage> {
                 children: [
                   // Admin Option
                   Expanded(
-                    child: _buildGroupOption(
+                    child: _buildRoleOption(
                       title: AppLocalizations.of(context)!.translate('administrator'),
                       subtitle: AppLocalizations.of(context)!.translate('full_access'),
-                      value: 'admin',
+                      value: 'ADMIN',
                       icon: Icons.admin_panel_settings,
-                      isSelected: _selectedGroup == 'admin',
+                      isSelected: _selectedRole == 'ADMIN',
                       isMobile: isMobile,
                     ),
                   ),
                   // User Option
                   Expanded(
-                    child: _buildGroupOption(
+                    child: _buildRoleOption(
                       title: AppLocalizations.of(context)!.translate('regular_user'),
                       subtitle: AppLocalizations.of(context)!.translate('limited_access'),
-                      value: 'user',
+                      value: 'USER',
                       icon: Icons.person,
-                      isSelected: _selectedGroup == 'user',
+                      isSelected: _selectedRole == 'USER',
                       isMobile: isMobile,
                     ),
                   ),
@@ -378,8 +592,8 @@ class _AddUserPageState extends State<AddUserPage> {
     );
   }
 
-  // ✅ تصميم كل خيار من خيارات نوع المستخدم
-  Widget _buildGroupOption({
+  // ✅ تصميم كل خيار من خيارات الـ Role
+  Widget _buildRoleOption({
     required String title,
     required String subtitle,
     required String value,
@@ -390,7 +604,7 @@ class _AddUserPageState extends State<AddUserPage> {
     return InkWell(
       onTap: () {
         setState(() {
-          _selectedGroup = value;
+          _selectedRole = value;
         });
       },
       child: Container(
