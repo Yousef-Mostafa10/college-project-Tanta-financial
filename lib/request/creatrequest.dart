@@ -659,7 +659,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
             _isLoadingTypes
                 ? Container(
-              height: 56,
+              height: 70,
               decoration: BoxDecoration(
                 border: Border.all(color: CreateRequestColors.borderColor),
                 borderRadius: BorderRadius.circular(4),
@@ -684,6 +684,8 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
               ),
             )
                 : DropdownButtonFormField<String>(
+              isExpanded: true,
+              itemHeight: 75,
               value: _selectedRequestType,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
@@ -696,10 +698,26 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 2),
                 ),
                 contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
+                  horizontal: 18,
                   vertical: isMobile ? 12 : 16,
                 ),
               ),
+              selectedItemBuilder: (BuildContext context) {
+                return _requestTypes.map<Widget>((String item) {
+                  return Text(
+                    item == 'Request Type'
+                        ? AppLocalizations.of(context)!.translate('request_type_hint')
+                        : item,
+                    style: TextStyle(
+                      fontWeight: item == 'Request Type' ? FontWeight.normal : FontWeight.w600,
+                      color: item == 'Request Type'
+                          ? CreateRequestColors.textMuted
+                          : CreateRequestColors.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  );
+                }).toList();
+              },
               items: _requestTypes.map((v) {
                 final typeData = _requestTypesData.firstWhere(
                       (t) => t.name == v,
