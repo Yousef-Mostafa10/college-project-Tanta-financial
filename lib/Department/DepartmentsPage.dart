@@ -1,0 +1,804 @@
+import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+
+class DepartmentsPage extends StatefulWidget {
+  const DepartmentsPage({Key? key}) : super(key: key);
+
+  @override
+  State<DepartmentsPage> createState() => _DepartmentsPageState();
+}
+
+class _DepartmentsPageState extends State<DepartmentsPage> {
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: 'http://77.83.242.94:3300',
+    headers: {
+      'accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+  ));
+
+  List<Map<String, dynamic>> allDepartments = [];
+  List<Map<String, dynamic>> filteredDepartments = [];
+  TextEditingController searchController = TextEditingController();
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAllDepartments();
+    searchController.addListener(_searchDepartments);
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  // 📥 Fetch all departments
+  Future<void> fetchAllDepartments() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final response = await _dio.get('/api/v0/departments');
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = response.data;
+        setState(() {
+          allDepartments = data.map((dept) => {
+            'name': dept['name'] ?? '',
+            'managerName': dept['managerName'] ?? 'No manager',
+          }).toList();
+          filteredDepartments = allDepartments;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Failed to load departments';
+      });
+      print('Error fetching departments: $e');
+    }
+  }
+
+  // 🔍 Search for a specific department
+  Future<void> _searchDepartments() async {
+    String query = searchController.text.trim();
+
+    if (query.isEmpty) {
+      setState(() {
+        filteredDepartments = allDepartments;
+      });
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final response = await _dio.get('/api/v0/departments/$query');
+
+      if (response.statusCode == 200) {
+        setState(() {
+          Map<String, dynamic> dept = response.data;
+          filteredDepartments = [{
+            'name': dept['name'] ?? '',
+            'managerName': dept['managerName'] ?? 'No manager',
+          }];
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        filteredDepartments = [];
+        isLoading = false;
+      });
+    }
+  }
+
+  // ➕ Add new department
+  Future<void> addDepartment(String name, String managerName) async {
+    try {
+      final response = await _dio.post(
+        '/api/v0/departments',
+        data: {
+          'name': name,
+          'managerName': managerName,
+        },
+      );
+
+      if (response.statusCode == 201) {
+        setState(() {
+          allDepartments.add({
+            'name': response.data['name'],
+            'managerName': response.data['managerName'],
+          });
+          filteredDepartments = allDepartments;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Department "$name" added successfully'),
+              backgroundColor: AppColors.accentGreen,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add department'),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
+      print('Error adding department: $e');
+    }
+  }
+
+  // ✏️ Update department
+  Future<void> updateDepartment(String oldName, String newName, String managerName) async {
+    try {
+      final response = await _dio.patch(
+        '/api/v0/departments/$oldName',
+        data: {
+          'name': newName,
+          'managerName': managerName,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          int index = allDepartments.indexWhere((dept) => dept['name'] == oldName);
+          if (index != -1) {
+            allDepartments[index] = {
+              'name': response.data['name'],
+              'managerName': response.data['managerName'],
+            };
+          }
+
+          if (searchController.text.isEmpty) {
+            filteredDepartments = List.from(allDepartments);
+          } else {
+            _searchDepartments();
+          }
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Department updated successfully'),
+              backgroundColor: AppColors.accentGreen,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update department'),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
+      print('Error updating department: $e');
+    }
+  }
+
+  // 🗑️ Delete department
+  Future<void> deleteDepartment(String name) async {
+    try {
+      final response = await _dio.delete('/api/v0/departments/$name');
+
+      if (response.statusCode == 200) {
+        setState(() {
+          allDepartments.removeWhere((dept) => dept['name'] == name);
+          filteredDepartments.removeWhere((dept) => dept['name'] == name);
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Department "$name" deleted successfully'),
+              backgroundColor: AppColors.accentRed,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete department'),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
+      print('Error deleting department: $e');
+    }
+  }
+
+  // 🎨 Show add department dialog
+  void _showAddDepartmentDialog() {
+    TextEditingController nameController = TextEditingController();
+    TextEditingController managerController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: 400,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Add New Department',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Department Name',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  prefixIcon: const Icon(Icons.business, color: AppColors.primary),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: managerController,
+                decoration: InputDecoration(
+                  labelText: 'Manager Name',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  prefixIcon: const Icon(Icons.person, color: AppColors.primary),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (nameController.text.isNotEmpty) {
+                          addDepartment(
+                            nameController.text,
+                            managerController.text.isEmpty
+                                ? 'Not specified'
+                                : managerController.text,
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Add' , style: TextStyle(color: Colors.black)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        side: const BorderSide(color: AppColors.textMuted),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🎨 Show edit department dialog
+  void _showEditDepartmentDialog(Map<String, dynamic> department) {
+    TextEditingController nameController = TextEditingController(text: department['name']);
+    TextEditingController managerController = TextEditingController(text: department['managerName']);
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: 400,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Edit Department',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Department Name',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  prefixIcon: const Icon(Icons.business, color: AppColors.primary),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: managerController,
+                decoration: InputDecoration(
+                  labelText: 'Manager Name',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  prefixIcon: const Icon(Icons.person, color: AppColors.primary),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        updateDepartment(
+                          department['name'],
+                          nameController.text,
+                          managerController.text,
+                        );
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Save Changes'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        side: const BorderSide(color: AppColors.textMuted),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🎨 Confirm delete
+  void _confirmDelete(Map<String, dynamic> department) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          'Confirm Delete',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          'Are you sure you want to delete "${department['name']}" department?',
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              deleteDepartment(department['name']);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentRed,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bodyBg,
+      appBar: AppBar(
+        title: const Text(
+          'Departments Management',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: AppColors.sidebarBg,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white), // 👈 Back arrow
+          onPressed: () {
+            Navigator.pop(context); // 👈 Go back to previous page
+          },
+        ),
+      ),
+      body: Column(
+        children: [
+          // 🔍 Search Bar
+          Container(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.statShadow,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search by department name...',
+                  hintStyle: const TextStyle(color: AppColors.textMuted),
+                  prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                  suffixIcon: searchController.text.isNotEmpty
+                      ? IconButton(
+                    icon: const Icon(Icons.clear, color: AppColors.textMuted),
+                    onPressed: () {
+                      searchController.clear();
+                      setState(() {
+                        filteredDepartments = allDepartments;
+                      });
+                    },
+                  )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+          ),
+
+          // 📊 Stats Summary
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.statBgLight,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.statBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.corporate_fare, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Total Departments: ${allDepartments.length}',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // 📱 Departments Grid
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                : errorMessage != null
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: AppColors.accentRed,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    errorMessage!,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: fetchAllDepartments,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+                : filteredDepartments.isEmpty
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.business_center,
+                    size: 64,
+                    color: AppColors.textMuted.withOpacity(0.5),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    searchController.text.isEmpty
+                        ? 'No departments found'
+                        : 'No search results',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : GridView.builder(
+              padding: const EdgeInsets.all(24),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                childAspectRatio: 1.2,
+                crossAxisSpacing: 20,
+                mainAxisSpacing: 20,
+              ),
+              itemCount: filteredDepartments.length,
+              itemBuilder: (context, index) {
+                final dept = filteredDepartments[index];
+                return DepartmentCard(
+                  department: dept,
+                  onEdit: () => _showEditDepartmentDialog(dept),
+                  onDelete: () => _confirmDelete(dept),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddDepartmentDialog,
+        backgroundColor: AppColors.accentYellow,
+        child: const Icon(
+          Icons.add,
+          color: Colors.white,
+          size: 28,
+        ),
+      ),
+    );
+  }
+}
+
+// 🃏 Department Card Widget
+class DepartmentCard extends StatelessWidget {
+  final Map<String, dynamic> department;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const DepartmentCard({
+    Key? key,
+    required this.department,
+    required this.onEdit,
+    required this.onDelete,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.statShadow,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Department Icon
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.business,
+                    color: AppColors.primary,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Department Name
+                Text(
+                  department['name'] ?? 'No name',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                // Manager Name
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.person_outline,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        department['managerName'] ?? 'No manager',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Three dots menu
+          Positioned(
+            top: 12,
+            right: 12,
+            child: PopupMenuButton<String>(
+              icon: const Icon(
+                Icons.more_vert,
+                color: AppColors.textMuted,
+                size: 20,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onSelected: (value) {
+                if (value == 'edit') {
+                  onEdit();
+                } else if (value == 'delete') {
+                  onDelete();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, color: AppColors.accentBlue, size: 20),
+                      SizedBox(width: 8),
+                      Text('Edit'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, color: AppColors.accentRed, size: 20),
+                      SizedBox(width: 8),
+                      Text('Delete'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// 🎨 Colors Class
+class AppColors {
+  static const Color primary = Color(0xFF00695C);
+  static const Color primaryLight = Color(0xFF00796B);
+  static const Color sidebarBg = Color(0xFF0E6C62);
+  static const Color sidebarText = Color(0xFFFFFFFF);
+  static const Color sidebarHover = Color(0xFF07584F);
+  static const Color bodyBg = Color(0xFFF5F6FA);
+  static const Color cardBg = Color(0xFFFFFFFF);
+  static const Color textPrimary = Color(0xFF2C3E50);
+  static const Color textSecondary = Color(0xFF7F8C8D);
+  static const Color textMuted = Color(0xFFB0B0B0);
+  static const Color accentYellow = Color(0xFFFFB74D);
+  static const Color accentRed = Color(0xFFE74C3C);
+  static const Color accentGreen = Color(0xFF27AE60);
+  static const Color accentBlue = Color(0xFF1E88E5);
+  static const Color statusApproved = Color(0xFF27AE60);
+  static const Color statusRejected = Color(0xFFE74C3C);
+  static const Color statusWaiting = Color(0xFF1E88E5);
+  static const Color statusNeedsChange = Color(0xFFFFB74D);
+  static const Color statusFulfilled = Color(0xFF009688);
+  static const Color statBgLight = Color(0xFFF0F8F7);
+  static const Color statBorder = Color(0xFFB2DFDB);
+  static const Color statShadow = Color(0x1A00695C);
+}
