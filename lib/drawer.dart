@@ -9,6 +9,8 @@ import 'package:provider/provider.dart';
 import 'package:college_project/providers/language_provider.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 
+import 'Department/DepartmentsPage.dart';
+
 // 🎨 COLOR PALETTE - Consistent with the whole application
 class AppColors {
   // Primary Colors
@@ -150,6 +152,18 @@ class _CustomDrawerState extends State<CustomDrawer> {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (context) => ViewUsersPage()),
+                  );
+                },
+              ),
+
+              _buildMenuItem(
+                icon: Icons.corporate_fare,
+                title: AppLocalizations.of(context)!.translate('Add Department'),
+                color: AppColors.accentGreen,
+                isMobile: isMobile,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) =>  DepartmentsPage()),
                   );
                 },
               ),
