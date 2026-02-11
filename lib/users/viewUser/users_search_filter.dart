@@ -85,9 +85,18 @@ class _UsersSearchFilterState extends State<UsersSearchFilter> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _buildFilterChip(AppLocalizations.of(context)!.translate('all'), 'all'),
-          _buildFilterChip(AppLocalizations.of(context)!.translate('administrator'), 'admin'),
-          _buildFilterChip(AppLocalizations.of(context)!.translate('regular_user'), 'user'),
+          _buildFilterChip(
+            AppLocalizations.of(context)!.translate('all'),
+            'all',
+          ),
+          _buildFilterChip(
+            AppLocalizations.of(context)!.translate('administrator'),
+            'admin',
+          ),
+          _buildFilterChip(
+            AppLocalizations.of(context)!.translate('regular_user'),
+            'user',
+          ),
         ],
       ),
     );

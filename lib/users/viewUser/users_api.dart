@@ -12,7 +12,7 @@ class UsersApiService {
     return prefs.getString('token');
   }
 
-  // ✅ جلب جميع المستخدمين (بدون pagination)
+  // ✅ جلب جميع المستخدمين
   Future<List<User>> fetchUsers() async {
     final token = await _getToken();
     if (token == null) {
@@ -33,7 +33,6 @@ class UsersApiService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data is List) {
-        // تحويل البيانات إلى قائمة من User objects
         return data.map((userJson) => User.fromJson(userJson)).toList();
       } else {
         throw Exception('Invalid API response format');
@@ -75,7 +74,7 @@ class UsersApiService {
     }
   }
 
-  // ✅ تحديث بيانات المستخدم (بما في ذلك كلمة المرور)
+  // ✅ تحديث بيانات المستخدم
   Future<User> updateUser(String userName, {
     String? newPassword,
     String? newRole,
@@ -90,7 +89,6 @@ class UsersApiService {
 
     final url = Uri.parse("$baseUrl/users/$userName");
 
-    // بناء البيانات المراد تحديثها
     Map<String, dynamic> updateData = {};
 
     if (newPassword != null && newPassword.isNotEmpty) {
@@ -109,7 +107,6 @@ class UsersApiService {
       updateData['departmentName'] = departmentName;
     }
 
-    // إذا لم تكن هناك بيانات للتحديث
     if (updateData.isEmpty) {
       throw Exception('no_changes_provided');
     }
@@ -248,7 +245,7 @@ class UsersApiService {
     return await updateUser(userName, newPassword: newPassword);
   }
 
-  // ✅ تغيير حالة المستخدم (تفعيل/تعطيل)
+  // ✅ تغيير حالة المستخدم
   Future<User> toggleUserStatus(String userName, bool active) async {
     return await updateUser(userName, active: active);
   }

@@ -28,7 +28,9 @@ class UsersEmptyState extends StatelessWidget {
           SizedBox(height: isMobile ? 12 : 16),
           Text(
             selectedFilter != 'all'
-                ? (selectedFilter == 'admin' ? AppLocalizations.of(context)!.translate('no_admins_found') : AppLocalizations.of(context)!.translate('no_users_found'))
+                ? (selectedFilter == 'admin'
+                ? AppLocalizations.of(context)!.translate('no_admins_found')
+                : AppLocalizations.of(context)!.translate('no_users_found'))
                 : AppLocalizations.of(context)!.translate('no_users_found'),
             style: TextStyle(
               fontSize: isMobile ? 16 : 18,

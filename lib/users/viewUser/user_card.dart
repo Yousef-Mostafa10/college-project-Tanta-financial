@@ -6,7 +6,6 @@ import 'users_colors.dart';
 import 'users_helpers.dart';
 import 'user_profile_dialog.dart';
 import 'change_password_dialog.dart';
-
 import 'edit_user_dialog.dart';
 
 class UserCard extends StatelessWidget {
@@ -43,67 +42,145 @@ class UserCard extends StatelessWidget {
       ),
       child: ListTile(
         contentPadding: EdgeInsets.all(isMobile ? 12 : 16),
-        leading: Container(
-          width: isMobile ? 40 : 50,
-          height: isMobile ? 40 : 50,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppColors.gradientStart, AppColors.gradientEnd],
-            ),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            Icons.person,
-            color: AppColors.primary,
-            size: isMobile ? 18 : 22,
-          ),
-        ),
-        title: Row(
+
+        // ✅ أيقونة مع علامة الحالة
+        leading: Stack(
           children: [
-            Expanded(
-              child: Text(
-                user.name,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                  fontSize: isMobile ? 14 : 16,
+            Container(
+              width: isMobile ? 50 : 60,
+              height: isMobile ? 50 : 60,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.gradientStart, AppColors.gradientEnd],
                 ),
-                overflow: TextOverflow.ellipsis,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.person,
+                color: Colors.white,
+                size: isMobile ? 24 : 28,
               ),
             ),
-            SizedBox(width: isMobile ? 4 : 6),
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: isMobile ? 6 : 8,
-                vertical: isMobile ? 2 : 4,
-              ),
-              decoration: BoxDecoration(
-                color: UsersHelpers.getRoleColor(user.role).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
-                border: Border.all(
-                  color: UsersHelpers.getRoleColor(user.role).withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                user.role == 'admin' ? AppLocalizations.of(context)!.translate('administrator') : AppLocalizations.of(context)!.translate('regular_user'),
-                style: TextStyle(
-                  fontSize: isMobile ? 9 : 10,
-                  fontWeight: FontWeight.w600,
-                  color: UsersHelpers.getRoleColor(user.role),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                width: isMobile ? 14 : 16,
+                height: isMobile ? 14 : 16,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  color: user.active
+                      ? AppColors.statusApproved
+                      : AppColors.statusRejected,
                 ),
               ),
             ),
           ],
         ),
-        subtitle: Text(
-          "${user.name}@company.com",
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: isMobile ? 12 : 14,
-          ),
-          overflow: TextOverflow.ellipsis,
+
+        // ✅ المحتوى الرئيسي
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    user.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                      fontSize: isMobile ? 15 : 17,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                SizedBox(width: isMobile ? 4 : 6),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 6 : 8,
+                    vertical: isMobile ? 2 : 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: UsersHelpers.getRoleColor(user.role).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
+                    border: Border.all(
+                      color: UsersHelpers.getRoleColor(user.role).withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    user.role.toLowerCase() == 'admin'
+                        ? AppLocalizations.of(context)!.translate('administrator')
+                        : AppLocalizations.of(context)!.translate('regular_user'),
+                    style: TextStyle(
+                      fontSize: isMobile ? 9 : 10,
+                      fontWeight: FontWeight.w600,
+                      color: UsersHelpers.getRoleColor(user.role),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: isMobile ? 4 : 6),
+
+            // ✅ القسم
+            if (user.departmentName != null && user.departmentName!.isNotEmpty)
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 8 : 10,
+                  vertical: isMobile ? 3 : 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.business_center,
+                      size: isMobile ? 10 : 12,
+                      color: AppColors.primary,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      user.departmentName!,
+                      style: TextStyle(
+                        fontSize: isMobile ? 10 : 12,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
+
+        // ✅ subtitle بقيمة من API
+        subtitle: Padding(
+          padding: EdgeInsets.only(top: isMobile ? 6 : 8),
+          child: Row(
+            children: [
+              Icon(
+                Icons.access_time_rounded,
+                size: isMobile ? 12 : 14,
+                color: AppColors.textMuted,
+              ),
+              SizedBox(width: 4),
+              Text(
+                'Last login: ${UsersHelpers.formatDate(user.lastLogin, context)}',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: isMobile ? 11 : 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+
         trailing: PopupMenuButton<String>(
           icon: Icon(
             Icons.more_vert_rounded,
@@ -125,15 +202,27 @@ class UserCard extends StatelessWidget {
           itemBuilder: (context) => [
             PopupMenuItem(
               value: 'view',
-              child: _buildPopupItem(Icons.remove_red_eye_rounded, AppLocalizations.of(context)!.translate('view_profile'), AppColors.primary),
+              child: _buildPopupItem(
+                  Icons.remove_red_eye_rounded,
+                  AppLocalizations.of(context)!.translate('view_profile'),
+                  AppColors.primary
+              ),
             ),
             PopupMenuItem(
               value: 'edit',
-              child: _buildPopupItem(Icons.edit_rounded, AppLocalizations.of(context)!.translate('edit_user') ?? 'Edit Profile', AppColors.accentBlue),
+              child: _buildPopupItem(
+                  Icons.edit_rounded,
+                  AppLocalizations.of(context)!.translate('edit_user') ?? 'Edit Profile',
+                  AppColors.accentBlue
+              ),
             ),
             PopupMenuItem(
               value: 'delete',
-              child: _buildPopupItem(Icons.delete_outline_rounded, AppLocalizations.of(context)!.translate('delete') ?? 'Delete User', AppColors.accentRed),
+              child: _buildPopupItem(
+                  Icons.delete_outline_rounded,
+                  AppLocalizations.of(context)!.translate('delete') ?? 'Delete User',
+                  AppColors.accentRed
+              ),
             ),
           ],
         ),

@@ -35,21 +35,17 @@ class UsersListHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            '${AppLocalizations.of(context)!.translate('showing')} $filteredUsersCount ${selectedFilter != 'all' ? (selectedFilter == 'admin' ? AppLocalizations.of(context)!.translate('administrator') : AppLocalizations.of(context)!.translate('regular_user')) : AppLocalizations.of(context)!.translate('users_management').toLowerCase()}',
+            '${AppLocalizations.of(context)!.translate('showing')} $filteredUsersCount '
+                '${selectedFilter != 'all'
+                ? (selectedFilter == 'admin'
+                ? AppLocalizations.of(context)!.translate('administrator')
+                : AppLocalizations.of(context)!.translate('regular_user'))
+                : AppLocalizations.of(context)!.translate('users_management').toLowerCase()}',
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: isMobile ? 12 : 14,
             ),
           ),
-          if (false) // Pagination removed
-            Text(
-              AppLocalizations.of(context)!.translate('scroll_to_load_more'),
-              style: TextStyle(
-                color: AppColors.primary,
-                fontSize: isMobile ? 10 : 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
         ],
       ),
     );

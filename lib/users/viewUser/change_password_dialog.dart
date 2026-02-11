@@ -51,32 +51,32 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-            Text(
-              '${AppLocalizations.of(context)!.translate('change_password')} - ${widget.userName}',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-            ),
-            SizedBox(height: 16),
-            TextField(
-              controller: _passwordController,
-              obscureText: !_showPassword,
-              decoration: _buildInputDecoration(
-                AppLocalizations.of(context)!.translate('new_password'),
-                Icons.lock,
-                suffix: IconButton(
-                  icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off),
-                  onPressed: () => setState(() => _showPassword = !_showPassword),
-                ),
+          Text(
+            '${AppLocalizations.of(context)!.translate('change_password')} - ${widget.userName}',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          ),
+          SizedBox(height: 16),
+          TextField(
+            controller: _passwordController,
+            obscureText: !_showPassword,
+            decoration: _buildInputDecoration(
+              AppLocalizations.of(context)!.translate('new_password'),
+              Icons.lock,
+              suffix: IconButton(
+                icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off),
+                onPressed: () => setState(() => _showPassword = !_showPassword),
               ),
             ),
-            SizedBox(height: 12),
-            TextField(
-              controller: _confirmPasswordController,
-              obscureText: !_showPassword,
-              decoration: _buildInputDecoration(
-                AppLocalizations.of(context)!.translate('confirm_password'),
-                Icons.lock_clock_outlined,
-              ),
+          ),
+          SizedBox(height: 12),
+          TextField(
+            controller: _confirmPasswordController,
+            obscureText: !_showPassword,
+            decoration: _buildInputDecoration(
+              AppLocalizations.of(context)!.translate('confirm_password'),
+              Icons.lock_clock_outlined,
             ),
+          ),
         ],
       ),
       actions: [
@@ -91,7 +91,14 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
             foregroundColor: Colors.white,
           ),
           child: _isLoading
-              ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              ? SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          )
               : Text(AppLocalizations.of(context)!.translate('save')),
         ),
       ],
@@ -105,29 +112,41 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
       suffixIcon: suffix,
       filled: true,
       fillColor: AppColors.bodyBg,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
     );
   }
 
   Future<void> _savePassword() async {
     if (_passwordController.text.isEmpty) {
-        UsersHelpers.showErrorMessage(context, 'Password cannot be empty');
-        return;
+      UsersHelpers.showErrorMessage(context, 'Password cannot be empty');
+      return;
     }
     if (_passwordController.text != _confirmPasswordController.text) {
-        UsersHelpers.showErrorMessage(context, "Passwords don't match");
-        return;
+      UsersHelpers.showErrorMessage(context, "Passwords don't match");
+      return;
     }
     if (_passwordController.text.length < 6) {
-        UsersHelpers.showErrorMessage(context, AppLocalizations.of(context)!.translate('password_length_error'));
-        return;
+      UsersHelpers.showErrorMessage(
+        context,
+        AppLocalizations.of(context)!.translate('password_length_error'),
+      );
+      return;
     }
 
     setState(() => _isLoading = true);
     try {
-      await widget.apiService.changePassword(widget.userName, _passwordController.text);
+      await widget.apiService.changePassword(
+        widget.userName,
+        _passwordController.text,
+      );
       if (mounted) {
-        UsersHelpers.showSuccessMessage(context, AppLocalizations.of(context)!.translate('password_changed_success') ?? 'Password changed');
+        UsersHelpers.showSuccessMessage(
+          context,
+          AppLocalizations.of(context)!.translate('password_changed_success') ?? 'Password changed',
+        );
         Navigator.pop(context);
       }
     } catch (e) {

@@ -5,7 +5,9 @@ import 'package:college_project/l10n/app_localizations.dart';
 
 class UsersHelpers {
   static String formatDate(String? iso, BuildContext context) {
-    if (iso == null || iso.isEmpty) return "Unknown";
+    if (iso == null || iso.isEmpty) {
+      return AppLocalizations.of(context)?.translate('unknown') ?? "Unknown";
+    }
     try {
       final dt = DateTime.parse(iso);
       final locale = Localizations.localeOf(context).languageCode;
@@ -27,9 +29,7 @@ class UsersHelpers {
   }
 
   static void showErrorMessage(BuildContext context, String message) {
-    // Remove "Exception: " if present
     final cleanMessage = message.replaceAll('Exception: ', '');
-    // Try to translate, otherwise use original
     final localizedMessage = AppLocalizations.of(context)?.translate(cleanMessage) ?? cleanMessage;
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -50,7 +50,6 @@ class UsersHelpers {
   }
 
   static void showSuccessMessage(BuildContext context, String message) {
-     // Try to translate, otherwise use original
     final localizedMessage = AppLocalizations.of(context)?.translate(message) ?? message;
 
     ScaffoldMessenger.of(context).showSnackBar(

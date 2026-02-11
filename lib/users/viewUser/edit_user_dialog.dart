@@ -25,17 +25,16 @@ class _EditUserDialogState extends State<EditUserDialog> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  
+
   String _selectedRole = 'user';
   bool _isActive = true;
   bool _isLoading = true;
   bool _isSaving = false;
   bool _showPassword = false;
-  
+
   String? _selectedDepartment;
   List<String> _departments = [];
-  
-  // قيمة وهمية لتمثيل كلمة المرور الحالية
+
   final String _currentPasswordPlaceholder = "********";
 
   @override
@@ -52,14 +51,15 @@ class _EditUserDialogState extends State<EditUserDialog> {
       setState(() {
         _nameController.text = user.name;
         _passwordController.text = _currentPasswordPlaceholder;
-        _selectedRole = user.role.toUpperCase(); // ضمان أنها تكون uppercase
+        _selectedRole = user.role.toUpperCase();
         _isActive = user.active;
         _departments = departments;
-        
-        if (user.departmentName != null && _departments.contains(user.departmentName)) {
-            _selectedDepartment = user.departmentName;
+
+        if (user.departmentName != null &&
+            _departments.contains(user.departmentName)) {
+          _selectedDepartment = user.departmentName;
         }
-        
+
         _isLoading = false;
       });
     } catch (e) {
@@ -81,7 +81,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
       return AlertDialog(
         content: SizedBox(
           height: 100,
-          child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+          child: Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
         ),
       );
     }
@@ -115,18 +117,25 @@ class _EditUserDialogState extends State<EditUserDialog> {
               SizedBox(height: 12),
 
               _buildLabel(AppLocalizations.of(context)!.translate('department') ?? 'Department'),
-              _departments.isEmpty 
-                ? Text('No departments found', style: TextStyle(color: Colors.red, fontSize: 12))
-                : DropdownButtonFormField<String>(
-                    value: _selectedDepartment,
-                    decoration: _buildInputDecoration(Icons.business),
-                    items: _departments.map((dept) => DropdownMenuItem(
-                      value: dept,
-                      child: Text(dept),
-                    )).toList(),
-                    onChanged: (v) => setState(() => _selectedDepartment = v),
-                    hint: Text(AppLocalizations.of(context)!.translate('select_department') ?? 'Select Dept'),
-                  ),
+              _departments.isEmpty
+                  ? Text(
+                'No departments found',
+                style: TextStyle(color: Colors.red, fontSize: 12),
+              )
+                  : DropdownButtonFormField<String>(
+                value: _selectedDepartment,
+                decoration: _buildInputDecoration(Icons.business),
+                items: _departments
+                    .map((dept) => DropdownMenuItem(
+                  value: dept,
+                  child: Text(dept),
+                ))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedDepartment = v),
+                hint: Text(
+                  AppLocalizations.of(context)!.translate('select_department') ?? 'Select Dept',
+                ),
+              ),
               SizedBox(height: 12),
 
               _buildLabel(AppLocalizations.of(context)!.translate('role_label') ?? 'Role'),
@@ -134,8 +143,14 @@ class _EditUserDialogState extends State<EditUserDialog> {
                 value: _selectedRole,
                 decoration: _buildInputDecoration(Icons.admin_panel_settings),
                 items: [
-                  DropdownMenuItem(value: 'USER', child: Text(AppLocalizations.of(context)!.translate('regular_user'))),
-                  DropdownMenuItem(value: 'ADMIN', child: Text(AppLocalizations.of(context)!.translate('administrator'))),
+                  DropdownMenuItem(
+                    value: 'USER',
+                    child: Text(AppLocalizations.of(context)!.translate('regular_user')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'ADMIN',
+                    child: Text(AppLocalizations.of(context)!.translate('administrator')),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _selectedRole = v!),
               ),
@@ -147,16 +162,17 @@ class _EditUserDialogState extends State<EditUserDialog> {
                 obscureText: !_showPassword,
                 decoration: _buildInputDecoration(Icons.lock).copyWith(
                   suffixIcon: IconButton(
-                    icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off),
+                    icon: Icon(
+                      _showPassword ? Icons.visibility : Icons.visibility_off,
+                    ),
                     onPressed: () => setState(() => _showPassword = !_showPassword),
                   ),
                   hintText: 'Enter new password or leave as is',
                 ),
                 onTap: () {
-                    // إذا ضغط المستخدم وكان الحقل يحتوي على النجوم فقط، نقوم بمسحه ليسهل عليه الكتابة
-                    if (_passwordController.text == _currentPasswordPlaceholder) {
-                        _passwordController.clear();
-                    }
+                  if (_passwordController.text == _currentPasswordPlaceholder) {
+                    _passwordController.clear();
+                  }
                 },
               ),
               SizedBox(height: 16),
@@ -164,7 +180,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
               Row(
                 children: [
                   Text(AppLocalizations.of(context)!.translate('active_status') ?? 'Active Status'),
-                  Spacer(),
+                  const Spacer(),
                   Switch(
                     value: _isActive,
                     activeColor: AppColors.primary,
@@ -188,7 +204,14 @@ class _EditUserDialogState extends State<EditUserDialog> {
             foregroundColor: Colors.white,
           ),
           child: _isSaving
-              ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              ? SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          )
               : Text(AppLocalizations.of(context)!.translate('save') ?? 'Save'),
         ),
       ],
@@ -198,7 +221,14 @@ class _EditUserDialogState extends State<EditUserDialog> {
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6.0),
-      child: Text(text, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: AppColors.textPrimary,
+        ),
+      ),
     );
   }
 
@@ -207,8 +237,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
       prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
       filled: true,
       fillColor: AppColors.bodyBg,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     );
   }
 
@@ -217,10 +250,10 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
     setState(() => _isSaving = true);
     try {
-      // نتحقق إذا كان الباسورد قد تغير أم لا يزال يحتوي على النجوم (القيمة الوهمية)
       String? newPasswordToSend;
-      if (_passwordController.text.isNotEmpty && _passwordController.text != _currentPasswordPlaceholder) {
-          newPasswordToSend = _passwordController.text;
+      if (_passwordController.text.isNotEmpty &&
+          _passwordController.text != _currentPasswordPlaceholder) {
+        newPasswordToSend = _passwordController.text;
       }
 
       await widget.apiService.updateUser(
@@ -229,9 +262,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
         newRole: _selectedRole,
         active: _isActive,
         departmentName: _selectedDepartment,
-        newPassword: newPasswordToSend, // سيتم إرساله فقط إذا قام المستخدم بتعديله
+        newPassword: newPasswordToSend,
       );
-      
+
       if (mounted) {
         UsersHelpers.showSuccessMessage(context, 'User updated successfully');
         Navigator.pop(context, true);

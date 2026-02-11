@@ -3,7 +3,6 @@ import 'users_api.dart';
 import 'users_colors.dart';
 import 'users_helpers.dart';
 import 'package:college_project/l10n/app_localizations.dart';
-
 import 'user_model.dart';
 
 class UserProfileDialog extends StatefulWidget {
@@ -77,7 +76,7 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
               child: Icon(
                 Icons.person,
                 size: widget.isMobile ? 30 : 36,
-                color: AppColors.primary,
+                color: Colors.white,
               ),
             ),
             SizedBox(height: widget.isMobile ? 12 : 16),
@@ -90,31 +89,47 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
               ),
             ),
             SizedBox(height: widget.isMobile ? 8 : 12),
+
+            // ✅ الدور
             _buildProfileDetail(
               AppLocalizations.of(context)!.translate('user_type'),
-              _userData!.role == 'admin' ? AppLocalizations.of(context)!.translate('administrator') : AppLocalizations.of(context)!.translate('regular_user'),
+              _userData!.role.toLowerCase() == 'admin'
+                  ? AppLocalizations.of(context)!.translate('administrator')
+                  : AppLocalizations.of(context)!.translate('regular_user'),
               Icons.group_rounded,
             ),
+
+            // ✅ القسم
             if (_userData!.departmentName != null)
-            _buildProfileDetail(
-              AppLocalizations.of(context)!.translate('department_name') ?? 'Department',
-              _userData!.departmentName!,
-              Icons.business_rounded,
-            ),
+              _buildProfileDetail(
+                AppLocalizations.of(context)!.translate('department_name') ?? 'Department',
+                _userData!.departmentName!,
+                Icons.business_rounded,
+              ),
+
+            // ✅ الحالة
             _buildProfileDetail(
               AppLocalizations.of(context)!.translate('status') ?? 'Status',
-              _userData!.active ? (AppLocalizations.of(context)!.translate('active') ?? 'Active') : (AppLocalizations.of(context)!.translate('inactive') ?? 'Inactive'),
-              _userData!.active ? Icons.check_circle_rounded : Icons.cancel_rounded,
+              _userData!.active
+                  ? (AppLocalizations.of(context)!.translate('active') ?? 'Active')
+                  : (AppLocalizations.of(context)!.translate('inactive') ?? 'Inactive'),
+              _userData!.active
+                  ? Icons.check_circle_rounded
+                  : Icons.cancel_rounded,
             ),
+
+            // ✅ تاريخ الإنشاء
             _buildProfileDetail(
               AppLocalizations.of(context)!.translate('created_at'),
               UsersHelpers.formatDate(_userData!.createdAt, context),
               Icons.calendar_today_rounded,
             ),
+
+            // ✅ آخر تسجيل دخول (بدل updated_at)
             _buildProfileDetail(
-              AppLocalizations.of(context)!.translate('updated_at'),
-              UsersHelpers.formatDate(_userData!.updatedAt, context),
-              Icons.update_rounded,
+              AppLocalizations.of(context)!.translate('last_login') ?? 'Last Login',
+              UsersHelpers.formatDate(_userData!.lastLogin, context),
+              Icons.access_time_rounded,
             ),
           ],
         ),

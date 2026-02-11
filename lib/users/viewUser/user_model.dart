@@ -4,7 +4,7 @@ class User {
   final bool active;
   final String? departmentName;
   final String createdAt;
-  final String updatedAt;
+  final String lastLogin;
 
   User({
     required this.name,
@@ -12,7 +12,7 @@ class User {
     required this.active,
     this.departmentName,
     required this.createdAt,
-    required this.updatedAt,
+    required this.lastLogin,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -22,7 +22,7 @@ class User {
       active: json["active"] ?? true,
       departmentName: json["departmentName"],
       createdAt: json["createdAt"] ?? "",
-      updatedAt: json["updatedAt"] ?? json["createdAt"] ?? "",
+      lastLogin: json["lastLogin"] ?? json["createdAt"] ?? "",
     );
   }
 }

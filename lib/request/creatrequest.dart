@@ -43,7 +43,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _commentController = TextEditingController(); // ✅ إضافة حقل الكومنت
+  final _commentController = TextEditingController();
   final _userSearchController = TextEditingController();
 
   String _selectedRequestType = 'Request Type';
@@ -52,10 +52,12 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
   List<TransactionType> _requestTypesData = [];
   List<String> _requestTypes = ['Request Type'];
-  List<String> _availableUsers = ['Select User'];
-  List<String> _filteredUsers = ['Select User'];
 
-  // ✅ تحميل البيانات بشكل منفصل
+  // ✅ تعديل: تخزين بيانات المستخدمين كاملة
+  List<Map<String, dynamic>> _usersData = [];
+  List<String> _availableUserNames = ['Select User'];
+  List<Map<String, dynamic>> _filteredUsersData = [];
+
   bool _isLoadingTypes = true;
   bool _isLoadingUsers = true;
   bool _isSubmitting = false;
@@ -70,17 +72,14 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     super.initState();
     fetchRequestTypes();
     fetchUsers();
-
     _requestTypes = ['Request Type'];
-    _availableUsers = ['Select User'];
-    _filteredUsers = ['Select User'];
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _commentController.dispose(); // ✅ dispose الكومنت
+    _commentController.dispose();
     _userSearchController.dispose();
     super.dispose();
   }
@@ -105,7 +104,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     return uniqueName;
   }
 
-  // ✅ جلب أنواع الطلبات
   Future<void> fetchRequestTypes() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -149,7 +147,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     }
   }
 
-  // ✅ جلب المستخدمين
+  // ✅ تعديل: جلب المستخدمين مع تخزين كل البيانات
   Future<void> fetchUsers() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -164,14 +162,11 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           if (data is List) {
-            final List<String> users = [];
-            for (var user in data) {
-              if (user["name"] != null) users.add(user["name"]);
-            }
             setState(() {
-              _availableUsers = ['Select User', ...users];
-              _filteredUsers = List.from(_availableUsers);
-              _selectedReceiver = _availableUsers.first;
+              _usersData = List<Map<String, dynamic>>.from(data);
+              _availableUserNames = ['Select User', ..._usersData.map((u) => u['name'] as String).toList()];
+              _filteredUsersData = List.from(_usersData);
+              _selectedReceiver = _availableUserNames.first;
               _isLoadingUsers = false;
             });
           } else {
@@ -201,12 +196,34 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     });
   }
 
+  // ✅ تعديل: بيانات احتياطية بالقسم والحالة
   void _loadFallbackUsers() {
     setState(() {
-      _availableUsers = ['Select User', 'John Doe', 'Jane Smith', 'Admin User'];
-      _filteredUsers = List.from(_availableUsers);
-      _selectedReceiver = _availableUsers.first;
+      _usersData = [
+        {'name': 'John Doe', 'departmentName': 'Engineering', 'active': true, 'role': 'USER'},
+        {'name': 'Jane Smith', 'departmentName': 'Human Resources', 'active': true, 'role': 'USER'},
+        {'name': 'Admin User', 'departmentName': 'Management', 'active': true, 'role': 'ADMIN'},
+        {'name': 'Bob Wilson', 'departmentName': 'Engineering', 'active': false, 'role': 'USER'},
+        {'name': 'Alice Johnson', 'departmentName': 'Finance', 'active': true, 'role': 'USER'},
+      ];
+      _availableUserNames = ['Select User', ..._usersData.map((u) => u['name'] as String).toList()];
+      _filteredUsersData = List.from(_usersData);
+      _selectedReceiver = _availableUserNames.first;
       _isLoadingUsers = false;
+    });
+  }
+
+  // ✅ تعديل: فلترة المستخدمين
+  void _filterUsers(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredUsersData = List.from(_usersData);
+      } else {
+        _filteredUsersData = _usersData
+            .where((user) =>
+            user['name'].toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
     });
   }
 
@@ -225,7 +242,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // ✅ تحسين: استخدم الـ Response بدل ما تعمل Refetch
         if (response.body.isNotEmpty) {
           try {
             final newType = json.decode(response.body);
@@ -235,7 +251,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
               _selectedRequestType = newType['name'];
             });
           } catch (e) {
-            // لو الـ Response مش صالح، اعمل Refetch
             await fetchRequestTypes();
           }
         } else {
@@ -345,23 +360,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     );
   }
 
-  void _filterUsers(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredUsers = List.from(_availableUsers);
-      } else {
-        _filteredUsers = _availableUsers
-            .where((user) =>
-        user.toLowerCase().contains(query.toLowerCase()) &&
-            user != 'Select User')
-            .toList();
-        if (!_filteredUsers.contains('Select User')) {
-          _filteredUsers.insert(0, 'Select User');
-        }
-      }
-    });
-  }
-
   void _showErrorMessage(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -427,9 +425,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             _uploadedDocumentIds.add(documentId);
             debugPrint('📎 Document ID added: $documentId');
 
-            // ✅ تخزين downloadURI للاستخدام المستقبلي
             if (documentData["downloadURI"] != null) {
-              // ممكن تخزينه لو هتحتاجه بعدين
               debugPrint('📥 Download URI: ${documentData["downloadURI"]}');
             }
           }
@@ -445,7 +441,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     }
   }
 
-  // ✅ تعديل الـ Forward عشان يستخدم comment بدل senderComment
   Future<void> _forwardTransaction(int transactionId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
@@ -459,7 +454,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         },
         body: jsonEncode({
           "receiverName": _selectedReceiver,
-          "comment": _commentController.text.trim().isEmpty  // ✅ استخدام comment
+          "comment": _commentController.text.trim().isEmpty
               ? "Request forwarded from ${AppLocalizations.of(context)!.translate('app_name')}"
               : _commentController.text.trim(),
         }),
@@ -495,9 +490,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           "description": _descriptionController.text,
           "typeName": _selectedRequestType,
           "priority": _selectedPriority.toUpperCase(),
-          "documentsIds": _uploadedDocumentIds.isNotEmpty
-              ? _uploadedDocumentIds
-              : [],
+          "documentsIds": _uploadedDocumentIds.isNotEmpty ? _uploadedDocumentIds : [],
         };
 
         debugPrint('🚀 Creating transaction: $transactionData');
@@ -602,9 +595,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   Widget _buildResponsiveBody(bool isMobile, bool isTablet, bool isDesktop, double height) {
     final content = SingleChildScrollView(
       padding: EdgeInsets.all(
-        isMobile ? 16.0 :
-        isTablet ? 24.0 :
-        32.0,
+        isMobile ? 16.0 : isTablet ? 24.0 : 32.0,
       ),
       child: Form(
         key: _formKey,
@@ -726,27 +717,38 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
                 return DropdownMenuItem(
                   value: v,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        v == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : v,
-                        style: TextStyle(
-                          fontWeight: v == 'Request Type' ? FontWeight.normal : FontWeight.w600,
-                          color: v == 'Request Type' ? CreateRequestColors.textMuted : CreateRequestColors.textPrimary,
-                        ),
-                      ),
-                      if (v != 'Request Type' && typeData.creatorName != 'System' && typeData.creatorName != '')
+                  child: Container(
+                    constraints: BoxConstraints(
+                      minHeight: 40,
+                      maxHeight: 60,
+                    ),
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          'Created by: ${typeData.creatorName}',
+                          v == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : v,
                           style: TextStyle(
-                            fontSize: 10,
-                            color: CreateRequestColors.textSecondary,
-                            fontStyle: FontStyle.italic,
+                            fontWeight: v == 'Request Type' ? FontWeight.normal : FontWeight.w600,
+                            color: v == 'Request Type' ? CreateRequestColors.textMuted : CreateRequestColors.textPrimary,
                           ),
                         ),
-                    ],
+                        if (v != 'Request Type' && typeData.creatorName != 'System' && typeData.creatorName != '')
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              'Created by: ${typeData.creatorName}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: CreateRequestColors.textSecondary,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 );
               }).toList(),
@@ -817,7 +819,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             ),
             SizedBox(height: isMobile ? 16 : 20),
 
-            // ✅ حقل الكومنت الجديد - تحت الوصف مباشرة
             _buildLabel(AppLocalizations.of(context)!.translate('comment_label')),
             SizedBox(height: 8),
             TextFormField(
@@ -899,7 +900,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        _selectedReceiver == 'Select User' ? AppLocalizations.of(context)!.translate('select_user_hint') : _selectedReceiver,
+                        _selectedReceiver == 'Select User'
+                            ? AppLocalizations.of(context)!.translate('select_user_hint')
+                            : _selectedReceiver,
                         style: TextStyle(
                           fontSize: isMobile ? 14 : 16,
                           color: _selectedReceiver == 'Select User'
@@ -1089,6 +1092,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     return content;
   }
 
+  // ✅ تعديل: عرض المستخدمين بالاسم + القسم + الحالة
   void _showUserSelectionDialog() {
     if (_isLoadingUsers) {
       _showErrorMessage('Loading users, please wait...');
@@ -1151,7 +1155,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     SizedBox(height: 16),
 
                     Text(
-                      '${_filteredUsers.length - 1} ${AppLocalizations.of(context)!.translate('users_count_label')}',
+                      '${_filteredUsersData.length} ${AppLocalizations.of(context)!.translate('users_count_label')}',
                       style: TextStyle(
                         fontSize: 12,
                         color: CreateRequestColors.textSecondary,
@@ -1162,13 +1166,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     Expanded(
                       child: ListView.builder(
                         shrinkWrap: true,
-                        itemCount: _filteredUsers.length,
+                        itemCount: _filteredUsersData.length + 1,
                         itemBuilder: (context, index) {
-                          final user = _filteredUsers[index];
-                          final isSelected = user == _selectedReceiver;
-                          final isSelectUserOption = user == 'Select User';
-
-                          if (isSelectUserOption) {
+                          if (index == 0) {
                             return ListTile(
                               leading: Icon(
                                 Icons.clear_all_rounded,
@@ -1187,30 +1187,111 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                             );
                           }
 
+                          final user = _filteredUsersData[index - 1];
+                          final isSelected = user['name'] == _selectedReceiver;
+
+                          Color statusColor = user['active'] == true
+                              ? CreateRequestColors.accentGreen
+                              : CreateRequestColors.textMuted;
+                          IconData statusIcon = user['active'] == true
+                              ? Icons.circle
+                              : Icons.circle_outlined;
+                          String statusText = user['active'] == true ? 'Active' : 'Inactive';
+
                           return ListTile(
-                            leading: Icon(
-                              Icons.person_rounded,
-                              color: isSelected
-                                  ? CreateRequestColors.primary
-                                  : CreateRequestColors.textSecondary,
-                            ),
-                            title: Text(
-                              user,
-                              style: TextStyle(
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            leading: CircleAvatar(
+                              backgroundColor: isSelected
+                                  ? CreateRequestColors.primary.withOpacity(0.2)
+                                  : Colors.transparent,
+                              child: Icon(
+                                Icons.person_rounded,
                                 color: isSelected
                                     ? CreateRequestColors.primary
-                                    : CreateRequestColors.textPrimary,
+                                    : CreateRequestColors.textSecondary,
                               ),
+                            ),
+                            title: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  user['name'],
+                                  style: TextStyle(
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: isSelected
+                                        ? CreateRequestColors.primary
+                                        : CreateRequestColors.textPrimary,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    if (user['departmentName'] != null && user['departmentName'].toString().isNotEmpty)
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: CreateRequestColors.primary.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.business_center,
+                                              size: 12,
+                                              color: CreateRequestColors.primary,
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              user['departmentName'],
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: CreateRequestColors.primary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    SizedBox(width: 8),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            statusIcon,
+                                            size: 10,
+                                            color: statusColor,
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            statusText,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: statusColor,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                             trailing: isSelected
                                 ? Icon(
-                              Icons.check_rounded,
+                              Icons.check_circle_rounded,
                               color: CreateRequestColors.primary,
                             )
                                 : null,
                             onTap: () {
-                              setState(() => _selectedReceiver = user);
+                              setState(() {
+                                _selectedReceiver = user['name'];
+                              });
                               Navigator.pop(context);
                               _userSearchController.clear();
                               _filterUsers('');
