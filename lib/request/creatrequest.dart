@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
 import 'transaction_type_model.dart';
@@ -46,21 +43,22 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _commentController = TextEditingController(); // ✅ إضافة حقل الكومنت
   final _userSearchController = TextEditingController();
 
   String _selectedRequestType = 'Request Type';
   String _selectedPriority = 'Medium';
   String _selectedReceiver = 'Select User';
 
-  List<TransactionType> _requestTypesData = []; // Store full objects
+  List<TransactionType> _requestTypesData = [];
   List<String> _requestTypes = ['Request Type'];
   List<String> _availableUsers = ['Select User'];
   List<String> _filteredUsers = ['Select User'];
 
-  bool _isLoading = true;
+  // ✅ تحميل البيانات بشكل منفصل
+  bool _isLoadingTypes = true;
+  bool _isLoadingUsers = true;
   bool _isSubmitting = false;
-  bool _areRequestTypesLoaded = false;
-  bool _areUsersLoaded = false;
 
   List<int> _uploadedDocumentIds = [];
   List<PlatformFile> _selectedFiles = [];
@@ -70,11 +68,21 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    fetchRequestTypes();
+    fetchUsers();
+
+    _requestTypes = ['Request Type'];
+    _availableUsers = ['Select User'];
+    _filteredUsers = ['Select User'];
   }
 
-  Future<void> _loadInitialData() async {
-    await Future.wait([fetchRequestTypes(), fetchUsers()]);
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _commentController.dispose(); // ✅ dispose الكومنت
+    _userSearchController.dispose();
+    super.dispose();
   }
 
   String _sanitizeFileName(String originalName) {
@@ -83,7 +91,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         .replaceAll(RegExp(r'\s+'), '_')
         .replaceAll(RegExp(r'_{2,}'), '_')
         .trim();
-
     return cleanedName;
   }
 
@@ -93,12 +100,12 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     final extension = originalName.split('.').last;
     final nameWithoutExtension =
     originalName.substring(0, originalName.lastIndexOf('.'));
-
     final cleanedName = _sanitizeFileName(nameWithoutExtension);
     final uniqueName = '${cleanedName}_${timestamp}_$randomSuffix.$extension';
     return uniqueName;
   }
 
+  // ✅ جلب أنواع الطلبات
   Future<void> fetchRequestTypes() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -109,42 +116,98 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         headers: {"Authorization": "Bearer $token"},
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        // The API now returns a list of objects based on latest documentation
-        // Handle both: dynamic list of objects OR object with "transactionTypes" list
-        List<dynamic> typesList = [];
-        if (data is List) {
-          typesList = data;
-        } else if (data is Map && data["transactionTypes"] != null) {
-          typesList = data["transactionTypes"];
-        }
-
-        final List<TransactionType> types = [];
-        for (var item in typesList) {
-          types.add(TransactionType.fromJson(item));
-        }
-
-        setState(() {
-          _requestTypesData = types;
-          _requestTypes = ['Request Type', ...types.map((t) => t.name)];
-          
-          if (_selectedRequestType == 'Request Type' || !_requestTypes.contains(_selectedRequestType)) {
-            _selectedRequestType = _requestTypes.length > 1 ? _requestTypes[1] : _requestTypes.first;
+      if (mounted) {
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          List<dynamic> typesList = [];
+          if (data is List) {
+            typesList = data;
+          } else if (data is Map && data["transactionTypes"] != null) {
+            typesList = data["transactionTypes"];
           }
-          
-          _areRequestTypesLoaded = true;
-          _checkLoadingStatus();
-        });
-      } else {
-        _showErrorMessage('HTTP Error: ${response.statusCode}');
-        _loadFallbackData();
+
+          final List<TransactionType> types = [];
+          for (var item in typesList) {
+            types.add(TransactionType.fromJson(item));
+          }
+
+          setState(() {
+            _requestTypesData = types;
+            _requestTypes = ['Request Type', ...types.map((t) => t.name)];
+            if (_selectedRequestType == 'Request Type' && _requestTypes.length > 1) {
+              _selectedRequestType = _requestTypes[1];
+            }
+            _isLoadingTypes = false;
+          });
+        } else {
+          _loadFallbackTypes();
+        }
       }
     } catch (e) {
-      _showErrorMessage('Connection Error: $e');
-      _loadFallbackData();
+      if (mounted) _loadFallbackTypes();
+      print('Error fetching types: $e');
     }
+  }
+
+  // ✅ جلب المستخدمين
+  Future<void> fetchUsers() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.get(
+        Uri.parse('$_documentApiUrl/users'),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (mounted) {
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data is List) {
+            final List<String> users = [];
+            for (var user in data) {
+              if (user["name"] != null) users.add(user["name"]);
+            }
+            setState(() {
+              _availableUsers = ['Select User', ...users];
+              _filteredUsers = List.from(_availableUsers);
+              _selectedReceiver = _availableUsers.first;
+              _isLoadingUsers = false;
+            });
+          } else {
+            _loadFallbackUsers();
+          }
+        } else {
+          _loadFallbackUsers();
+        }
+      }
+    } catch (e) {
+      if (mounted) _loadFallbackUsers();
+      print('Error fetching users: $e');
+    }
+  }
+
+  void _loadFallbackTypes() {
+    setState(() {
+      _requestTypes = [
+        'Request Type',
+        'Purchase Request',
+        'Leave Request',
+        'Training Request',
+        'Equipment Request'
+      ];
+      _selectedRequestType = _requestTypes[1];
+      _isLoadingTypes = false;
+    });
+  }
+
+  void _loadFallbackUsers() {
+    setState(() {
+      _availableUsers = ['Select User', 'John Doe', 'Jane Smith', 'Admin User'];
+      _filteredUsers = List.from(_availableUsers);
+      _selectedReceiver = _availableUsers.first;
+      _isLoadingUsers = false;
+    });
   }
 
   Future<void> _createNewRequestType(String name) async {
@@ -162,10 +225,28 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        await fetchRequestTypes(); // Refresh list
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Type created successfully!'), backgroundColor: CreateRequestColors.accentGreen),
-        );
+        // ✅ تحسين: استخدم الـ Response بدل ما تعمل Refetch
+        if (response.body.isNotEmpty) {
+          try {
+            final newType = json.decode(response.body);
+            setState(() {
+              _requestTypesData.add(TransactionType.fromJson(newType));
+              _requestTypes = ['Request Type', ..._requestTypesData.map((t) => t.name)];
+              _selectedRequestType = newType['name'];
+            });
+          } catch (e) {
+            // لو الـ Response مش صالح، اعمل Refetch
+            await fetchRequestTypes();
+          }
+        } else {
+          await fetchRequestTypes();
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Type created successfully!'), backgroundColor: CreateRequestColors.accentGreen),
+          );
+        }
       } else {
         _showErrorMessage('Failed to create type: ${response.statusCode}');
       }
@@ -186,9 +267,11 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         await fetchRequestTypes();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Type deleted successfully!'), backgroundColor: CreateRequestColors.accentGreen),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Type deleted successfully!'), backgroundColor: CreateRequestColors.accentGreen),
+          );
+        }
       } else {
         _showErrorMessage('Failed to delete: ${response.statusCode}');
       }
@@ -231,7 +314,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
               SizedBox(
                 height: 200,
                 width: double.maxFinite,
-                child: ListView.builder(
+                child: _isLoadingTypes
+                    ? Center(child: CircularProgressIndicator(color: CreateRequestColors.primary))
+                    : ListView.builder(
                   shrinkWrap: true,
                   itemCount: _requestTypesData.length,
                   itemBuilder: (context, index) {
@@ -260,75 +345,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     );
   }
 
-  Future<void> fetchUsers() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token') ?? '';
-
-      final response = await http.get(
-        Uri.parse('$_documentApiUrl/users'),
-        headers: {"Authorization": "Bearer $token"},
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data is List) {
-          final List<String> users = [];
-          for (var user in data) {
-            if (user["name"] != null) users.add(user["name"]);
-          }
-
-          setState(() {
-            _availableUsers = ['Select User', ...users];
-            _filteredUsers = List.from(_availableUsers);
-            _selectedReceiver = _availableUsers.first;
-            _areUsersLoaded = true;
-            _checkLoadingStatus();
-          });
-        } else {
-          _showErrorMessage('Invalid API response format');
-          setState(() {
-            _areUsersLoaded = true;
-            _checkLoadingStatus();
-          });
-        }
-      } else {
-        _showErrorMessage('HTTP Error: ${response.statusCode}');
-        setState(() {
-          _areUsersLoaded = true;
-          _checkLoadingStatus();
-        });
-      }
-    } catch (e) {
-      _showErrorMessage('Connection Error: $e');
-      setState(() {
-        _areUsersLoaded = true;
-        _checkLoadingStatus();
-      });
-    }
-  }
-
-  void _loadFallbackData() {
-    setState(() {
-      _requestTypes = [
-        'Request Type',
-        'Purchase Request',
-        'Leave Request',
-        'Training Request',
-        'Equipment Request'
-      ];
-      _selectedRequestType = _requestTypes[1];
-      _areRequestTypesLoaded = true;
-      _checkLoadingStatus();
-    });
-  }
-
-  void _checkLoadingStatus() {
-    if (_areRequestTypesLoaded && _areUsersLoaded) {
-      setState(() => _isLoading = false);
-    }
-  }
-
   void _filterUsers(String query) {
     setState(() {
       if (query.isEmpty) {
@@ -339,7 +355,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         user.toLowerCase().contains(query.toLowerCase()) &&
             user != 'Select User')
             .toList();
-
         if (!_filteredUsers.contains('Select User')) {
           _filteredUsers.insert(0, 'Select User');
         }
@@ -348,6 +363,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   }
 
   void _showErrorMessage(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -358,6 +374,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   }
 
   void _showSuccessMessage(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -404,12 +421,17 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           debugPrint('✅ Upload Response: $responseData');
           final documentData = json.decode(responseData);
 
-          // الحصول على document ID
           if (documentData["id"] != null) {
             final dynamic rawId = documentData["id"];
             final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
             _uploadedDocumentIds.add(documentId);
             debugPrint('📎 Document ID added: $documentId');
+
+            // ✅ تخزين downloadURI للاستخدام المستقبلي
+            if (documentData["downloadURI"] != null) {
+              // ممكن تخزينه لو هتحتاجه بعدين
+              debugPrint('📥 Download URI: ${documentData["downloadURI"]}');
+            }
           }
           _showSuccessMessage(AppLocalizations.of(context)!.translate('file_uploaded_success').replaceFirst('{fileName}', file.name));
         } else {
@@ -423,6 +445,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     }
   }
 
+  // ✅ تعديل الـ Forward عشان يستخدم comment بدل senderComment
   Future<void> _forwardTransaction(int transactionId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
@@ -436,7 +459,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         },
         body: jsonEncode({
           "receiverName": _selectedReceiver,
-          "senderComment": "Request forwarded from ${AppLocalizations.of(context)!.translate('app_name')}"
+          "comment": _commentController.text.trim().isEmpty  // ✅ استخدام comment
+              ? "Request forwarded from ${AppLocalizations.of(context)!.translate('app_name')}"
+              : _commentController.text.trim(),
         }),
       );
 
@@ -458,7 +483,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isSubmitting = true);
       try {
-        // 1. رفع الملفات أولاً (إذا كان هناك ملفات)
         if (_selectedFiles.isNotEmpty) {
           await _uploadFiles();
         }
@@ -466,7 +490,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         final prefs = await SharedPreferences.getInstance();
         final token = prefs.getString('token') ?? '';
 
-        // 2. إنشاء المعاملة مع documentsIds مباشرة
         final transactionData = {
           "title": _titleController.text,
           "description": _descriptionController.text,
@@ -495,7 +518,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           final data = json.decode(response.body);
           final transactionId = data["id"];
 
-          // 3. إرسال المعاملة للمستخدم المحدد
           if (transactionId != null) {
             await _forwardTransaction(transactionId);
           }
@@ -548,14 +570,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   );
 
   @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _userSearchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final height = MediaQuery.of(context).size.height;
@@ -565,6 +579,10 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           AppLocalizations.of(context)!.translate('create_new_request'),
           style: TextStyle(
@@ -577,11 +595,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         foregroundColor: Colors.white,
       ),
       backgroundColor: CreateRequestColors.bodyBg,
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(
-        color: CreateRequestColors.primary,
-      ))
-          : _buildResponsiveBody(isMobile, isTablet, isDesktop, height),
+      body: _buildResponsiveBody(isMobile, isTablet, isDesktop, height),
     );
   }
 
@@ -641,7 +655,35 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 ),
               ],
             ),
-            DropdownButtonFormField<String>(
+            SizedBox(height: 8),
+
+            _isLoadingTypes
+                ? Container(
+              height: 56,
+              decoration: BoxDecoration(
+                border: Border.all(color: CreateRequestColors.borderColor),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(width: 12),
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: CreateRequestColors.primary,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Loading request types...',
+                    style: TextStyle(color: CreateRequestColors.textMuted),
+                  ),
+                ],
+              ),
+            )
+                : DropdownButtonFormField<String>(
               value: _selectedRequestType,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
@@ -660,7 +702,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
               ),
               items: _requestTypes.map((v) {
                 final typeData = _requestTypesData.firstWhere(
-                  (t) => t.name == v,
+                      (t) => t.name == v,
                   orElse: () => TransactionType(name: v, creatorName: ''),
                 );
 
@@ -755,6 +797,32 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   ? AppLocalizations.of(context)!.translate('description_error')
                   : null,
             ),
+            SizedBox(height: isMobile ? 16 : 20),
+
+            // ✅ حقل الكومنت الجديد - تحت الوصف مباشرة
+            _buildLabel(AppLocalizations.of(context)!.translate('comment_label')),
+            SizedBox(height: 8),
+            TextFormField(
+              controller: _commentController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)!.translate('comment_hint'),
+                hintStyle: TextStyle(color: CreateRequestColors.textMuted),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 2),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: isMobile ? 12 : 16,
+                ),
+              ),
+            ),
             SizedBox(height: isMobile ? 24 : 32),
 
             _buildSectionHeader(AppLocalizations.of(context)!.translate('send_request_section')),
@@ -763,7 +831,34 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             _buildLabel('${AppLocalizations.of(context)!.translate('send_to_user_label')} *'),
             SizedBox(height: 8),
 
-            InkWell(
+            _isLoadingUsers
+                ? Container(
+              height: 56,
+              decoration: BoxDecoration(
+                border: Border.all(color: CreateRequestColors.borderColor),
+                borderRadius: BorderRadius.circular(4),
+                color: CreateRequestColors.cardBg,
+              ),
+              child: Row(
+                children: [
+                  SizedBox(width: 12),
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: CreateRequestColors.primary,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Loading users...',
+                    style: TextStyle(color: CreateRequestColors.textMuted),
+                  ),
+                ],
+              ),
+            )
+                : InkWell(
               onTap: _showUserSelectionDialog,
               child: Container(
                 width: double.infinity,
@@ -805,7 +900,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 ),
               ),
             ),
-            if (_selectedReceiver != 'Select User') ...[
+            if (_selectedReceiver != 'Select User' && !_isLoadingUsers) ...[
               SizedBox(height: 8),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -977,6 +1072,11 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   }
 
   void _showUserSelectionDialog() {
+    if (_isLoadingUsers) {
+      _showErrorMessage('Loading users, please wait...');
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) {
