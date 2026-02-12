@@ -60,17 +60,15 @@ class _AddUserPageState extends State<AddUserPage> {
   bool _showPassword = false;
   String _selectedRole = 'USER'; // القيمة الافتراضية
   String? _selectedDepartment; // القسم المختار
-  List<String> _departments = []; // قائمة الأقسام
-  List<String> _users = []; // قائمة المستخدمين لاختيار المدير
+  List<String> _departments = []; // قائمة الأقسام فقط
 
   final String _apiUrl = AppConfig.baseUrl;
 
   @override
   void initState() {
     super.initState();
-    // تحميل الأقسام والمستخدمين عند بداية الصفحة
+    // تحميل الأقسام فقط عند بداية الصفحة
     _fetchDepartments();
-    _fetchUsers();
   }
 
   // ✅ دالة لتحميل الأقسام من الـ API
@@ -111,37 +109,6 @@ class _AddUserPageState extends State<AddUserPage> {
     }
   }
 
-  // ✅ دالة لتحميل المستخدمين من الـ API
-  Future<void> _fetchUsers() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null || token.isEmpty) return;
-
-      final response = await http.get(
-        Uri.parse('$_apiUrl/users'),
-        headers: {
-          "Authorization": "Bearer $token",
-          "accept": "application/json",
-        },
-      );
-
-      debugPrint("Users Status: ${response.statusCode}");
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is List) {
-          setState(() {
-            _users = data.map((user) => user['name'].toString()).toList();
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint("Error fetching users: $e");
-    }
-  }
-
   // ✅ الدالة المسؤولة عن إضافة مستخدم جديد
   Future<void> _addUser() async {
     if (!_formKey.currentState!.validate()) return;
@@ -159,7 +126,7 @@ class _AddUserPageState extends State<AddUserPage> {
         return;
       }
 
-      // 🟢 تحضير البيانات حسب الهيكل الجديد
+      // 🟢 تحضير البيانات حسب الهيكل المطلوب
       Map<String, dynamic> userData = {
         "name": _nameController.text.trim(),
         "password": _passwordController.text.trim(),
@@ -188,18 +155,7 @@ class _AddUserPageState extends State<AddUserPage> {
       debugPrint("Response Body: ${response.body}");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        try {
-          final data = jsonDecode(response.body);
-          // التحقق من الاستجابة
-          if (data["name"] == _nameController.text.trim()) {
-            _showSuccessMessage();
-          } else {
-            _showErrorMessage("User added but response format unexpected");
-          }
-        } catch (e) {
-          // إذا لم يكن الرد JSON، ولكن العملية نجحت
-          _showSuccessMessage();
-        }
+        _showSuccessMessage();
       } else if (response.statusCode == 409) {
         _showErrorMessage(AppLocalizations.of(context)!.translate('user_exists_error'));
       } else if (response.statusCode == 403) {
@@ -343,10 +299,7 @@ class _AddUserPageState extends State<AddUserPage> {
                     if (v == null || v.isEmpty) {
                       return AppLocalizations.of(context)!.translate('please_enter_username');
                     }
-                    // التحقق من أن اسم المستخدم غير موجود بالفعل
-                    if (_users.contains(v.trim())) {
-                      return AppLocalizations.of(context)!.translate('user_exists_error');
-                    }
+                    // ✅ إزالة التحقق من وجود المستخدم - الباك اند هو المسؤول
                     return null;
                   },
                 ),
@@ -507,7 +460,7 @@ class _AddUserPageState extends State<AddUserPage> {
               });
             },
             validator: (value) {
-              // يمكنك إزالة هذا الـ validator إذا كان القسم اختياري
+              // ✅ القسم اختياري
               return null;
             },
           ),
