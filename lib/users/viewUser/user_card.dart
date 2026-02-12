@@ -7,6 +7,7 @@ import 'users_helpers.dart';
 import 'user_profile_dialog.dart';
 import 'change_password_dialog.dart';
 import 'edit_user_dialog.dart';
+import 'user_files_dialog.dart';
 
 class UserCard extends StatelessWidget {
   final User user;
@@ -193,6 +194,8 @@ class UserCard extends StatelessWidget {
           onSelected: (value) {
             if (value == 'view') {
               _showUserProfile(context);
+            } else if (value == 'files') {
+              _showUserFilesDialog(context);
             } else if (value == 'edit') {
               _showEditUserDialog(context);
             } else if (value == 'delete') {
@@ -206,6 +209,14 @@ class UserCard extends StatelessWidget {
                   Icons.remove_red_eye_rounded,
                   AppLocalizations.of(context)!.translate('view_profile'),
                   AppColors.primary
+              ),
+            ),
+            PopupMenuItem(
+              value: 'files',
+              child: _buildPopupItem(
+                  Icons.folder_shared_rounded,
+                  AppLocalizations.of(context)!.translate('view_files') ?? 'View Files',
+                  AppColors.accentBlue
               ),
             ),
             PopupMenuItem(
@@ -290,6 +301,17 @@ class UserCard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => UserProfileDialog(
+        userName: user.name,
+        apiService: apiService,
+        isMobile: isMobile,
+      ),
+    );
+  }
+
+  void _showUserFilesDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => UserFilesDialog(
         userName: user.name,
         apiService: apiService,
         isMobile: isMobile,
