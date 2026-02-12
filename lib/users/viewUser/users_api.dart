@@ -259,4 +259,36 @@ class UsersApiService {
   Future<User> changeUserDepartment(String userName, String departmentName) async {
     return await updateUser(userName, departmentName: departmentName);
   }
+
+  // ✅ جلب ملفات المستخدم
+  Future<List<Map<String, dynamic>>> getUserUploadedDocuments(String userName) async {
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('no_token_error');
+    }
+
+    final url = Uri.parse("$baseUrl/documents/uploaded");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+        "accept": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      // تصفية النتائج بناءً على اسم المستخدم
+      return data
+          .where((doc) => doc['uploaderName'] == userName)
+          .map((doc) => doc as Map<String, dynamic>)
+          .toList();
+    } else if (response.statusCode == 401) {
+      throw Exception('unauthorized_error');
+    } else {
+      throw Exception('error_code: ${response.statusCode}');
+    }
+  }
 }
