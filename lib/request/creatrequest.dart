@@ -58,6 +58,11 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   List<String> _availableUserNames = ['Select User'];
   List<Map<String, dynamic>> _filteredUsersData = [];
 
+  // ✅ الملفات السابقة للمستخدم
+  List<Map<String, dynamic>> _previousDocuments = [];
+  bool _isLoadingPreviousDocs = false;
+  List<Map<String, dynamic>> _selectedPreviousDocuments = [];
+
   bool _isLoadingTypes = true;
   bool _isLoadingUsers = true;
   bool _isSubmitting = false;
@@ -104,6 +109,45 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     return uniqueName;
   }
 
+  // ✅ جلب الملفات التي رفعها المستخدم سابقاً
+  Future<void> _fetchPreviousDocuments() async {
+    setState(() => _isLoadingPreviousDocs = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.get(
+        Uri.parse('$_documentApiUrl/documents/uploaded'),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (mounted) {
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data is List) {
+            setState(() {
+              _previousDocuments = List<Map<String, dynamic>>.from(data);
+              _isLoadingPreviousDocs = false;
+            });
+          }
+        } else {
+          setState(() {
+            _previousDocuments = [];
+            _isLoadingPreviousDocs = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _previousDocuments = [];
+          _isLoadingPreviousDocs = false;
+        });
+      }
+    }
+  }
+
   Future<void> fetchRequestTypes() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -138,16 +182,20 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             _isLoadingTypes = false;
           });
         } else {
-          _loadFallbackTypes();
+          setState(() {
+            _isLoadingTypes = false;
+          });
         }
       }
     } catch (e) {
-      if (mounted) _loadFallbackTypes();
-      print('Error fetching types: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingTypes = false;
+        });
+      }
     }
   }
 
-  // ✅ تعديل: جلب المستخدمين مع تخزين كل البيانات
   Future<void> fetchUsers() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -170,50 +218,25 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
               _isLoadingUsers = false;
             });
           } else {
-            _loadFallbackUsers();
+            setState(() {
+              _isLoadingUsers = false;
+            });
           }
         } else {
-          _loadFallbackUsers();
+          setState(() {
+            _isLoadingUsers = false;
+          });
         }
       }
     } catch (e) {
-      if (mounted) _loadFallbackUsers();
-      print('Error fetching users: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingUsers = false;
+        });
+      }
     }
   }
 
-  void _loadFallbackTypes() {
-    setState(() {
-      _requestTypes = [
-        'Request Type',
-        'Purchase Request',
-        'Leave Request',
-        'Training Request',
-        'Equipment Request'
-      ];
-      _selectedRequestType = _requestTypes[1];
-      _isLoadingTypes = false;
-    });
-  }
-
-  // ✅ تعديل: بيانات احتياطية بالقسم والحالة
-  void _loadFallbackUsers() {
-    setState(() {
-      _usersData = [
-        {'name': 'John Doe', 'departmentName': 'Engineering', 'active': true, 'role': 'USER'},
-        {'name': 'Jane Smith', 'departmentName': 'Human Resources', 'active': true, 'role': 'USER'},
-        {'name': 'Admin User', 'departmentName': 'Management', 'active': true, 'role': 'ADMIN'},
-        {'name': 'Bob Wilson', 'departmentName': 'Engineering', 'active': false, 'role': 'USER'},
-        {'name': 'Alice Johnson', 'departmentName': 'Finance', 'active': true, 'role': 'USER'},
-      ];
-      _availableUserNames = ['Select User', ..._usersData.map((u) => u['name'] as String).toList()];
-      _filteredUsersData = List.from(_usersData);
-      _selectedReceiver = _availableUserNames.first;
-      _isLoadingUsers = false;
-    });
-  }
-
-  // ✅ تعديل: فلترة المستخدمين
   void _filterUsers(String query) {
     setState(() {
       if (query.isEmpty) {
@@ -242,32 +265,14 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (response.body.isNotEmpty) {
-          try {
-            final newType = json.decode(response.body);
-            setState(() {
-              _requestTypesData.add(TransactionType.fromJson(newType));
-              _requestTypes = ['Request Type', ..._requestTypesData.map((t) => t.name)];
-              _selectedRequestType = newType['name'];
-            });
-          } catch (e) {
-            await fetchRequestTypes();
-          }
-        } else {
-          await fetchRequestTypes();
-        }
-
+        await fetchRequestTypes();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Type created successfully!'), backgroundColor: CreateRequestColors.accentGreen),
           );
         }
-      } else {
-        _showErrorMessage('Failed to create type: ${response.statusCode}');
       }
-    } catch (e) {
-      _showErrorMessage('Error: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _deleteRequestType(String name) async {
@@ -287,12 +292,8 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             SnackBar(content: Text('Type deleted successfully!'), backgroundColor: CreateRequestColors.accentGreen),
           );
         }
-      } else {
-        _showErrorMessage('Failed to delete: ${response.statusCode}');
       }
-    } catch (e) {
-      _showErrorMessage('Error: $e');
-    }
+    } catch (e) {}
   }
 
   void _showManageTypesDialog() {
@@ -382,17 +383,16 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     );
   }
 
-  Future<void> _uploadFiles() async {
+  Future<void> _uploadNewFiles() async {
     if (_selectedFiles.isEmpty) return;
-    _uploadedDocumentIds.clear();
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
 
     for (var file in _selectedFiles) {
       try {
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('token') ?? '';
         final finalFileName = _generateUniqueFileName(file.name);
+
         if (file.path == null) {
-          _showErrorMessage("Could not get file path for ${file.name}");
           continue;
         }
 
@@ -402,43 +402,296 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         );
 
         request.headers['Authorization'] = 'Bearer $token';
-        request.headers['accept'] = 'application/json';
-
         request.files.add(await http.MultipartFile.fromPath(
           'file',
           file.path!,
           filename: finalFileName,
         ));
 
-        debugPrint('📤 Uploading: $finalFileName');
         var response = await request.send();
-        debugPrint('📊 Upload Status: ${response.statusCode}');
 
         if (response.statusCode == 201 || response.statusCode == 200) {
           final responseData = await response.stream.bytesToString();
-          debugPrint('✅ Upload Response: $responseData');
           final documentData = json.decode(responseData);
 
           if (documentData["id"] != null) {
             final dynamic rawId = documentData["id"];
             final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
             _uploadedDocumentIds.add(documentId);
-            debugPrint('📎 Document ID added: $documentId');
-
-            if (documentData["downloadURI"] != null) {
-              debugPrint('📥 Download URI: ${documentData["downloadURI"]}');
-            }
           }
-          _showSuccessMessage(AppLocalizations.of(context)!.translate('file_uploaded_success').replaceFirst('{fileName}', file.name));
-        } else {
-          final responseData = await response.stream.bytesToString();
-          debugPrint('❌ Upload Error: $responseData');
-          _showErrorMessage('Upload failed with status ${response.statusCode}');
         }
-      } catch (e) {
-        _showErrorMessage('${AppLocalizations.of(context)!.translate('error_uploading_file').replaceFirst('{fileName}', file.name)}: $e');
-      }
+      } catch (e) {}
     }
+  }
+
+  void _addPreviousDocument(Map<String, dynamic> document) {
+    setState(() {
+      final alreadyAdded = _selectedPreviousDocuments.any((doc) => doc['id'] == document['id']);
+      if (!alreadyAdded) {
+        _selectedPreviousDocuments.add(document);
+        _uploadedDocumentIds.add(document['id'] as int);
+      }
+    });
+  }
+
+  void _removePreviousDocument(Map<String, dynamic> document) {
+    setState(() {
+      _selectedPreviousDocuments.removeWhere((doc) => doc['id'] == document['id']);
+      _uploadedDocumentIds.remove(document['id'] as int);
+    });
+  }
+
+  // ✅ ✅ ✅ قائمة المنسدلة للملفات (القديمة + رفع جديد)
+  void _showFileSelectionMenu() async {
+    await _fetchPreviousDocuments();
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateSheet) {
+            return Container(
+              padding: EdgeInsets.all(20),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.7,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Select Files',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: CreateRequestColors.primary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  Divider(height: 1, thickness: 1),
+                  SizedBox(height: 16),
+
+                  ListTile(
+                    leading: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: CreateRequestColors.accentBlue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.cloud_upload_rounded, color: CreateRequestColors.accentBlue),
+                    ),
+                    title: Text(
+                      'Upload New Files',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: CreateRequestColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Select PDF files from your device',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: CreateRequestColors.textSecondary,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: CreateRequestColors.textMuted,
+                    ),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        FilePickerResult? result = await FilePicker.platform.pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: ['pdf'],
+                          allowMultiple: true,
+                        );
+                        if (result != null && result.files.isNotEmpty) {
+                          setState(() {
+                            _selectedFiles.addAll(result.files);
+                          });
+                        }
+                      } catch (e) {}
+                    },
+                  ),
+
+                  SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      Icon(Icons.history_rounded, size: 20, color: CreateRequestColors.primary),
+                      SizedBox(width: 8),
+                      Text(
+                        'Previously Uploaded Files',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: CreateRequestColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+
+                  _isLoadingPreviousDocs
+                      ? Container(
+                    height: 200,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: CreateRequestColors.primary,
+                      ),
+                    ),
+                  )
+                      : _previousDocuments.isEmpty
+                      ? Container(
+                    height: 100,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.folder_open_rounded,
+                            size: 32,
+                            color: CreateRequestColors.textMuted,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'No previous files found',
+                            style: TextStyle(
+                              color: CreateRequestColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                      : Container(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.35,
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: _previousDocuments.length,
+                      separatorBuilder: (context, index) => Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final doc = _previousDocuments[index];
+                        final isSelected = _selectedPreviousDocuments.any((d) => d['id'] == doc['id']);
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: CreateRequestColors.primary.withOpacity(0.1),
+                            child: Icon(
+                              Icons.description_rounded,
+                              color: CreateRequestColors.primary,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(
+                            doc['title'] ?? 'Untitled',
+                            style: TextStyle(
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? CreateRequestColors.primary : CreateRequestColors.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: isSelected
+                              ? Icon(
+                            Icons.check_circle_rounded,
+                            color: CreateRequestColors.accentGreen,
+                          )
+                              : Icon(
+                            Icons.add_circle_outline_rounded,
+                            color: CreateRequestColors.primary,
+                          ),
+                          onTap: () {
+                            if (isSelected) {
+                              _removePreviousDocument(doc);
+                            } else {
+                              _addPreviousDocument(doc);
+                            }
+                            setStateSheet(() {});
+                            setState(() {});
+                          },
+                        );
+                      },
+                    ),
+                  ),
+
+                  SizedBox(height: 16),
+
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: CreateRequestColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Selected Files:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: CreateRequestColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '${_selectedPreviousDocuments.length + _selectedFiles.length}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: CreateRequestColors.primary,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CreateRequestColors.primary,
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        'Done',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _forwardTransaction(int transactionId) async {
@@ -455,23 +708,11 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         body: jsonEncode({
           "receiverName": _selectedReceiver,
           "comment": _commentController.text.trim().isEmpty
-              ? "Request forwarded from ${AppLocalizations.of(context)!.translate('app_name')}"
+              ? "Request forwarded"
               : _commentController.text.trim(),
         }),
       );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = json.decode(response.body);
-        debugPrint('✅ Forward successful: ${data["id"]}');
-        _showSuccessMessage(AppLocalizations.of(context)!
-            .translate('request_sent_to')
-            .replaceFirst('{user}', _selectedReceiver));
-      } else {
-        _showErrorMessage('Failed to forward request: ${response.statusCode}\n${response.body}');
-      }
-    } catch (e) {
-      _showErrorMessage('Failed to forward request: $e');
-    }
+    } catch (e) {}
   }
 
   void _submitForm() async {
@@ -479,7 +720,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       setState(() => _isSubmitting = true);
       try {
         if (_selectedFiles.isNotEmpty) {
-          await _uploadFiles();
+          await _uploadNewFiles();
         }
 
         final prefs = await SharedPreferences.getInstance();
@@ -493,8 +734,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           "documentsIds": _uploadedDocumentIds.isNotEmpty ? _uploadedDocumentIds : [],
         };
 
-        debugPrint('🚀 Creating transaction: $transactionData');
-
         final response = await http.post(
           Uri.parse('$_documentApiUrl/transactions'),
           headers: {
@@ -504,9 +743,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           body: jsonEncode(transactionData),
         );
 
-        debugPrint('📊 Create Status: ${response.statusCode}');
-        debugPrint('📄 Create Response: ${response.body}');
-
         if (response.statusCode == 201 || response.statusCode == 200) {
           final data = json.decode(response.body);
           final transactionId = data["id"];
@@ -515,34 +751,142 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             await _forwardTransaction(transactionId);
           }
 
-          _showSuccessMessage(AppLocalizations.of(context)!.translate('request_sent_success'));
+          _showSuccessMessage('Request sent successfully');
           Navigator.pop(context);
-        } else {
-          _showErrorMessage('Failed to create transaction: ${response.statusCode}\n${response.body}');
         }
-      } catch (e) {
-        _showErrorMessage('${AppLocalizations.of(context)!.translate('error_label')}: $e');
-      } finally {
+      } catch (e) {} finally {
         setState(() => _isSubmitting = false);
       }
     }
   }
 
-  Future<void> _pickFiles() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-        allowMultiple: true,
-      );
+  void _showUserSelectionDialog() {
+    if (_isLoadingUsers) return;
 
-      if (result != null && result.files.isNotEmpty) {
-        setState(() => _selectedFiles = result.files);
-        _showSuccessMessage(AppLocalizations.of(context)!.translate('selected_files_count').replaceFirst('{count}', '${_selectedFiles.length}'));
-      }
-    } catch (e) {
-      _showErrorMessage('Error picking files: $e');
-    }
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.9,
+                constraints: BoxConstraints(maxHeight: 500),
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_search_rounded,
+                          color: CreateRequestColors.primary,
+                          size: 24,
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Select User',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: CreateRequestColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: _userSearchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search users...',
+                        prefixIcon: Icon(Icons.search_rounded, color: CreateRequestColors.primary),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setStateDialog(() {
+                          _filterUsers(value);
+                        });
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    Expanded(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _filteredUsersData.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return ListTile(
+                              leading: Icon(
+                                Icons.clear_all_rounded,
+                                color: CreateRequestColors.textMuted,
+                              ),
+                              title: Text(
+                                'Clear Selection',
+                                style: TextStyle(
+                                  color: CreateRequestColors.textMuted,
+                                ),
+                              ),
+                              onTap: () {
+                                setState(() => _selectedReceiver = 'Select User');
+                                Navigator.pop(context);
+                              },
+                            );
+                          }
+                          final user = _filteredUsersData[index - 1];
+                          final isSelected = user['name'] == _selectedReceiver;
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: isSelected
+                                  ? CreateRequestColors.primary.withOpacity(0.2)
+                                  : Colors.transparent,
+                              child: Icon(
+                                Icons.person_rounded,
+                                color: isSelected
+                                    ? CreateRequestColors.primary
+                                    : CreateRequestColors.textSecondary,
+                              ),
+                            ),
+                            title: Text(
+                              user['name'],
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected
+                                    ? CreateRequestColors.primary
+                                    : CreateRequestColors.textPrimary,
+                              ),
+                            ),
+                            trailing: isSelected
+                                ? Icon(
+                              Icons.check_circle_rounded,
+                              color: CreateRequestColors.primary,
+                            )
+                                : null,
+                            onTap: () {
+                              setState(() {
+                                _selectedReceiver = user['name'];
+                              });
+                              Navigator.pop(context);
+                              _userSearchController.clear();
+                              _filterUsers('');
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildSectionHeader(String title) => Text(
@@ -561,6 +905,81 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       color: CreateRequestColors.textPrimary,
     ),
   );
+
+  Widget _buildHeader(bool isMobile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          AppLocalizations.of(context)!.translate('create_new_request'),
+          style: TextStyle(
+            fontSize: isMobile ? 22 : 28,
+            fontWeight: FontWeight.bold,
+            color: CreateRequestColors.primary,
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          AppLocalizations.of(context)!.translate('create_request_subtitle'),
+          style: TextStyle(
+            fontSize: isMobile ? 14 : 16,
+            color: CreateRequestColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons(bool isMobile) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        OutlinedButton(
+          onPressed: () => Navigator.pop(context),
+          style: OutlinedButton.styleFrom(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 20 : 24,
+              vertical: isMobile ? 12 : 16,
+            ),
+            side: BorderSide(color: CreateRequestColors.primary),
+            foregroundColor: CreateRequestColors.primary,
+          ),
+          child: Text(
+            AppLocalizations.of(context)!.translate('cancel'),
+            style: TextStyle(
+              fontSize: isMobile ? 14 : 16,
+            ),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _isSubmitting ? null : _submitForm,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: CreateRequestColors.primary,
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 20 : 24,
+              vertical: isMobile ? 12 : 16,
+            ),
+          ),
+          child: _isSubmitting
+              ? SizedBox(
+            width: isMobile ? 20 : 24,
+            height: isMobile ? 20 : 24,
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          )
+              : Text(
+            AppLocalizations.of(context)!.translate('send_request_button'),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: isMobile ? 14 : 16,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -593,7 +1012,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   }
 
   Widget _buildResponsiveBody(bool isMobile, bool isTablet, bool isDesktop, double height) {
-    final content = SingleChildScrollView(
+    Widget content = SingleChildScrollView(
       padding: EdgeInsets.all(
         isMobile ? 16.0 : isTablet ? 24.0 : 32.0,
       ),
@@ -642,7 +1061,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 IconButton(
                   icon: Icon(Icons.settings, color: CreateRequestColors.primary, size: 20),
                   onPressed: _showManageTypesDialog,
-                  tooltip: 'Manage Request Types',
                 ),
               ],
             ),
@@ -921,42 +1339,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 ),
               ),
             ),
-            if (_selectedReceiver != 'Select User' && !_isLoadingUsers) ...[
-              SizedBox(height: 8),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: CreateRequestColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.person_rounded, size: 14, color: CreateRequestColors.primary),
-                    SizedBox(width: 6),
-                    Text(
-                      '${AppLocalizations.of(context)!.translate('selected_user')} $_selectedReceiver',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: CreateRequestColors.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() => _selectedReceiver = 'Select User');
-                      },
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 14,
-                        color: CreateRequestColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
             SizedBox(height: isMobile ? 24 : 32),
 
             _buildSectionHeader(AppLocalizations.of(context)!.translate('supporting_documents')),
@@ -979,9 +1361,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     ),
                     SizedBox(height: isMobile ? 12 : 16),
                     Text(
-                      _selectedFiles.isEmpty
-                          ? AppLocalizations.of(context)!.translate('add_documents_hint')
-                          : AppLocalizations.of(context)!.translate('selected_files_count').replaceFirst('{count}', '${_selectedFiles.length}'),
+                      _selectedFiles.isEmpty && _selectedPreviousDocuments.isEmpty
+                          ? 'Click to select files or choose from previously uploaded'
+                          : '${_selectedFiles.length + _selectedPreviousDocuments.length} file(s) selected',
                       style: TextStyle(
                         fontSize: isMobile ? 14 : 16,
                         color: CreateRequestColors.textSecondary,
@@ -990,7 +1372,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     ),
                     SizedBox(height: isMobile ? 8 : 16),
                     ElevatedButton(
-                      onPressed: _pickFiles,
+                      onPressed: _showFileSelectionMenu,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: CreateRequestColors.primary,
                         padding: EdgeInsets.symmetric(
@@ -999,7 +1381,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                         ),
                       ),
                       child: Text(
-                        AppLocalizations.of(context)!.translate('choose_files'),
+                        'Choose Files',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: isMobile ? 14 : 16,
@@ -1011,10 +1393,10 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
               ),
             ),
 
-            if (_selectedFiles.isNotEmpty) ...[
+            if (_selectedFiles.isNotEmpty || _selectedPreviousDocuments.isNotEmpty) ...[
               SizedBox(height: isMobile ? 12 : 16),
               Text(
-                AppLocalizations.of(context)!.translate('selected_files_label'),
+                'Selected Files:',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: isMobile ? 14 : 16,
@@ -1023,48 +1405,113 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
               ),
               SizedBox(height: 8),
               Column(
-                children: _selectedFiles.map((file) {
-                  return Container(
-                    margin: EdgeInsets.symmetric(vertical: 4),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: isMobile ? 6 : 8,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: CreateRequestColors.borderColor),
-                      borderRadius: BorderRadius.circular(6),
-                      color: CreateRequestColors.cardBg,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            file.name,
-                            style: TextStyle(
-                              fontSize: isMobile ? 12 : 14,
-                              color: CreateRequestColors.textPrimary,
+                children: [
+                  ..._selectedPreviousDocuments.map((doc) {
+                    return Container(
+                      margin: EdgeInsets.symmetric(vertical: 4),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: isMobile ? 6 : 8,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: CreateRequestColors.borderColor),
+                        borderRadius: BorderRadius.circular(6),
+                        color: CreateRequestColors.cardBg,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  doc['title'] ?? 'Untitled',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                    color: CreateRequestColors.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  'Previously uploaded',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: CreateRequestColors.textSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.close_rounded,
-                            color: CreateRequestColors.accentRed,
-                            size: isMobile ? 18 : 24,
+                          IconButton(
+                            icon: Icon(
+                              Icons.close_rounded,
+                              color: CreateRequestColors.accentRed,
+                              size: isMobile ? 18 : 24,
+                            ),
+                            onPressed: () {
+                              _removePreviousDocument(doc);
+                            },
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _selectedFiles.remove(file);
-                            });
-                            _showSuccessMessage(AppLocalizations.of(context)!.translate('files_removed').replaceFirst('{fileName}', file.name));
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  ..._selectedFiles.map((file) {
+                    return Container(
+                      margin: EdgeInsets.symmetric(vertical: 4),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: isMobile ? 6 : 8,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: CreateRequestColors.borderColor),
+                        borderRadius: BorderRadius.circular(6),
+                        color: CreateRequestColors.cardBg,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  file.name,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                    color: CreateRequestColors.textPrimary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  'New file',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: CreateRequestColors.accentBlue,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.close_rounded,
+                              color: CreateRequestColors.accentRed,
+                              size: isMobile ? 18 : 24,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _selectedFiles.remove(file);
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
               ),
             ],
 
@@ -1090,336 +1537,5 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     }
 
     return content;
-  }
-
-  // ✅ تعديل: عرض المستخدمين بالاسم + القسم + الحالة
-  void _showUserSelectionDialog() {
-    if (_isLoadingUsers) {
-      _showErrorMessage('Loading users, please wait...');
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                constraints: BoxConstraints(maxHeight: 500),
-                padding: EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.person_search_rounded,
-                          color: CreateRequestColors.primary,
-                          size: 24,
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          AppLocalizations.of(context)!.translate('select_user_hint'),
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: CreateRequestColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-
-                    TextField(
-                      controller: _userSearchController,
-                      decoration: InputDecoration(
-                        hintText: AppLocalizations.of(context)!.translate('search_users'),
-                        prefixIcon: Icon(Icons.search_rounded, color: CreateRequestColors.primary),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                      onChanged: (value) {
-                        setStateDialog(() {
-                          _filterUsers(value);
-                        });
-                      },
-                    ),
-                    SizedBox(height: 16),
-
-                    Text(
-                      '${_filteredUsersData.length} ${AppLocalizations.of(context)!.translate('users_count_label')}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: CreateRequestColors.textSecondary,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-
-                    Expanded(
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: _filteredUsersData.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index == 0) {
-                            return ListTile(
-                              leading: Icon(
-                                Icons.clear_all_rounded,
-                                color: CreateRequestColors.textMuted,
-                              ),
-                              title: Text(
-                                AppLocalizations.of(context)!.translate('select_user_hint'),
-                                style: TextStyle(
-                                  color: CreateRequestColors.textMuted,
-                                ),
-                              ),
-                              onTap: () {
-                                setState(() => _selectedReceiver = 'Select User');
-                                Navigator.pop(context);
-                              },
-                            );
-                          }
-
-                          final user = _filteredUsersData[index - 1];
-                          final isSelected = user['name'] == _selectedReceiver;
-
-                          Color statusColor = user['active'] == true
-                              ? CreateRequestColors.accentGreen
-                              : CreateRequestColors.textMuted;
-                          IconData statusIcon = user['active'] == true
-                              ? Icons.circle
-                              : Icons.circle_outlined;
-                          String statusText = user['active'] == true ? 'Active' : 'Inactive';
-
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: isSelected
-                                  ? CreateRequestColors.primary.withOpacity(0.2)
-                                  : Colors.transparent,
-                              child: Icon(
-                                Icons.person_rounded,
-                                color: isSelected
-                                    ? CreateRequestColors.primary
-                                    : CreateRequestColors.textSecondary,
-                              ),
-                            ),
-                            title: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user['name'],
-                                  style: TextStyle(
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    color: isSelected
-                                        ? CreateRequestColors.primary
-                                        : CreateRequestColors.textPrimary,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    if (user['departmentName'] != null && user['departmentName'].toString().isNotEmpty)
-                                      Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: CreateRequestColors.primary.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.business_center,
-                                              size: 12,
-                                              color: CreateRequestColors.primary,
-                                            ),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              user['departmentName'],
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: CreateRequestColors.primary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    SizedBox(width: 8),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: statusColor.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            statusIcon,
-                                            size: 10,
-                                            color: statusColor,
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            statusText,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: statusColor,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            trailing: isSelected
-                                ? Icon(
-                              Icons.check_circle_rounded,
-                              color: CreateRequestColors.primary,
-                            )
-                                : null,
-                            onTap: () {
-                              setState(() {
-                                _selectedReceiver = user['name'];
-                              });
-                              Navigator.pop(context);
-                              _userSearchController.clear();
-                              _filterUsers('');
-                            },
-                          );
-                        },
-                      ),
-                    ),
-
-                    SizedBox(height: 16),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              _userSearchController.clear();
-                              _filterUsers('');
-                              Navigator.pop(context);
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: CreateRequestColors.primary,
-                              side: BorderSide(color: CreateRequestColors.primary),
-                            ),
-                            child: Text(AppLocalizations.of(context)!.translate('cancel')),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              _userSearchController.clear();
-                              _filterUsers('');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: CreateRequestColors.primary,
-                            ),
-                            child: Text(
-                              AppLocalizations.of(context)!.translate('select_button'),
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildHeader(bool isMobile) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppLocalizations.of(context)!.translate('create_new_request'),
-          style: TextStyle(
-            fontSize: isMobile ? 22 : 28,
-            fontWeight: FontWeight.bold,
-            color: CreateRequestColors.primary,
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(
-          AppLocalizations.of(context)!.translate('create_request_subtitle'),
-          style: TextStyle(
-            fontSize: isMobile ? 14 : 16,
-            color: CreateRequestColors.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButtons(bool isMobile) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        OutlinedButton(
-          onPressed: () => Navigator.pop(context),
-          style: OutlinedButton.styleFrom(
-            padding: EdgeInsets.symmetric(
-              horizontal: isMobile ? 20 : 24,
-              vertical: isMobile ? 12 : 16,
-            ),
-            side: BorderSide(color: CreateRequestColors.primary),
-            foregroundColor: CreateRequestColors.primary,
-          ),
-          child: Text(
-            AppLocalizations.of(context)!.translate('cancel'),
-            style: TextStyle(
-              fontSize: isMobile ? 14 : 16,
-            ),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: _isSubmitting ? null : _submitForm,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: CreateRequestColors.primary,
-            padding: EdgeInsets.symmetric(
-              horizontal: isMobile ? 20 : 24,
-              vertical: isMobile ? 12 : 16,
-            ),
-          ),
-          child: _isSubmitting
-              ? SizedBox(
-            width: isMobile ? 20 : 24,
-            height: isMobile ? 20 : 24,
-            child: CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 2,
-            ),
-          )
-              : Text(
-            AppLocalizations.of(context)!.translate('send_request_button'),
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: isMobile ? 14 : 16,
-            ),
-          ),
-        ),
-      ],
-    );
   }
 }
