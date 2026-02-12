@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -79,7 +78,14 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   Map<String, String> _downloadProgress = {};
   Map<String, String> _downloadedFilePaths = {};
 
-  // متغيرات لمنع الاستدعاء المكرر
+  // ✅ متغيرات للملفات السابقة
+  List<Map<String, dynamic>> _previousDocuments = [];
+  bool _isLoadingPreviousDocs = false;
+
+  // ✅ متغيرات للتعليقات
+  List<Map<String, dynamic>> _comments = [];
+  bool _isLoadingComments = false;
+
   bool _isProcessing = false;
 
   @override
@@ -87,8 +93,6 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     super.initState();
     _getUserToken();
   }
-
-
 
   Future<void> _getUserToken() async {
     try {
@@ -106,6 +110,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     }
   }
 
+  // ✅ جلب تفاصيل الطلب
   Future<void> _fetchRequestData() async {
     if (_userToken == null) {
       setState(() {
@@ -136,15 +141,21 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final transactionData = (data is Map && data["status"] == "success") 
-            ? data["transaction"] 
+        final transactionData = (data is Map && data["status"] == "success")
+            ? data["transaction"]
             : data;
-            
+
         if (transactionData != null) {
           setState(() {
             _requestData = transactionData;
             _isLoading = false;
           });
+
+          // ✅ جلب التعليقات والمستندات بعد نجاح جلب الطلب
+          _fetchComments();
+          if (transactionData["documents"] != null) {
+            _fetchDocumentsDetails(transactionData["documents"]);
+          }
         } else {
           setState(() {
             _errorMessage = AppLocalizations.of(context)!.translate('no_request_details_msg');
@@ -162,6 +173,81 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         _errorMessage = "${AppLocalizations.of(context)!.translate('network_error')}: ${e.toString()}";
         _isLoading = false;
       });
+    }
+  }
+
+  // ✅ جلب تفاصيل الملفات باستخدام /api/v0/documents/{id}
+  Future<void> _fetchDocumentsDetails(List<dynamic> documents) async {
+    if (_userToken == null) return;
+
+    setState(() {
+      _previousDocuments = [];
+      _isLoadingPreviousDocs = true;
+    });
+
+    try {
+      for (var doc in documents) {
+        final docId = doc["id"];
+        if (docId == null) continue;
+
+        final response = await http.get(
+          Uri.parse("$_baseUrl/documents/$docId"),
+          headers: {
+            'accept': 'application/json',
+            'Authorization': 'Bearer $_userToken',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final docData = json.decode(response.body);
+          setState(() {
+            _previousDocuments.add(docData);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching document details: $e');
+    } finally {
+      setState(() {
+        _isLoadingPreviousDocs = false;
+      });
+    }
+  }
+
+  // ✅ جلب التعليقات (مؤقت: Mock Data)
+  Future<void> _fetchComments() async {
+    setState(() => _isLoadingComments = true);
+
+    try {
+      // 🟡 مؤقت: Mock Data لحين تجهيز API
+      await Future.delayed(Duration(milliseconds: 500));
+
+      setState(() {
+        _comments = [
+          {
+            "id": 1,
+            "comment": "This request needs review from finance department.",
+            "commenterName": "Ahmed Hassan",
+            "createdAt": "2026-02-13T10:30:00.000Z"
+          },
+          {
+            "id": 2,
+            "comment": "Documents are missing, please upload the signed version.",
+            "commenterName": "Mohamed Ali",
+            "createdAt": "2026-02-13T11:45:00.000Z"
+          },
+          {
+            "id": 3,
+            "comment": "Approved by supervisor. Ready for final review.",
+            "commenterName": "Sara Ahmed",
+            "createdAt": "2026-02-13T14:20:00.000Z"
+          }
+        ];
+        _isLoadingComments = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingComments = false);
+      debugPrint('❌ Error fetching comments: $e');
     }
   }
 
@@ -184,14 +270,23 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     }
   }
 
+  String _formatDateOnly(String? dateString) {
+    if (dateString == null) return '';
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormat('MMM dd, yyyy').format(date);
+    } catch (e) {
+      return dateString;
+    }
+  }
+
   Future<bool> _requestPermission() async {
     return await StoragePermissionHelper.requestStoragePermission();
   }
 
+  // ✅ تحديث دالة التحميل لاستخدام downloadURI
   Future<void> _downloadFile(int documentId, String fileName) async {
-    // 1️⃣ التحقق من الأذونات أولاً
     final hasPermission = await StoragePermissionHelper.checkAndRequestPermission();
-
     if (!hasPermission) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -208,28 +303,21 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       return;
     }
 
-    // 2️⃣ تحديث حالة التنزيل
     setState(() {
       _downloadingFiles[fileName] = true;
       _downloadProgress[fileName] = AppLocalizations.of(context)!.translate('starting_download_msg');
     });
 
-    // 3️⃣ الحصول على مسار التخزين الآمن
     Directory? downloadDir;
-    String? storagePath;
-
     try {
       downloadDir = await getDownloadsDirectory();
       if (downloadDir == null) {
         downloadDir = Directory((await getTemporaryDirectory()).path);
       }
 
-      storagePath = downloadDir.path;
-
       if (!await downloadDir.exists()) {
         await downloadDir.create(recursive: true);
       }
-
     } catch (e) {
       debugPrint('❌ Error getting download directory: $e');
       setState(() {
@@ -241,16 +329,13 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
     final filePath = '${downloadDir.path}/$fileName';
 
-    // 4️⃣ التحميل من الـ API الجديد باستخدام الـ ID
-    final downloadUrl = "$_baseUrl/documents/$documentId/download";
-
     try {
       setState(() {
         _downloadProgress[fileName] = '📥 Downloading...';
       });
 
       final response = await http.get(
-        Uri.parse(downloadUrl),
+        Uri.parse("$_baseUrl/documents/$documentId/download"),
         headers: {
           'accept': '*/*',
           'Authorization': 'Bearer $_userToken',
@@ -310,7 +395,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       }
     }
   }
-  // 🔥 دالة جديدة لعرض تفاصيل الملف المحمل
+
   void _showFileDetails(String fileName) {
     final filePath = _downloadedFilePaths[fileName];
     if (filePath == null) return;
@@ -368,7 +453,6 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     );
   }
 
-  // 🔥 دالة للحصول على حجم الملف
   String _getFileSize(String filePath) {
     try {
       final file = File(filePath);
@@ -388,7 +472,6 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     return 'Unknown';
   }
 
-  // 🔥 دالة لفتح موقع الملف
   void _openFileLocation(String filePath) async {
     try {
       final file = File(filePath);
@@ -512,7 +595,10 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   Widget _buildRequestDetails(bool isMobile, bool isTablet, bool isDesktop) {
     final data = _requestData!;
     final title = data["title"] ?? AppLocalizations.of(context)!.translate('no_title');
-    final type = data["type"]?["name"] ?? AppLocalizations.of(context)!.translate('not_available');
+
+    // ✅ تعديل: استخدام typeName مباشرة
+    final type = data["typeName"] ?? AppLocalizations.of(context)!.translate('not_available');
+
     String priority = data["priority"] ?? AppLocalizations.of(context)!.translate('not_available');
     if (priority.toLowerCase() == 'high') {
       priority = AppLocalizations.of(context)!.translate('priority_high');
@@ -527,7 +613,10 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     final fulfilled = data["fulfilled"] == true;
     final status = fulfilled ? AppLocalizations.of(context)!.translate('status_fulfilled') : AppLocalizations.of(context)!.translate('pending');
     final statusColor = fulfilled ? AppColors.accentGreen : AppColors.accentYellow;
-    final creator = data["creator"]?["name"] ?? AppLocalizations.of(context)!.translate('unknown');
+
+    // ✅ تعديل: استخدام creatorName مباشرة
+    final creator = data["creatorName"] ?? AppLocalizations.of(context)!.translate('unknown');
+
     final documents = data["documents"] as List<dynamic>? ?? [];
 
     final content = SingleChildScrollView(
@@ -548,11 +637,13 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             SizedBox(height: isMobile ? 16 : 20),
           ],
           _buildAdditionalInfoCard(data, isMobile),
+          SizedBox(height: isMobile ? 16 : 20),
+          // ✅ إضافة قسم التعليقات
+          _buildCommentsSection(isMobile),
         ],
       ),
     );
 
-    // إضافة السكرول للديسكتوب فقط
     if (isDesktop) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -759,7 +850,6 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     );
   }
 
-  // تصميم للموبايل
   Widget _buildMobileAttachmentItem(
       String fileName, String uploaderName, dynamic fileId,
       bool isDownloading, String? downloadStatus, bool isDownloaded,
@@ -783,7 +873,6 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     );
   }
 
-  // تصميم جديد للديسكتوب - أكثر مرونة
   Widget _buildDesktopAttachmentItem(
       String fileName, String uploaderName, dynamic fileId,
       bool isDownloading, String? downloadStatus, bool isDownloaded,
@@ -793,19 +882,15 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // File Icon
           Padding(
             padding: EdgeInsets.only(top: 2),
             child: _getFileIcon(fileName),
           ),
           SizedBox(width: 12),
-
-          // File Info - تأخذ المساحة المتبقية
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // File Name
                 Text(
                   fileName,
                   style: TextStyle(
@@ -817,8 +902,6 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: 4),
-
-                // Uploader Info و File ID في سطر واحد إذا أمكن
                 Wrap(
                   spacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -843,14 +926,10 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                     ],
                   ],
                 ),
-
-                // Download Status
                 if (isDownloading && downloadStatus != null) ...[
                   SizedBox(height: 6),
                   _buildDownloadProgress(downloadStatus, false),
                 ],
-
-                // Downloaded Status
                 if (isDownloaded) ...[
                   SizedBox(height: 6),
                   _buildDownloadedStatus(fileName, false),
@@ -858,17 +937,13 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
               ],
             ),
           ),
-
           SizedBox(width: 12),
-
-          // Download Button
           _buildDownloadButton(isDownloading, isDownloaded, documentId, fileName, false),
         ],
       ),
     );
   }
 
-  // بناء الـ subtitle بشكل منفصل لإعادة استخدامه
   Widget _buildFileSubtitle(
       String uploaderName, String fileId, bool isDownloading,
       String? downloadStatus, bool isDownloaded, String fileName, bool isMobile) {
@@ -907,7 +982,6 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     );
   }
 
-  // بناء progress indicator منفصل
   Widget _buildDownloadProgress(String downloadStatus, bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -927,7 +1001,6 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     );
   }
 
-  // بناء حالة التحميل المكتمل
   Widget _buildDownloadedStatus(String fileName, bool isMobile) {
     return Tooltip(
       message: AppLocalizations.of(context)!.translate('view_details'),
@@ -955,7 +1028,6 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     );
   }
 
-  // تحديث دالة بناء زر التحميل
   Widget _buildDownloadButton(bool isDownloading, bool isDownloaded, dynamic documentId, String fileName, bool isMobile) {
     if (isDownloading) {
       return Container(
@@ -1020,27 +1092,6 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     );
   }
 
-  Future<String> _getDownloadPath(String fileName) async {
-    try {
-      final filePath = _downloadedFilePaths[fileName];
-      if (filePath != null) {
-        final file = File(filePath);
-        if (await file.exists()) {
-          return filePath;
-        }
-      }
-
-      final dir = await getDownloadsDirectory();
-      if (dir != null) {
-        return '${dir.path}/$fileName';
-      }
-      final internalDir = await getExternalStorageDirectory();
-      return internalDir?.path ?? AppLocalizations.of(context)!.translate('unknown');
-    } catch (e) {
-      return AppLocalizations.of(context)!.translate('unknown');
-    }
-  }
-
   Widget _buildAdditionalInfoCard(Map<String, dynamic> data, bool isMobile) {
     return Card(
       elevation: 2,
@@ -1066,11 +1117,149 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             _buildInfoRow(AppLocalizations.of(context)!.translate('created_at'), _formatDate(data["createdAt"]), isMobile),
             if (data["updatedAt"] != null)
               _buildInfoRow(AppLocalizations.of(context)!.translate('updated_at'), _formatDate(data["updatedAt"]), isMobile),
-            if (data["creator"]?["group"] != null)
-              _buildInfoRow(AppLocalizations.of(context)!.translate('role_label'), data["creator"]?["group"] ?? AppLocalizations.of(context)!.translate('not_available'), isMobile),
+            if (data["creatorName"] != null)
+              _buildInfoRow(AppLocalizations.of(context)!.translate('role_label'), data["creatorName"] ?? AppLocalizations.of(context)!.translate('not_available'), isMobile),
           ],
         ),
       ),
+    );
+  }
+
+  // ✅ قسم التعليقات - يعرض فقط اسم المعلق، نص التعليق، التاريخ
+  Widget _buildCommentsSection(bool isMobile) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      color: AppColors.cardBg,
+      child: Padding(
+        padding: EdgeInsets.all(isMobile ? 16 : 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // العنوان
+            Row(
+              children: [
+                Icon(
+                  Icons.comment_rounded,
+                  color: AppColors.primary,
+                  size: isMobile ? 18 : 20,
+                ),
+                SizedBox(width: isMobile ? 6 : 8),
+                Text(
+                  '${AppLocalizations.of(context)!.translate('comments_label')} (${_comments.length})',
+                  style: TextStyle(
+                    fontSize: isMobile ? 16 : 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: isMobile ? 12 : 16),
+
+            // قائمة التعليقات
+            _isLoadingComments
+                ? Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                ),
+              ),
+            )
+                : _comments.isEmpty
+                ? Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 32,
+                      color: AppColors.textMuted,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      AppLocalizations.of(context)!.translate('no_comments_yet'),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: isMobile ? 13 : 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+                : ListView.separated(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: _comments.length,
+              separatorBuilder: (context, index) => Divider(
+                height: 24,
+                thickness: 1,
+                color: AppColors.borderColor,
+              ),
+              itemBuilder: (context, index) {
+                final comment = _comments[index];
+                return _buildCommentItem(comment, isMobile);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ عنصر التعليق الواحد - اسم المعلق، نص التعليق، التاريخ فقط
+  Widget _buildCommentItem(Map<String, dynamic> comment, bool isMobile) {
+    final commenterName = comment["commenterName"] ?? AppLocalizations.of(context)!.translate('unknown');
+    final commentText = comment["comment"] ?? "";
+    final createdAt = _formatDateOnly(comment["createdAt"]);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // اسم المعلق والتاريخ
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                commenterName,
+                style: TextStyle(
+                  fontSize: isMobile ? 14 : 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            SizedBox(width: 8),
+            Text(
+              createdAt,
+              style: TextStyle(
+                fontSize: isMobile ? 11 : 12,
+                color: AppColors.textMuted,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 6),
+        // نص التعليق
+        Text(
+          commentText,
+          style: TextStyle(
+            fontSize: isMobile ? 13 : 14,
+            color: AppColors.textPrimary,
+            height: 1.4,
+          ),
+        ),
+      ],
     );
   }
 
