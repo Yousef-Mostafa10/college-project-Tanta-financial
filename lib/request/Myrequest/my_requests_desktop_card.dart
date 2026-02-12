@@ -120,18 +120,11 @@ Widget buildDesktopRequestCard({
                 _buildDesktopChip(displayPriority, priorityIcon, priorityColor),
                 const SizedBox(width: 8),
                 // 📎 أيقونة المستندات
-                if (documentsCount > 0)
-                  _buildDesktopChip(
-                    documentsCount == 1 ? '1 File' : '$documentsCount Files',
-                    Icons.attach_file_rounded,
-                    MyRequestsColors.accentBlue,
-                  )
-                else
-                  _buildDesktopChip(
-                    AppLocalizations.of(context)!.translate('no_documents'),
-                    Icons.attach_file_rounded,
-                    MyRequestsColors.textMuted,
-                  ),
+                _buildDesktopChip(
+                  '$documentsCount',
+                  Icons.attach_file_rounded,
+                  documentsCount > 0 ? MyRequestsColors.accentBlue : MyRequestsColors.textMuted,
+                ),
                 const Spacer(),
 
                 // 4️⃣ أزرار الإجراءات

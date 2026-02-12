@@ -120,18 +120,11 @@ Widget buildMobileRequestCard({
                 _buildMobileChip(displayPriority, priorityIcon, priorityColor),
                 const SizedBox(width: 6),
                 // 📎 أيقونة المستندات
-                if (documentsCount > 0)
-                  _buildMobileChip(
-                    documentsCount == 1 ? '1' : '$documentsCount',
-                    Icons.attach_file_rounded,
-                    MyRequestsColors.accentBlue,
-                  )
-                else
-                  _buildMobileChip(
-                    '0',
-                    Icons.attach_file_rounded,
-                    MyRequestsColors.textMuted,
-                  ),
+                _buildMobileChip(
+                  '$documentsCount',
+                  Icons.attach_file_rounded,
+                  documentsCount > 0 ? MyRequestsColors.accentBlue : MyRequestsColors.textMuted,
+                ),
                 const Spacer(),
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert_rounded, size: 16, color: MyRequestsColors.textSecondary),
