@@ -13,6 +13,7 @@ Widget buildMobileRequestCard({
   required String statusText,
   required Color statusColor,
   required IconData statusIcon,
+  required int documentsCount,
   required Function(String) onDelete,
   required BuildContext context,
 }) {
@@ -32,7 +33,6 @@ Widget buildMobileRequestCard({
   final priorityColor = getPriorityColor(priority);
   final priorityIcon = _getPriorityIcon(priority);
 
-  // Translate priority if it's a known value
   String displayPriority = priority;
   if (priority.toLowerCase() == 'high') displayPriority = AppLocalizations.of(context)!.translate('priority_high');
   else if (priority.toLowerCase() == 'medium') displayPriority = AppLocalizations.of(context)!.translate('priority_medium');
@@ -112,12 +112,26 @@ Widget buildMobileRequestCard({
             ),
             const SizedBox(height: 6),
 
-            // النوع والأولوية
+            // النوع والأولوية والمستندات
             Row(
               children: [
                 _buildMobileChip(type, Icons.category_outlined, MyRequestsColors.primary),
                 const SizedBox(width: 6),
                 _buildMobileChip(displayPriority, priorityIcon, priorityColor),
+                const SizedBox(width: 6),
+                // 📎 أيقونة المستندات
+                if (documentsCount > 0)
+                  _buildMobileChip(
+                    documentsCount == 1 ? '1' : '$documentsCount',
+                    Icons.attach_file_rounded,
+                    MyRequestsColors.accentBlue,
+                  )
+                else
+                  _buildMobileChip(
+                    '0',
+                    Icons.attach_file_rounded,
+                    MyRequestsColors.textMuted,
+                  ),
                 const Spacer(),
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert_rounded, size: 16, color: MyRequestsColors.textSecondary),
@@ -199,7 +213,7 @@ Widget _buildMobileChip(String text, IconData icon, Color color) {
         Icon(icon, size: 10, color: color),
         const SizedBox(width: 2),
         Text(
-          text.length > 8 ? text.substring(0, 8) + '...' : text,
+          text.length > 6 ? text.substring(0, 6) + '...' : text,
           style: TextStyle(
             fontSize: 9,
             color: color,

@@ -13,6 +13,7 @@ Widget buildDesktopRequestCard({
   required String statusText,
   required Color statusColor,
   required IconData statusIcon,
+  required int documentsCount,
   required Function(String) onDelete,
   required BuildContext context,
 }) {
@@ -111,12 +112,26 @@ Widget buildDesktopRequestCard({
             ),
             const SizedBox(height: 12),
 
-            // 3️⃣ النوع والأولوية والأزرار
+            // 3️⃣ النوع والأولوية والمستندات والأزرار
             Row(
               children: [
                 _buildDesktopChip(type, Icons.category_outlined, MyRequestsColors.primary),
                 const SizedBox(width: 8),
                 _buildDesktopChip(displayPriority, priorityIcon, priorityColor),
+                const SizedBox(width: 8),
+                // 📎 أيقونة المستندات
+                if (documentsCount > 0)
+                  _buildDesktopChip(
+                    documentsCount == 1 ? '1 File' : '$documentsCount Files',
+                    Icons.attach_file_rounded,
+                    MyRequestsColors.accentBlue,
+                  )
+                else
+                  _buildDesktopChip(
+                    AppLocalizations.of(context)!.translate('no_documents'),
+                    Icons.attach_file_rounded,
+                    MyRequestsColors.textMuted,
+                  ),
                 const Spacer(),
 
                 // 4️⃣ أزرار الإجراءات
