@@ -82,10 +82,15 @@ class _EditRequestPageState extends State<EditRequestPage> {
   final String _documentApiUrl = AppConfig.baseUrl;
 
   List<dynamic> _documents = [];
-  List<PlatformFile> _newFiles = [];
+
+  // ✅ متغيرات الملفات - بنفس طريقة CreateRequestPage
+  List<PlatformFile> _selectedFiles = []; // ملفات جديدة من الجهاز
+  List<Map<String, dynamic>> _previousDocuments = []; // ملفات المستخدم السابقة
+  bool _isLoadingPreviousDocs = false;
+  List<Map<String, dynamic>> _selectedPreviousDocuments = []; // ملفات قديمة تم اختيارها
 
   // 🔥 متغير لتتبع الملفات المرفوعة حديثاً
-  List<String> _recentlyUploadedFiles = [];
+  List<String> _recentlyLinkedFiles = [];
 
   final List<String> _priorityOptions = ['Low', 'Medium', 'High'];
 
@@ -149,7 +154,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         List<dynamic> typesList = [];
         if (data is List) {
           typesList = data;
@@ -186,7 +191,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        await _fetchRequestTypes(); // Refresh
+        await _fetchRequestTypes();
         _showSuccessSnackBar('Type created successfully!');
       } else {
         _showErrorSnackBar('Failed to create type: ${response.statusCode}');
@@ -202,7 +207,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
       final token = prefs.getString('token') ?? '';
 
       final response = await http.delete(
-        Uri.parse('$_documentApiUrl/transactions/types/$name'), // Using _documentApiUrl instead of AppConfig.baseUrl
+        Uri.parse('$_documentApiUrl/transactions/types/$name'),
         headers: {"Authorization": "Bearer $token"},
       );
 
@@ -282,7 +287,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
   Future<void> _fetchRequestDetails() async {
     try {
-      // استخدام الـ endpoint الصحيح من port 3300
       var response = await http.get(
         Uri.parse('$_documentApiUrl/transactions/${widget.requestId}'),
         headers: {'Authorization': 'Bearer $_userToken'},
@@ -297,10 +301,10 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
       if (response.statusCode == 200) {
         final rawData = json.decode(response.body);
-        final data = (rawData is Map && rawData["status"] == "success") 
-            ? rawData["transaction"] 
+        final data = (rawData is Map && rawData["status"] == "success")
+            ? rawData["transaction"]
             : rawData;
-            
+
         debugPrint('📄 Transaction details: ${response.body}');
 
         if (data == null) {
@@ -312,17 +316,14 @@ class _EditRequestPageState extends State<EditRequestPage> {
           _titleController.text = data["title"] ?? '';
           _descriptionController.text = data["description"] ?? '';
 
-          // تعيين نوع الطلب
           final typeName = data["typeName"];
           if (typeName != null && _requestTypes.contains(typeName)) {
             _selectedRequestType = typeName;
           }
 
-          // تعيين الأولوية
           final priority = data["priority"] ?? 'Medium';
           _selectedPriority = _normalizePriority(priority);
 
-          // تعيين الملفات
           _documents = data["documents"] ?? [];
           debugPrint('📋 Loaded ${_documents.length} documents');
         });
@@ -363,57 +364,482 @@ class _EditRequestPageState extends State<EditRequestPage> {
     }
   }
 
-  // 🔥 دالة لتوليد اسم فريد للملف
-  String _generateUniqueFileName(String originalName) {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final randomSuffix = (timestamp % 10000).toString();
-    final extension = originalName.split('.').last;
-    final nameWithoutExtension = originalName.substring(0, originalName.lastIndexOf('.'));
-
-    // تنظيف الاسم من الأحرف الخاصة
-    String cleanedName = nameWithoutExtension
+  String _sanitizeFileName(String originalName) {
+    String cleanedName = originalName
         .replaceAll(RegExp(r'[^\w\s\.-]', unicode: true), '')
         .replaceAll(RegExp(r'\s+'), '_')
         .replaceAll(RegExp(r'_{2,}'), '_')
         .trim();
-
-    return '${cleanedName}_${timestamp}_$randomSuffix.$extension';
+    return cleanedName;
   }
 
-  // 🔹 دالة رفع ملف جديد
-  Future<void> _uploadNewFile() async {
+  String _generateUniqueFileName(String originalName) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final randomSuffix = (timestamp % 10000).toString();
+    final extension = originalName.split('.').last;
+    final nameWithoutExtension =
+    originalName.substring(0, originalName.lastIndexOf('.'));
+    final cleanedName = _sanitizeFileName(nameWithoutExtension);
+    final uniqueName = '${cleanedName}_${timestamp}_$randomSuffix.$extension';
+    return uniqueName;
+  }
+
+  // ✅ جلب الملفات التي رفعها المستخدم سابقاً
+  Future<void> _fetchPreviousDocuments() async {
+    setState(() => _isLoadingPreviousDocs = true);
+
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.get(
+        Uri.parse('$_documentApiUrl/documents/uploaded'),
+        headers: {"Authorization": "Bearer $token"},
       );
 
-      if (result != null && result.files.isNotEmpty) {
-        final List<PlatformFile> uniqueFiles = [];
-
-        for (var file in result.files) {
-          final uniqueFileName = _generateUniqueFileName(file.name);
-          final uniqueFile = PlatformFile(
-            name: uniqueFileName,
-            size: file.size,
-            path: file.path,
-            bytes: file.bytes,
-          );
-          uniqueFiles.add(uniqueFile);
+      if (mounted) {
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data is List) {
+            setState(() {
+              _previousDocuments = List<Map<String, dynamic>>.from(data);
+              _isLoadingPreviousDocs = false;
+            });
+          }
+        } else {
+          setState(() {
+            _previousDocuments = [];
+            _isLoadingPreviousDocs = false;
+          });
         }
-
-        setState(() {
-          _newFiles.addAll(uniqueFiles);
-        });
-        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('files_selected_for_upload').replaceFirst('{count}', '${uniqueFiles.length}'));
       }
     } catch (e) {
-      _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_uploading_file').split(':')[0]}: $e');
+      if (mounted) {
+        setState(() {
+          _previousDocuments = [];
+          _isLoadingPreviousDocs = false;
+        });
+      }
     }
   }
 
-  // 🔹 دالة حذف ملف موجود
+  // ✅ إضافة ملف قديم
+  void _addPreviousDocument(Map<String, dynamic> document) {
+    setState(() {
+      final alreadyAdded = _selectedPreviousDocuments.any((doc) => doc['id'] == document['id']);
+      if (!alreadyAdded) {
+        _selectedPreviousDocuments.add(document);
+      }
+    });
+  }
+
+  // ✅ إزالة ملف قديم
+  void _removePreviousDocument(Map<String, dynamic> document) {
+    setState(() {
+      _selectedPreviousDocuments.removeWhere((doc) => doc['id'] == document['id']);
+    });
+  }
+
+  // ✅ ✅ ✅ قائمة المنسدلة للملفات (القديمة + رفع جديد)
+  void _showFileSelectionMenu() async {
+    await _fetchPreviousDocuments();
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateSheet) {
+            return Container(
+              padding: EdgeInsets.all(20),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.7,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Select Files',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  Divider(height: 1, thickness: 1),
+                  SizedBox(height: 16),
+
+                  ListTile(
+                    leading: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentBlue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.cloud_upload_rounded, color: AppColors.accentBlue),
+                    ),
+                    title: Text(
+                      'Upload New Files',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Select PDF files from your device',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: AppColors.textMuted,
+                    ),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        FilePickerResult? result = await FilePicker.platform.pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: ['pdf'],
+                          allowMultiple: true,
+                        );
+                        if (result != null && result.files.isNotEmpty) {
+                          // إنشاء أسماء فريدة للملفات
+                          final List<PlatformFile> uniqueFiles = [];
+                          for (var file in result.files) {
+                            final uniqueFileName = _generateUniqueFileName(file.name);
+                            final uniqueFile = PlatformFile(
+                              name: uniqueFileName,
+                              size: file.size,
+                              path: file.path,
+                              bytes: file.bytes,
+                            );
+                            uniqueFiles.add(uniqueFile);
+                          }
+
+                          setState(() {
+                            _selectedFiles.addAll(uniqueFiles);
+                          });
+                        }
+                      } catch (e) {}
+                    },
+                  ),
+
+                  SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      Icon(Icons.history_rounded, size: 20, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Text(
+                        'Previously Uploaded Files',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+
+                  _isLoadingPreviousDocs
+                      ? Container(
+                    height: 200,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  )
+                      : _previousDocuments.isEmpty
+                      ? Container(
+                    height: 100,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.folder_open_rounded,
+                            size: 32,
+                            color: AppColors.textMuted,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'No previous files found',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                      : Container(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.35,
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: _previousDocuments.length,
+                      separatorBuilder: (context, index) => Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final doc = _previousDocuments[index];
+                        final isSelected = _selectedPreviousDocuments.any((d) => d['id'] == doc['id']);
+                        // تحقق إذا كان الملف مرفق بالفعل بالطلب
+                        final isAlreadyAttached = _documents.any((d) => d['id'] == doc['id']);
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: AppColors.primary.withOpacity(0.1),
+                            child: Icon(
+                              Icons.description_rounded,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(
+                            doc['title'] ?? 'Untitled',
+                            style: TextStyle(
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            isAlreadyAttached 
+                                ? 'Already attached to this request'
+                                : _formatDate(doc['uploadedAt'] ?? ''),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isAlreadyAttached ? AppColors.accentGreen : AppColors.textSecondary,
+                            ),
+                          ),
+                          trailing: isAlreadyAttached
+                              ? Icon(
+                                  Icons.check_circle,
+                                  color: AppColors.accentGreen,
+                                )
+                              : isSelected
+                                  ? Icon(
+                                      Icons.check_circle_rounded,
+                                      color: AppColors.accentGreen,
+                                    )
+                                  : Icon(
+                                      Icons.add_circle_outline_rounded,
+                                      color: AppColors.primary,
+                                    ),
+                          enabled: !isAlreadyAttached,
+                          onTap: isAlreadyAttached ? null : () {
+                            if (isSelected) {
+                              _removePreviousDocument(doc);
+                            } else {
+                              _addPreviousDocument(doc);
+                            }
+                            setStateSheet(() {});
+                            setState(() {});
+                          },
+                        );
+                      },
+                    ),
+                  ),
+
+                  SizedBox(height: 16),
+
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Selected Files:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '${_selectedPreviousDocuments.length + _selectedFiles.length}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        'Done',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ✅ رفع ملفات جديدة
+  Future<void> _uploadNewFiles() async {
+    if (_selectedFiles.isEmpty) return;
+
+    for (var file in _selectedFiles) {
+      try {
+        final finalFileName = file.name;
+
+        var request = http.MultipartRequest(
+          'POST',
+          Uri.parse('$_documentApiUrl/documents'),
+        );
+
+        request.headers['Authorization'] = 'Bearer $_userToken';
+        request.headers['accept'] = 'application/json';
+
+        request.files.add(await http.MultipartFile.fromPath(
+          'file',
+          file.path!,
+          filename: finalFileName,
+        ));
+
+        var response = await request.send();
+
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          final responseData = await response.stream.bytesToString();
+          final documentData = json.decode(responseData);
+
+          if (documentData["id"] != null) {
+            final dynamic rawId = documentData["id"];
+            final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
+
+            // ربط الملف بالطلب فوراً
+            await _linkDocumentToTransaction(documentId);
+
+            // إضافة الملف للقائمة
+            final String title = documentData["title"] ?? file.name;
+            final String uploadedAt = documentData["uploadedAt"] ?? DateTime.now().toIso8601String();
+            final String uploaderName = documentData["uploaderName"] ?? _userName ?? "user";
+
+            final Map<String, dynamic> newDocument = {
+              "id": documentId,
+              "title": title,
+              "uploadedAt": uploadedAt,
+              "uploaderName": uploaderName,
+              "downloadURI": "/documents/$documentId/download"
+            };
+
+            setState(() {
+              _documents.add(newDocument);
+              _recentlyLinkedFiles.add(file.name);
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint('❌ Error uploading file: $e');
+      }
+    }
+
+    setState(() {
+      _selectedFiles.clear();
+    });
+  }
+
+  // ✅ ربط الملفات القديمة المختارة
+  Future<void> _linkPreviousDocuments() async {
+    if (_selectedPreviousDocuments.isEmpty) return;
+
+    for (var doc in _selectedPreviousDocuments) {
+      try {
+        final documentId = doc['id'] is int ? doc['id'] : int.parse(doc['id'].toString());
+
+        // ربط الملف بالطلب
+        await _linkDocumentToTransaction(documentId);
+
+        // إضافة الملف للقائمة إذا لم يكن موجوداً
+        setState(() {
+          final exists = _documents.any((d) => d['id'] == documentId);
+          if (!exists) {
+            _documents.add(doc);
+            _recentlyLinkedFiles.add(doc['title'] ?? 'Existing File');
+          }
+        });
+      } catch (e) {
+        debugPrint('❌ Error linking document: $e');
+      }
+    }
+
+    setState(() {
+      _selectedPreviousDocuments.clear();
+    });
+  }
+
+  // ✅ دالة منفصلة لربط ملف بالطلب
+  Future<void> _linkDocumentToTransaction(int documentId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_documentApiUrl/transactions/${widget.requestId}/document/$documentId'),
+        headers: {
+          'accept': 'application/json',
+          'Authorization': 'Bearer $_userToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({}),
+      );
+
+      debugPrint('🔗 Link Status: ${response.statusCode}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint('✅ Document $documentId linked successfully');
+      } else {
+        debugPrint('❌ Link failed: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error linking document: $e');
+    }
+  }
+
   Future<void> _deleteExistingFile(Map<String, dynamic> document) async {
     try {
       final dynamic rawId = document["id"];
@@ -441,139 +867,39 @@ class _EditRequestPageState extends State<EditRequestPage> {
     }
   }
 
-  // 🔹 دالة رفع ملف جديد وربطه بالطلب - مصححة
-  Future<void> _uploadAndLinkNewFiles() async {
-    if (_newFiles.isEmpty) return;
-
-    setState(() {
-      _isUploadingFile = true;
-    });
-
-    try {
-      List<String> uploadedFiles = [];
-      List<Map<String, dynamic>> newDocuments = [];
-
-      // 1. رفع الملفات الجديدة
-      for (final file in _newFiles) {
-        final uniqueFileName = file.name;
-
-        var uploadRequest = http.MultipartRequest(
-          'POST',
-          Uri.parse('$_documentApiUrl/documents'),
-        );
-
-        uploadRequest.headers['Authorization'] = 'Bearer $_userToken';
-        uploadRequest.headers['accept'] = 'application/json';
-
-        uploadRequest.files.add(await http.MultipartFile.fromPath(
-          'file',
-          file.path!,
-          filename: uniqueFileName,
-        ));
-
-        var uploadResponse = await uploadRequest.send();
-        debugPrint('📤 Upload Status: ${uploadResponse.statusCode}');
-
-        if (uploadResponse.statusCode == 201 || uploadResponse.statusCode == 200) {
-          final responseData = await uploadResponse.stream.bytesToString();
-          final documentData = json.decode(responseData);
-          debugPrint('📄 Upload Response: $responseData');
-
-          final dynamic rawId = documentData["id"];
-          final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
-          final String title = documentData["title"] ?? file.name;
-          final String uploadedAt = documentData["uploadedAt"] ?? DateTime.now().toIso8601String();
-          final String uploaderName = documentData["uploaderName"] ?? _userName ?? "user";
-
-          // بناء كائن الملف بالشكل الصحيح كما في الـ response
-          final Map<String, dynamic> newDocument = {
-            "id": documentId,
-            "title": title,
-            "uploadedAt": uploadedAt,
-            "uploaderName": uploaderName,
-            "downloadURI": "/documents/$documentId/download"
-          };
-
-          newDocuments.add(newDocument);
-          uploadedFiles.add(file.name);
-          debugPrint('📎 Document created: ${newDocument["title"]}');
-        } else {
-          final errorData = await uploadResponse.stream.bytesToString();
-          debugPrint('❌ Upload failed: $errorData');
-        }
-      }
-
-      // 2. ربط كل الملفات الجديدة بالمعاملة
-      if (newDocuments.isNotEmpty) {
-        int linkedCount = 0;
-
-        for (final document in newDocuments) {
-          final int documentId = document["id"];
-          debugPrint('🔗 Linking document $documentId to transaction ${widget.requestId}');
-
-          final linkResponse = await http.post(
-            Uri.parse('$_documentApiUrl/transactions/${widget.requestId}/document/$documentId'),
-            headers: {
-              'accept': 'application/json',
-              'Authorization': 'Bearer $_userToken',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode({}),
-          );
-
-          debugPrint('🔗 Link Status: ${linkResponse.statusCode}');
-          if (linkResponse.statusCode == 200 || linkResponse.statusCode == 201) {
-            linkedCount++;
-
-            // ✅ إضافة الملف إلى القائمة مباشرة
-            setState(() {
-              _documents.add(document);
-            });
-
-            debugPrint('✅ Document $documentId linked and added to list');
-          } else {
-            debugPrint('❌ Link failed: ${linkResponse.body}');
-          }
-        }
-
-        if (linkedCount > 0) {
-          setState(() {
-            _recentlyUploadedFiles.addAll(uploadedFiles);
-            _newFiles.clear();
-          });
-
-          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('files_uploaded_success_count').replaceFirst('{count}', '$linkedCount'));
-        } else {
-          _showErrorSnackBar('Failed to link any documents to the request');
-        }
-      } else {
-        _showErrorSnackBar('No files were uploaded successfully');
-      }
-
-    } catch (e) {
-      _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_uploading_file').split(':')[0]}: $e');
-    } finally {
-      setState(() {
-        _isUploadingFile = false;
-      });
-    }
-  }
-
-  // 🔹 دالة تحديث بيانات الطلب
+  // ✅ تعديل: تحديث الطلب مع معالجة الملفات
   Future<void> _updateRequest() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _isUpdating = true;
+      _isUploadingFile = true;
     });
 
     try {
-      // 1. تحديث بيانات الطلب الأساسية
+      // 1. رفع الملفات الجديدة وربطها
+      if (_selectedFiles.isNotEmpty) {
+        await _uploadNewFiles();
+      }
+
+      // 2. ربط الملفات القديمة المختارة
+      if (_selectedPreviousDocuments.isNotEmpty) {
+        await _linkPreviousDocuments();
+      }
+
+      // 3. تجهيز IDs الملفات الموجودة
+      List<int> documentIds = _documents.map((doc) {
+        final id = doc["id"];
+        return id is int ? id : int.parse(id.toString());
+      }).toList();
+
+      // 4. تحديث بيانات الطلب مع تضمين documentsIds
       final requestData = {
         'title': _titleController.text,
         'description': _descriptionController.text,
         'typeName': _selectedRequestType,
         'priority': _selectedPriority.toUpperCase(),
+        'documentsIds': documentIds,
       };
 
       debugPrint('🚀 Updating request: $requestData');
@@ -591,19 +917,8 @@ class _EditRequestPageState extends State<EditRequestPage> {
       debugPrint('📄 Update Response: ${response.body}');
 
       if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        if (responseData["status"] == "success") {
-          // 2. إذا كانت هناك ملفات جديدة، رفعها وربطها
-          if (_newFiles.isNotEmpty) {
-            await _uploadAndLinkNewFiles();
-          } else {
-            _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_updated_success_details'));
-            // إعادة تحميل البيانات للتأكد من التحديث
-            await _fetchRequestDetails();
-          }
-        } else {
-          _showErrorSnackBar('Update failed: ${responseData["message"]}');
-        }
+        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_updated_success_details'));
+        await _fetchRequestDetails();
       } else {
         _showErrorSnackBar('Failed to update request with status: ${response.statusCode}');
       }
@@ -612,11 +927,11 @@ class _EditRequestPageState extends State<EditRequestPage> {
     } finally {
       setState(() {
         _isUpdating = false;
+        _isUploadingFile = false;
       });
     }
   }
 
-  // 🔥 دالة جديدة للخروج
   Future<void> _finishEditing() async {
     _showSuccessSnackBar(AppLocalizations.of(context)!.translate('editing_completed'));
     if (mounted) {
@@ -624,7 +939,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
     }
   }
 
-  // دالة مساعدة لتنسيق التاريخ
   String _formatDate(String isoDate) {
     try {
       final date = DateTime.parse(isoDate);
@@ -634,7 +948,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
     }
   }
 
-  // 🔹 ويدجت لعرض الملفات
   Widget _buildDocumentsSection(bool isMobile, bool isTablet) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -649,7 +962,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
         ),
         SizedBox(height: isMobile ? 12 : 16),
 
-        // مؤشر تحميل رفع الملفات
         if (_isUploadingFile) ...[
           LinearProgressIndicator(
             backgroundColor: AppColors.primary.withOpacity(0.1),
@@ -658,8 +970,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
           SizedBox(height: isMobile ? 12 : 16),
         ],
 
-        // 🔥 رسالة تذكير إذا كان هناك ملفات مرفوعة حديثاً
-        if (_recentlyUploadedFiles.isNotEmpty) ...[
+        if (_recentlyLinkedFiles.isNotEmpty) ...[
           Container(
             padding: EdgeInsets.all(isMobile ? 12 : 16),
             decoration: BoxDecoration(
@@ -676,7 +987,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                     SizedBox(width: isMobile ? 8 : 12),
                     Expanded(
                       child: Text(
-                        AppLocalizations.of(context)!.translate('recently_uploaded_files').replaceFirst('{count}', '${_recentlyUploadedFiles.length}'),
+                        '${_recentlyLinkedFiles.length} file(s) linked successfully',
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: isMobile ? 14 : 16,
@@ -687,7 +998,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                   ],
                 ),
                 SizedBox(height: 8),
-                ..._recentlyUploadedFiles.map((fileName) =>
+                ..._recentlyLinkedFiles.map((fileName) =>
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
                       child: Text(
@@ -705,11 +1016,10 @@ class _EditRequestPageState extends State<EditRequestPage> {
           SizedBox(height: isMobile ? 12 : 16),
         ],
 
-        // الملفات المرفقة حالياً
         if (_documents.isNotEmpty) ...[
           ..._documents.map((document) => _buildDocumentItem(document, isMobile, isTablet)),
           SizedBox(height: isMobile ? 12 : 16),
-        ] else if (_recentlyUploadedFiles.isEmpty) ...[
+        ] else ...[
           Container(
             padding: EdgeInsets.all(isMobile ? 16 : 20),
             decoration: BoxDecoration(
@@ -736,10 +1046,10 @@ class _EditRequestPageState extends State<EditRequestPage> {
           SizedBox(height: isMobile ? 12 : 16),
         ],
 
-        // الملفات الجديدة المحددة للرفع
-        if (_newFiles.isNotEmpty) ...[
+        // عرض الملفات المختارة (جديدة + قديمة) قبل الرفع
+        if (_selectedFiles.isNotEmpty || _selectedPreviousDocuments.isNotEmpty) ...[
           Text(
-            AppLocalizations.of(context)!.translate('new_files_to_upload'),
+            'Files to be added:',
             style: TextStyle(
               fontSize: isMobile ? 14 : 16,
               fontWeight: FontWeight.bold,
@@ -747,16 +1057,117 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
           ),
           SizedBox(height: isMobile ? 6 : 8),
-          ..._newFiles.map((file) => _buildNewFileItem(file, isMobile, isTablet)),
+
+          // الملفات القديمة المختارة
+          ..._selectedPreviousDocuments.map((doc) => Container(
+            margin: EdgeInsets.only(bottom: isMobile ? 6 : 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 12 : 16,
+              vertical: isMobile ? 8 : 12,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.accentGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.accentGreen),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.cloud_done, color: AppColors.accentGreen, size: isMobile ? 20 : 22),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        doc['title'] ?? 'Existing File',
+                        style: TextStyle(
+                          fontSize: isMobile ? 13 : 14,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Existing file',
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 12,
+                          color: AppColors.accentGreen,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: AppColors.accentRed, size: isMobile ? 18 : 20),
+                  onPressed: () {
+                    setState(() {
+                      _selectedPreviousDocuments.removeWhere((d) => d['id'] == doc['id']);
+                    });
+                  },
+                ),
+              ],
+            ),
+          )).toList(),
+
+          // الملفات الجديدة المختارة
+          ..._selectedFiles.map((file) => Container(
+            margin: EdgeInsets.only(bottom: isMobile ? 6 : 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 12 : 16,
+              vertical: isMobile ? 8 : 12,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.accentBlue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.accentBlue),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.file_present_rounded, color: AppColors.accentBlue, size: isMobile ? 20 : 22),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        file.name,
+                        style: TextStyle(
+                          fontSize: isMobile ? 13 : 14,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '${(file.size / 1024 / 1024).toStringAsFixed(2)} MB',
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 12,
+                          color: AppColors.accentBlue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: AppColors.accentRed, size: isMobile ? 18 : 20),
+                  onPressed: () {
+                    setState(() {
+                      _selectedFiles.removeWhere((f) => f.name == file.name);
+                    });
+                  },
+                ),
+              ],
+            ),
+          )).toList(),
+
           SizedBox(height: isMobile ? 12 : 16),
         ],
 
-        // زر إضافة ملفات جديدة
         ElevatedButton.icon(
-          onPressed: _uploadNewFile,
+          onPressed: _showFileSelectionMenu,
           icon: Icon(Icons.add, size: isMobile ? 18 : 20),
           label: Text(
-            AppLocalizations.of(context)!.translate('add_more_files'),
+            'Add Files',
             style: TextStyle(fontSize: isMobile ? 14 : 16),
           ),
           style: ElevatedButton.styleFrom(
@@ -773,7 +1184,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
     );
   }
 
-  // 🔹 ويدجت لعرض ملف مرفق
   Widget _buildDocumentItem(Map<String, dynamic> document, bool isMobile, bool isTablet) {
     final fileName = document["title"] ?? "document.pdf";
     final fileId = document["id"]?.toString() ?? "";
@@ -830,49 +1240,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
     );
   }
 
-  // 🔹 ويدجت لعرض ملف جديد
-  Widget _buildNewFileItem(PlatformFile file, bool isMobile, bool isTablet) {
-    return Container(
-      margin: EdgeInsets.only(bottom: isMobile ? 6 : 8),
-      decoration: BoxDecoration(
-        color: AppColors.accentBlue.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.accentBlue),
-      ),
-      child: ListTile(
-        leading: Icon(Icons.file_present_rounded, color: AppColors.accentBlue, size: isMobile ? 20 : 22),
-        title: Text(
-          file.name,
-          style: TextStyle(
-            fontSize: isMobile ? 13 : 14,
-            color: AppColors.textPrimary,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          '${(file.size / 1024 / 1024).toStringAsFixed(2)} MB',
-          style: TextStyle(
-            fontSize: isMobile ? 11 : 12,
-            color: AppColors.accentBlue,
-          ),
-        ),
-        trailing: IconButton(
-          icon: Icon(Icons.close, color: AppColors.accentRed, size: isMobile ? 18 : 20),
-          onPressed: () {
-            setState(() {
-              _newFiles.removeWhere((f) => f.name == file.name);
-            });
-          },
-        ),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: isMobile ? 12 : 16,
-          vertical: isMobile ? 8 : 12,
-        ),
-      ),
-    );
-  }
-
   Widget _getFileIcon(String fileName) {
     if (fileName.toLowerCase().endsWith('.pdf')) {
       return Icon(Icons.picture_as_pdf_rounded, color: AppColors.filePdf);
@@ -880,7 +1247,9 @@ class _EditRequestPageState extends State<EditRequestPage> {
       return Icon(Icons.description_rounded, color: AppColors.fileDoc);
     } else if (fileName.toLowerCase().endsWith('.xls') || fileName.toLowerCase().endsWith('.xlsx')) {
       return Icon(Icons.table_chart_rounded, color: AppColors.fileExcel);
-    } else if (fileName.toLowerCase().endsWith('.jpg') || fileName.toLowerCase().endsWith('.jpeg') || fileName.toLowerCase().endsWith('.png')) {
+    } else if (fileName.toLowerCase().endsWith('.jpg') ||
+        fileName.toLowerCase().endsWith('.jpeg') ||
+        fileName.toLowerCase().endsWith('.png')) {
       return Icon(Icons.image_rounded, color: AppColors.fileImage);
     } else {
       return Icon(Icons.insert_drive_file_rounded, color: AppColors.fileGeneric);
@@ -920,7 +1289,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // العنوان الرئيسي
             Text(
               AppLocalizations.of(context)!.translate('edit_request'),
               style: TextStyle(
@@ -939,7 +1307,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
             SizedBox(height: isMobile ? 16 : 24),
 
-            // المعلومات الأساسية
             Text(
               AppLocalizations.of(context)!.translate('basic_information'),
               style: TextStyle(
@@ -950,7 +1317,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
-            // حقل العنوان
             Text(
               '${AppLocalizations.of(context)!.translate('request_title')} *',
               style: TextStyle(
@@ -1007,7 +1373,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
               decoration: _buildInputDecoration(),
               items: _requestTypes.map((v) {
                 final typeData = _requestTypesData.firstWhere(
-                  (t) => t.name == v,
+                      (t) => t.name == v,
                   orElse: () => TransactionType(name: v, creatorName: ''),
                 );
 
@@ -1043,7 +1409,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
-            // الأولوية
             Text(
               AppLocalizations.of(context)!.translate('priority_label'),
               style: TextStyle(
@@ -1092,7 +1457,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
-            // الوصف
             Text(
               '${AppLocalizations.of(context)!.translate('description_label')} *',
               style: TextStyle(
@@ -1126,10 +1490,8 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
             SizedBox(height: isMobile ? 20 : 32),
 
-            // قسم الملفات
             _buildDocumentsSection(isMobile, isTablet),
 
-            // 🔥 زر Update Request في الأعلى
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1180,7 +1542,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
             SizedBox(height: isMobile ? 24 : 32),
 
-            // 🔥 زر Finish في المنتصف في الأسفل
             Container(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -1248,7 +1609,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
       body: _buildMainContent(isMobile, isTablet, isDesktop),
     );
 
-    // إضافة السكرول للديسكتوب فقط مع حدود قصوى
     if (isDesktop) {
       return Scaffold(
         appBar: AppBar(
