@@ -1,4 +1,3 @@
-// home/mobile_request_card.dart
 import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import 'dashboard_colors.dart';
@@ -13,8 +12,11 @@ class MobileRequestCard extends StatelessWidget {
   final String statusText;
   final Color statusColor;
   final IconData statusIcon;
+  final int documentsCount;
+  final String createdAt;
   final VoidCallback onViewDetails;
   final VoidCallback onTrackRequest;
+  final VoidCallback onEditRequest; // ✅ زر تعديل
   final VoidCallback onDeleteRequest;
 
   const MobileRequestCard({
@@ -27,20 +29,37 @@ class MobileRequestCard extends StatelessWidget {
     required this.statusText,
     required this.statusColor,
     required this.statusIcon,
+    required this.documentsCount,
+    required this.createdAt,
     required this.onViewDetails,
     required this.onTrackRequest,
+    required this.onEditRequest, // ✅
     required this.onDeleteRequest,
   });
+
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day}/${date.month}/${date.year}'; // ✅ التاريخ الفعلي دائماً
+    } catch (e) {
+      return dateString.substring(0, 10);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final priorityColor = DashboardHelpers.getPriorityColor(priority);
+    final formattedDate = _formatDate(createdAt);
 
     // Translate priority
     String displayPriority = priority;
-    if (priority.toLowerCase() == 'high') displayPriority = AppLocalizations.of(context)!.translate('high');
-    else if (priority.toLowerCase() == 'medium') displayPriority = AppLocalizations.of(context)!.translate('medium');
-    else if (priority.toLowerCase() == 'low') displayPriority = AppLocalizations.of(context)!.translate('low');
+    if (priority.toLowerCase() == 'high') {
+      displayPriority = AppLocalizations.of(context)!.translate('high');
+    } else if (priority.toLowerCase() == 'medium') {
+      displayPriority = AppLocalizations.of(context)!.translate('medium');
+    } else if (priority.toLowerCase() == 'low') {
+      displayPriority = AppLocalizations.of(context)!.translate('low');
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -99,7 +118,7 @@ class MobileRequestCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // معلومات المرسل والنوع
+              // معلومات المرسل والتاريخ
               Row(
                 children: [
                   Icon(Icons.person_rounded, size: 12, color: AppColors.textSecondary),
@@ -112,16 +131,25 @@ class MobileRequestCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.calendar_today_rounded, size: 10, color: AppColors.textSecondary),
+                  const SizedBox(width: 2),
+                  Text(
+                    formattedDate,
+                    style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
 
-              // النوع والأولوية
+              // النوع والأولوية وعدد المستندات
               Row(
                 children: [
                   _buildChip(type, Icons.category_outlined, AppColors.primary),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
                   _buildChip(displayPriority, Icons.flag_outlined, priorityColor),
+                  const SizedBox(width: 4),
+                  _buildDocumentsChip(),
                   const Spacer(),
                   PopupMenuButton<String>(
                     icon: Icon(Icons.more_vert_rounded, size: 16, color: AppColors.textSecondary),
@@ -133,6 +161,8 @@ class MobileRequestCard extends StatelessWidget {
                         onViewDetails();
                       } else if (value == "track") {
                         onTrackRequest();
+                      } else if (value == "edit") {      // ✅ زر تعديل
+                        onEditRequest();
                       } else if (value == "delete") {
                         onDeleteRequest();
                       }
@@ -144,7 +174,10 @@ class MobileRequestCard extends StatelessWidget {
                           children: [
                             Icon(Icons.remove_red_eye_outlined, size: 16, color: AppColors.primary),
                             const SizedBox(width: 8),
-                            Text(AppLocalizations.of(context)!.translate('view_details'), style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+                            Text(
+                              AppLocalizations.of(context)!.translate('view_details'),
+                              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                            ),
                           ],
                         ),
                       ),
@@ -154,7 +187,23 @@ class MobileRequestCard extends StatelessWidget {
                           children: [
                             Icon(Icons.track_changes_outlined, size: 16, color: AppColors.primary),
                             const SizedBox(width: 8),
-                            Text(AppLocalizations.of(context)!.translate('track_request'), style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+                            Text(
+                              AppLocalizations.of(context)!.translate('track_request'),
+                              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(                      // ✅ زر تعديل
+                        value: "edit",
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 16, color: AppColors.accentYellow),
+                            const SizedBox(width: 8),
+                            Text(
+                              AppLocalizations.of(context)!.translate('edit'),
+                              style: TextStyle(fontSize: 12, color: AppColors.accentYellow),
+                            ),
                           ],
                         ),
                       ),
@@ -164,7 +213,10 @@ class MobileRequestCard extends StatelessWidget {
                           children: [
                             Icon(Icons.delete_outlined, size: 16, color: AppColors.accentRed),
                             const SizedBox(width: 8),
-                            Text(AppLocalizations.of(context)!.translate('delete'), style: TextStyle(fontSize: 12, color: AppColors.accentRed)),
+                            Text(
+                              AppLocalizations.of(context)!.translate('delete'),
+                              style: TextStyle(fontSize: 12, color: AppColors.accentRed),
+                            ),
                           ],
                         ),
                       ),
@@ -193,11 +245,39 @@ class MobileRequestCard extends StatelessWidget {
           Icon(icon, size: 10, color: color),
           const SizedBox(width: 2),
           Text(
-            text.length > 8 ? text.substring(0, 8) + '...' : text,
+            text.length > 6 ? '${text.substring(0, 6)}...' : text,
             style: TextStyle(
               fontSize: 9,
               color: color,
               fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocumentsChip() {
+    final color = documentsCount > 0 ? AppColors.primary : AppColors.textMuted;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.attach_file_rounded, size: 10, color: color),
+          const SizedBox(width: 2),
+          Text(
+            documentsCount.toString(),
+            style: TextStyle(
+              fontSize: 9,
+              color: color,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

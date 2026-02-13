@@ -1,7 +1,7 @@
-// home/dashboard_api.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 import '../app_config.dart';
 
@@ -18,36 +18,47 @@ class DashboardAPI {
     final token = await _getToken();
     if (token == null) throw Exception("No token found");
 
-    final response = await http.get(
-      Uri.parse("$_baseUrl/transactions/types"),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/transactions/types"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      
-      List<dynamic> typesList = [];
-      if (data is List) {
-        typesList = data;
-      } else if (data is Map && data["transactionTypes"] != null) {
-        typesList = data["transactionTypes"];
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        List<dynamic> typesList = [];
+        if (data is List) {
+          typesList = data;
+        } else if (data is Map && data["transactionTypes"] != null) {
+          typesList = data["transactionTypes"];
+        }
+
+        return typesList
+            .where((item) => item["name"] != null)
+            .map<String>((item) => item["name"] as String)
+            .toList();
+      } else {
+        // Fallback: جلب الأنواع من المعاملات
+        final transactions = await fetchAllRequests();
+        final types = transactions
+            .map((t) => t["typeName"]?.toString() ?? t["type"]?["name"] ?? "")
+            .where((type) => type.isNotEmpty)
+            .toSet()
+            .toList()
+            .cast<String>(); // ✅ تحويل إلى List<String>
+        return types;
       }
-
-      return typesList
-          .where((item) => item["name"] != null)
-          .map<String>((item) => item["name"] as String)
-          .toList();
-    } else if (response.statusCode == 401) {
-      throw Exception("Unauthorized - Token may be expired");
-    } else {
-      throw Exception("Failed to load types: ${response.statusCode}");
+    } catch (e) {
+      debugPrint("⚠️ Error fetching types: $e");
+      return [];
     }
   }
 
-  // جلب آخر حالة Forward
+  // ✅ جلب آخر حالة Forward
   Future<String?> _getLastForwardStatus(String transactionId) async {
     final token = await _getToken();
     if (token == null) return null;
@@ -63,8 +74,8 @@ class DashboardAPI {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> forwards = data is List 
-            ? data 
+        final List<dynamic> forwards = data is List
+            ? data
             : (data["transaction"]?["forwards"] ?? data["forwards"] ?? []);
 
         if (forwards.isNotEmpty) {
@@ -83,7 +94,7 @@ class DashboardAPI {
     }
   }
 
-  // جلب كل الطلبات
+  // ✅ جلب كل الطلبات
   Future<List<dynamic>> fetchAllRequests({
     String? priority,
     String? typeName,
@@ -91,54 +102,60 @@ class DashboardAPI {
     final token = await _getToken();
     if (token == null) throw Exception("No token found");
 
-    List<dynamic> allRequests = [];
-    int currentPage = 1;
-    int lastPage = 1;
+    // API يعيد مصفوفة مباشرة - لا Pagination من السيرفر
+    final queryParams = {
+      if (priority != null && priority != 'All')
+        "priority": priority.toLowerCase(),
+      if (typeName != null && typeName != 'All Types')
+        "typeName": typeName,
+    };
 
-    do {
-      final queryParams = {
-        "pageNumber": currentPage.toString(),
-        if (priority != null) "priority": priority.toLowerCase(),
-        if (typeName != null) "typeName": typeName,
-      };
+    final uri = Uri.parse("$_baseUrl/transactions")
+        .replace(queryParameters: queryParams);
 
-      final uri = Uri.parse("$_baseUrl/transactions")
-          .replace(queryParameters: queryParams);
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+    if (response.statusCode == 200) {
+      final List<dynamic> transactions = jsonDecode(response.body);
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> pageRequests = data is List 
-            ? data 
-            : (data["transactions"] ?? []);
-        allRequests.addAll(pageRequests);
+      // جلب آخر حالة لكل معاملة
+      for (var transaction in transactions) {
+        final lastStatus = await _getLastForwardStatus(transaction["id"].toString());
+        transaction["lastForwardStatus"] = lastStatus ?? "waiting";
 
-        lastPage = data is Map ? (data["page"]?["last"] ?? 1) : 1;
-        currentPage++;
-      } else if (response.statusCode == 401) {
-        throw Exception("Unauthorized - Token may be expired");
-      } else {
-        break;
+        // تحويل البيانات للشكل المطلوب للتوافق
+        transaction["type"] = {
+          "name": transaction["typeName"] ?? "N/A"
+        };
+
+        transaction["creator"] = {
+          "name": transaction["creatorName"] ?? "Unknown"
+        };
+
+        // إضافة عدد المستندات
+        transaction["documentsCount"] =
+            transaction["documents"]?.length ?? 0;
+
+        // إضافة تاريخ الإنشاء
+        transaction["createdDate"] =
+            transaction["createdAt"] ?? DateTime.now().toIso8601String();
       }
-    } while (currentPage <= lastPage);
 
-    // جلب آخر حالة forward لكل طلب
-    for (var request in allRequests) {
-      final lastStatus = await _getLastForwardStatus(request["id"].toString());
-      request["lastForwardStatus"] = lastStatus;
+      return transactions;
+    } else if (response.statusCode == 401) {
+      throw Exception("Unauthorized - Token may be expired");
+    } else {
+      throw Exception("Failed to load requests: ${response.statusCode}");
     }
-
-    return allRequests;
   }
 
-  // حذف طلب
+  // ✅ حذف طلب
   Future<bool> deleteRequest(String requestId) async {
     final token = await _getToken();
     if (token == null) throw Exception("No token found");
@@ -156,5 +173,26 @@ class DashboardAPI {
     }
 
     return false;
+  }
+
+  // ✅ تعديل طلب (مكان للإضافة - اختياري)
+  Future<bool> updateRequest(String requestId, Map<String, dynamic> data) async {
+    final token = await _getToken();
+    if (token == null) throw Exception("No token found");
+
+    // هذه دالة اختيارية - إذا كان هناك API للتعديل
+    // final response = await http.put(
+    //   Uri.parse("$_baseUrl/transactions/$requestId"),
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Authorization': 'Bearer $token',
+    //   },
+    //   body: jsonEncode(data),
+    // );
+
+    // return response.statusCode == 200;
+
+    // حالياً نوجه لصفحة التعديل
+    return true;
   }
 }

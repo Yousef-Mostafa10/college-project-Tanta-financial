@@ -5,11 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../Auth/login.dart';
 import '../Notefecation/inbox.dart';
-import '../drawer.dart' hide AppColors;
-import '../request/Ditalis_Request/ditalis_request.dart' hide AppColors;
-import '../request/RequestTracking/request_tracking.dart';
+import '../drawer.dart' hide AppColors; // إخفاء AppColors من drawer
+import '../request/Ditalis_Request/ditalis_request.dart' hide AppColors; // إخفاء AppColors من ditalis_request
+import '../request/RequestTracking/request_tracking.dart' hide AppColors; // إخفاء AppColors من request_tracking
+import '../request/editerequest.dart' hide AppColors; // إخفاء AppColors من editerequest
 import 'dashboard_api.dart';
-import 'dashboard_colors.dart';
+import 'dashboard_colors.dart'; // ✅ استخدام AppColors من هنا
 import 'dashboard_helpers.dart';
 import 'stats_widget.dart';
 import 'filters_widget.dart';
@@ -17,6 +18,7 @@ import 'header_widget.dart';
 import 'empty_state.dart';
 import 'desktop_request_card.dart';
 import 'mobile_request_card.dart';
+import 'pagination_widget.dart';
 
 class AdministrativeDashboardPage extends StatefulWidget {
   const AdministrativeDashboardPage({super.key});
@@ -33,23 +35,28 @@ class _AdministrativeDashboardPageState
 
   List<dynamic> requests = [];
   List<dynamic> filteredRequests = [];
+  List<dynamic> paginatedRequests = [];
   bool isLoading = false;
 
-  // إحصائيات - تم إضافة حالتين جديدتين
+  // ✅ Pagination
+  int currentPage = 1;
+  int itemsPerPage = 10;
+  int totalPages = 1;
+
+  // إحصائيات
   int total = 0;
   int approved = 0;
   int rejected = 0;
   int waiting = 0;
-  int needsChange = 0; // حالة جديدة
-  int fulfilled = 0;   // حالة جديدة
+  int needsChange = 0;
+  int fulfilled = 0;
 
-  // فلاتر - تم تحديث قائمة الحالات
+  // فلاتر
   String selectedPriority = 'All';
   String selectedType = 'All Types';
   String selectedStatus = 'All';
   List<String> priorities = ['All', 'High', 'Medium', 'Low'];
   List<String> typeNames = ['All Types'];
-// في dashboard.dart
   List<String> statuses = ['All', 'Waiting', 'Approved', 'Rejected', 'Fulfilled', 'Needs Change'];
 
   @override
@@ -68,6 +75,20 @@ class _AdministrativeDashboardPageState
     } catch (e) {
       debugPrint("⚠️ Error fetching types: $e");
     }
+  }
+
+  // ✅ تعديل طلب
+  void _editRequest(String requestId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditRequestPage(requestId: requestId),
+      ),
+    ).then((edited) {
+      if (edited == true) {
+        fetchRequests();
+      }
+    });
   }
 
   Future<void> _deleteRequest(String requestId) async {
@@ -159,7 +180,7 @@ class _AdministrativeDashboardPageState
 
     if (selectedType != "All Types") {
       filtered = filtered.where((request) {
-        final type = request["type"]?["name"] ?? "";
+        final type = request["type"]?["name"] ?? request["typeName"] ?? "";
         return type == selectedType;
       }).toList();
     }
@@ -182,9 +203,9 @@ class _AdministrativeDashboardPageState
             return lastForwardStatus == "rejected";
           case "Waiting":
             return lastForwardStatus == "waiting";
-          case "Fulfilled": // حالة جديدة
+          case "Fulfilled":
             return lastForwardStatus == "fulfilled";
-          case "Needs Change": // حالة جديدة
+          case "Needs Change":
             return lastForwardStatus == "needsChange";
           default:
             return true;
@@ -196,13 +217,38 @@ class _AdministrativeDashboardPageState
     if (searchTerm.isNotEmpty) {
       filtered = filtered.where((request) {
         final title = (request["title"] ?? "").toLowerCase();
-        final creator = (request["creator"]?["name"] ?? "").toLowerCase();
+        final creator = (request["creator"]?["name"] ?? request["creatorName"] ?? "").toLowerCase();
         return title.contains(searchTerm) || creator.contains(searchTerm);
       }).toList();
     }
 
     setState(() {
       filteredRequests = filtered;
+      totalPages = (filteredRequests.length / itemsPerPage).ceil();
+      if (totalPages == 0) totalPages = 1;
+      currentPage = 1;
+      _updatePaginatedRequests();
+    });
+  }
+
+  void _updatePaginatedRequests() {
+    final startIndex = (currentPage - 1) * itemsPerPage;
+    final endIndex = startIndex + itemsPerPage;
+
+    setState(() {
+      paginatedRequests = filteredRequests.length > startIndex
+          ? filteredRequests.sublist(
+        startIndex,
+        endIndex > filteredRequests.length ? filteredRequests.length : endIndex,
+      )
+          : [];
+    });
+  }
+
+  void _goToPage(int page) {
+    setState(() {
+      currentPage = page;
+      _updatePaginatedRequests();
     });
   }
 
@@ -228,7 +274,6 @@ class _AdministrativeDashboardPageState
     approved = data.where((e) => e["lastForwardStatus"] == "approved").length;
     rejected = data.where((e) => e["lastForwardStatus"] == "rejected").length;
     waiting = data.where((e) => e["lastForwardStatus"] == "waiting").length;
-    // إضافة الحالتين الجديدتين:
     needsChange = data.where((e) => e["lastForwardStatus"] == "needsChange").length;
     fulfilled = data.where((e) => e["lastForwardStatus"] == "fulfilled").length;
   }
@@ -317,8 +362,8 @@ class _AdministrativeDashboardPageState
               approved: approved,
               rejected: rejected,
               waiting: waiting,
-              needsChange: needsChange, // تمرير القيمة الجديدة
-              fulfilled: fulfilled,     // تمرير القيمة الجديدة
+              needsChange: needsChange,
+              fulfilled: fulfilled,
               isMobile: false,
             ),
             const SizedBox(height: 16),
@@ -329,6 +374,15 @@ class _AdministrativeDashboardPageState
             _buildHeader(false),
             const SizedBox(height: 16),
             _buildRequestsListForDesktop(),
+            if (filteredRequests.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              PaginationWidget(
+                currentPage: currentPage,
+                totalPages: totalPages,
+                onPageChanged: _goToPage,
+                isMobile: false,
+              ),
+            ],
           ],
         ),
       ),
@@ -341,7 +395,20 @@ class _AdministrativeDashboardPageState
         _buildMobileStatsSection(),
         _buildMobileFilterSection(),
         Expanded(
-          child: _buildMobileRequestsList(),
+          child: Column(
+            children: [
+              Expanded(
+                child: _buildMobileRequestsList(),
+              ),
+              if (filteredRequests.isNotEmpty)
+                PaginationWidget(
+                  currentPage: currentPage,
+                  totalPages: totalPages,
+                  onPageChanged: _goToPage,
+                  isMobile: true,
+                ),
+            ],
+          ),
         ),
       ],
     );
@@ -420,6 +487,8 @@ class _AdministrativeDashboardPageState
     return HeaderWidget(
       itemCount: filteredRequests.length,
       isMobile: isMobile,
+      currentPage: currentPage,
+      itemsPerPage: itemsPerPage,
     );
   }
 
@@ -430,14 +499,16 @@ class _AdministrativeDashboardPageState
 
     return Column(
       children: [
-        ...filteredRequests.map((req) {
+        ...paginatedRequests.map((req) {
           final id = req["id"].toString();
           final title = req["title"] ?? "No Title";
-          final type = req["type"]?["name"] ?? "N/A";
+          final type = req["type"]?["name"] ?? req["typeName"] ?? "N/A";
           final priority = req["priority"] ?? "N/A";
-          final creator = req["creator"]?["name"] ?? "Unknown";
+          final creator = req["creator"]?["name"] ?? req["creatorName"] ?? "Unknown";
           final lastForwardStatus = req["lastForwardStatus"];
           final statusInfo = DashboardHelpers.getStatusInfo(lastForwardStatus);
+          final documentsCount = req["documentsCount"] ?? 0;
+          final createdDate = req["createdDate"] ?? req["createdAt"];
 
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
@@ -450,6 +521,8 @@ class _AdministrativeDashboardPageState
               statusText: statusInfo['text'],
               statusColor: statusInfo['color'],
               statusIcon: statusInfo['icon'],
+              documentsCount: documentsCount,
+              createdAt: createdDate,
               onViewDetails: () {
                 Navigator.push(
                   context,
@@ -468,6 +541,7 @@ class _AdministrativeDashboardPageState
                   ),
                 );
               },
+              onEditRequest: () => _editRequest(id),
               onDeleteRequest: () => _deleteRequest(id),
             ),
           );
@@ -502,7 +576,6 @@ class _AdministrativeDashboardPageState
         "color": AppColors.statusWaiting,
         "icon": Icons.hourglass_empty_rounded
       },
-      // إضافة الحالتين الجديدتين:
       {
         "label": "Needs Change",
         "value": needsChange,
@@ -532,23 +605,32 @@ class _AdministrativeDashboardPageState
         ],
         border: Border.all(color: AppColors.statBorder),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: statItems.map((stat) => _buildMobileStatItem(
-          label: stat["label"] as String,
-          value: stat["value"] as int,
-          color: stat["color"] as Color,
-          icon: stat["icon"] as IconData,
-        )).toList(),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: statItems.map((stat) =>
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: _buildMobileStatItem(
+                  label: stat["label"] as String,
+                  value: stat["value"] as int,
+                  color: stat["color"] as Color,
+                  icon: stat["icon"] as IconData,
+                ),
+              )
+          ).toList(),
+        ),
       ),
     );
   }
 
-  Widget _buildMobileStatItem(
-      {required String label,
-        required int value,
-        required Color color,
-        required IconData icon}) {
+  Widget _buildMobileStatItem({
+    required String label,
+    required int value,
+    required Color color,
+    required IconData icon,
+  }) {
     return Column(
       children: [
         Container(
@@ -692,7 +774,6 @@ class _AdministrativeDashboardPageState
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    // تحديد لون النص حسب الحالة
     Color getTextColor() {
       if (label == AppLocalizations.of(context)!.translate('status')) {
         switch (value.toLowerCase()) {
@@ -713,7 +794,6 @@ class _AdministrativeDashboardPageState
       return AppColors.textPrimary;
     }
 
-    // تحديد أيقونة حسب الحالة
     IconData getStatusIcon() {
       if (label == AppLocalizations.of(context)!.translate('status')) {
         switch (value.toLowerCase()) {
@@ -736,7 +816,6 @@ class _AdministrativeDashboardPageState
       return icon;
     }
 
-    // تحديد لون الأيقونة
     Color getIconColor() {
       if (label == AppLocalizations.of(context)!.translate('status')) {
         return getTextColor();
@@ -746,7 +825,7 @@ class _AdministrativeDashboardPageState
 
     String displayValue = value;
     if (value != 'All' && value != 'All Types') {
-        displayValue = AppLocalizations.of(context)?.translate(value.toLowerCase().replaceAll(' ', '_')) ?? value;
+      displayValue = AppLocalizations.of(context)?.translate(value.toLowerCase().replaceAll(' ', '_')) ?? value;
     }
 
     return GestureDetector(
@@ -762,9 +841,9 @@ class _AdministrativeDashboardPageState
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              getStatusIcon(), // استخدم الأيقونة المناسبة للحالة
+              getStatusIcon(),
               size: 14,
-              color: getIconColor(), // لون الأيقونة حسب الحالة
+              color: getIconColor(),
             ),
             const SizedBox(height: 2),
             Text(
@@ -780,7 +859,7 @@ class _AdministrativeDashboardPageState
                 displayValue.length > 8 ? displayValue.substring(0, 8) + '...' : displayValue,
                 style: TextStyle(
                   fontSize: 8,
-                  color: getTextColor(), // لون النص حسب الحالة
+                  color: getTextColor(),
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
@@ -828,11 +907,13 @@ class _AdministrativeDashboardPageState
                         ? AppColors.primary
                         : Colors.transparent,
                   ),
-                  title: Text(AppLocalizations.of(context)!.translate(option.toLowerCase().replaceAll(' ', '_')),
-                      style: TextStyle(color: AppColors.textPrimary)),
+                  title: Text(
+                      AppLocalizations.of(context)!.translate(option.toLowerCase().replaceAll(' ', '_')),
+                      style: TextStyle(color: AppColors.textPrimary)
+                  ),
                   onTap: () {
-                    onSelected(option); // تحديث القيمة
-                    Navigator.pop(context); // إغلاق القائمة
+                    onSelected(option);
+                    Navigator.pop(context);
                   },
                 )),
                 const SizedBox(height: 16),
@@ -851,16 +932,18 @@ class _AdministrativeDashboardPageState
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      itemCount: filteredRequests.length,
+      itemCount: paginatedRequests.length,
       itemBuilder: (context, index) {
-        final req = filteredRequests[index];
+        final req = paginatedRequests[index];
         final id = req["id"].toString();
         final title = req["title"] ?? "No Title";
-        final type = req["type"]?["name"] ?? "N/A";
+        final type = req["type"]?["name"] ?? req["typeName"] ?? "N/A";
         final priority = req["priority"] ?? "N/A";
-        final creator = req["creator"]?["name"] ?? "Unknown";
+        final creator = req["creator"]?["name"] ?? req["creatorName"] ?? "Unknown";
         final lastForwardStatus = req["lastForwardStatus"];
         final statusInfo = DashboardHelpers.getStatusInfo(lastForwardStatus);
+        final documentsCount = req["documentsCount"] ?? 0;
+        final createdDate = req["createdDate"] ?? req["createdAt"];
 
         return MobileRequestCard(
           id: id,
@@ -871,6 +954,8 @@ class _AdministrativeDashboardPageState
           statusText: statusInfo['text'],
           statusColor: statusInfo['color'],
           statusIcon: statusInfo['icon'],
+          documentsCount: documentsCount,
+          createdAt: createdDate,
           onViewDetails: () {
             Navigator.push(
               context,
@@ -888,10 +973,10 @@ class _AdministrativeDashboardPageState
               ),
             );
           },
+          onEditRequest: () => _editRequest(id),
           onDeleteRequest: () => _deleteRequest(id),
         );
       },
     );
   }
 }
-
