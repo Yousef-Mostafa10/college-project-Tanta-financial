@@ -62,6 +62,7 @@ Widget buildTransactionHeader({
           ],
         ),
         SizedBox(height: isMobile ? 12 : 16),
+
         // معلومات سريعة عن الحالة الحالية
         if (forwards.isNotEmpty) ...[
           Container(
@@ -79,6 +80,7 @@ Widget buildTransactionHeader({
             ),
             child: Row(
               children: [
+                // أيقونة الحالة
                 Container(
                   width: 40,
                   height: 40,
@@ -94,6 +96,8 @@ Widget buildTransactionHeader({
                   ),
                 ),
                 SizedBox(width: isMobile ? 8 : 12),
+
+                // معلومات الحالة
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,7 +110,7 @@ Widget buildTransactionHeader({
                         ),
                       ),
                       Text(
-                        AppLocalizations.of(context)!.translate('status_${forwards.last['status'].toString().toLowerCase().replaceAll('-', '_')}'),
+                        AppLocalizations.of(context)!.translate('status_${forwards.last['status'].toString().toLowerCase()}'),
                         style: TextStyle(
                           fontSize: isMobile ? 14 : 16,
                           fontWeight: FontWeight.bold,
@@ -116,9 +120,38 @@ Widget buildTransactionHeader({
                     ],
                   ),
                 ),
+
+                // معلومات المشاهدة
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    Row(
+                      children: [
+                        Icon(
+                          forwards.last['seen'] == true
+                              ? Icons.visibility_rounded
+                              : Icons.visibility_off_rounded,
+                          size: isMobile ? 14 : 16,
+                          color: forwards.last['seen'] == true
+                              ? TrackingColors.statusApproved
+                              : TrackingColors.textMuted,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          forwards.last['seen'] == true
+                              ? AppLocalizations.of(context)!.translate('seen_label')
+                              : AppLocalizations.of(context)!.translate('not_seen_label'),
+                          style: TextStyle(
+                            fontSize: isMobile ? 10 : 12,
+                            color: forwards.last['seen'] == true
+                                ? TrackingColors.statusApproved
+                                : TrackingColors.textMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 4),
                     Text(
                       AppLocalizations.of(context)!.translate('last_update_label'),
                       style: TextStyle(

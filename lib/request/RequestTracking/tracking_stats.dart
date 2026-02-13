@@ -10,16 +10,17 @@ Widget buildStatsSection({
   required bool isTablet,
 }) {
   final total = forwards.length;
-  final waiting = forwards.where((f) => f['status'] == 'waiting').length;
-  final approved = forwards.where((f) => f['status'] == 'approved').length;
-  final rejected = forwards.where((f) => f['status'] == 'rejected').length;
-  final needsEditing = forwards.where((f) => f['status'] == 'needs-editing').length;
+  final waiting = forwards.where((f) => f['status'].toString().toUpperCase() == 'WAITING').length;
+  final approved = forwards.where((f) => f['status'].toString().toUpperCase() == 'APPROVED').length;
+  final rejected = forwards.where((f) => f['status'].toString().toUpperCase() == 'REJECTED').length;
+  final needsEditing = forwards.where((f) => f['status'].toString().toUpperCase() == 'NEEDS-EDITING').length;
 
   final statItems = [
     {"label": AppLocalizations.of(context)!.translate('total_stat'), "value": total, "color": TrackingColors.textPrimary, "icon": Icons.dashboard_rounded},
     {"label": AppLocalizations.of(context)!.translate('status_waiting'), "value": waiting, "color": TrackingColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
     {"label": AppLocalizations.of(context)!.translate('status_approved'), "value": approved, "color": TrackingColors.statusApproved, "icon": Icons.check_circle_rounded},
-    {"label": AppLocalizations.of(context)!.translate('others_stat_label'), "value": rejected + needsEditing, "color": TrackingColors.statusNeedsEditing, "icon": Icons.more_horiz_rounded},
+    {"label": AppLocalizations.of(context)!.translate('status_rejected'), "value": rejected, "color": TrackingColors.statusRejected, "icon": Icons.cancel_rounded},
+    {"label": AppLocalizations.of(context)!.translate('status_needs_editing'), "value": needsEditing, "color": TrackingColors.statusNeedsEditing, "icon": Icons.edit_note_rounded},
   ];
 
   return Container(

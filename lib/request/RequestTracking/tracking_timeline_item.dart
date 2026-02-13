@@ -129,7 +129,7 @@ Widget buildTimelineStep({
 
                 SizedBox(height: isMobile ? 8 : 12),
 
-                // معلومات الحالة والوقت
+                // معلومات الحالة والتاريخ
                 Row(
                   children: [
                     Container(
@@ -148,7 +148,7 @@ Widget buildTimelineStep({
                           Icon(statusIcon, size: isMobile ? 14 : 16, color: statusColor),
                           SizedBox(width: isMobile ? 4 : 6),
                           Text(
-                            AppLocalizations.of(context)!.translate('status_${forward['status'].toString().toLowerCase().replaceAll('-', '_')}'),
+                            AppLocalizations.of(context)!.translate('status_${forward['status'].toString().toLowerCase()}'),
                             style: TextStyle(
                               fontSize: isMobile ? 10 : 12,
                               fontWeight: FontWeight.bold,
@@ -159,6 +159,35 @@ Widget buildTimelineStep({
                       ),
                     ),
                     const Spacer(),
+
+                    // معلومات المشاهدة
+                    Row(
+                      children: [
+                        Icon(
+                          forward['seen'] == true
+                              ? Icons.visibility_rounded
+                              : Icons.visibility_off_rounded,
+                          size: isMobile ? 14 : 16,
+                          color: forward['seen'] == true
+                              ? TrackingColors.statusApproved
+                              : TrackingColors.textMuted,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          forward['seen'] == true
+                              ? AppLocalizations.of(context)!.translate('seen_label')
+                              : AppLocalizations.of(context)!.translate('not_seen_label'),
+                          style: TextStyle(
+                            fontSize: isMobile ? 10 : 12,
+                            color: forward['seen'] == true
+                                ? TrackingColors.statusApproved
+                                : TrackingColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(width: isMobile ? 8 : 12),
+
                     Text(
                       TrackingHelpers.formatDate(forward['forwardedAt']),
                       style: TextStyle(
@@ -169,16 +198,75 @@ Widget buildTimelineStep({
                   ],
                 ),
 
-                // وقت التحديث إذا كان مختلفاً
-                if (forward['updatedAt'] != null && forward['updatedAt'] != forward['forwardedAt']) ...[
-                  SizedBox(height: isMobile ? 6 : 8),
-                  Text(
-                    '${AppLocalizations.of(context)!.translate('updated_at')}: ${TrackingHelpers.formatDate(forward['updatedAt'])}',
-                    style: TextStyle(
-                      fontSize: isMobile ? 10 : 11,
-                      color: TrackingColors.textMuted,
-                      fontStyle: FontStyle.italic,
+                // تعليق المرسل (senderComment)
+                if (forward['senderComment'] != null && forward['senderComment'].isNotEmpty) ...[
+                  SizedBox(height: isMobile ? 8 : 12),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(isMobile ? 10 : 12),
+                    decoration: BoxDecoration(
+                      color: TrackingColors.accentBlue.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: TrackingColors.accentBlue.withOpacity(0.2),
+                      ),
                     ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.comment_rounded,
+                              size: isMobile ? 14 : 16,
+                              color: TrackingColors.accentBlue,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              AppLocalizations.of(context)!.translate('sender_comment_label'),
+                              style: TextStyle(
+                                fontSize: isMobile ? 11 : 12,
+                                fontWeight: FontWeight.w600,
+                                color: TrackingColors.accentBlue,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: isMobile ? 4 : 6),
+                        Text(
+                          forward['senderComment'],
+                          style: TextStyle(
+                            fontSize: isMobile ? 12 : 14,
+                            color: TrackingColors.textPrimary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // وقت التحديث إذا كان مختلفاً
+                if (forward['updatedAt'] != null &&
+                    forward['updatedAt'] != forward['forwardedAt']) ...[
+                  SizedBox(height: isMobile ? 6 : 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.update_rounded,
+                        size: isMobile ? 12 : 14,
+                        color: TrackingColors.textMuted,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        '${AppLocalizations.of(context)!.translate('updated_at')}: ${TrackingHelpers.formatDate(forward['updatedAt'])}',
+                        style: TextStyle(
+                          fontSize: isMobile ? 10 : 11,
+                          color: TrackingColors.textMuted,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ],
@@ -192,7 +280,8 @@ Widget buildTimelineStep({
 
 Widget _buildUserCard(BuildContext context, Map<String, dynamic>? user, String label, IconData icon, Color color, bool isMobile) {
   final userName = user?['name'] ?? AppLocalizations.of(context)!.translate('unknown');
-  final userGroup = user?['group'] ?? AppLocalizations.of(context)!.translate('not_available');
+  final userDepartment = user?['departmentName'] ?? AppLocalizations.of(context)!.translate('not_available');
+  final userRole = user?['role'] ?? '';
 
   return Container(
     padding: EdgeInsets.all(isMobile ? 8 : 12),
@@ -229,13 +318,46 @@ Widget _buildUserCard(BuildContext context, Map<String, dynamic>? user, String l
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        Text(
-          userGroup,
-          style: TextStyle(
-            fontSize: isMobile ? 9 : 11,
-            color: TrackingColors.textSecondary,
+        if (userDepartment.isNotEmpty) ...[
+          Text(
+            userDepartment,
+            style: TextStyle(
+              fontSize: isMobile ? 9 : 11,
+              color: TrackingColors.textSecondary,
+            ),
           ),
-        ),
+        ],
+        if (userRole.isNotEmpty) ...[
+          Text(
+            userRole,
+            style: TextStyle(
+              fontSize: isMobile ? 8 : 10,
+              color: TrackingColors.textMuted,
+            ),
+          ),
+        ],
+        if (user?['active'] == false) ...[
+          Container(
+            margin: EdgeInsets.only(top: isMobile ? 2 : 4),
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 4 : 6,
+              vertical: 2,
+            ),
+            decoration: BoxDecoration(
+              color: TrackingColors.accentRed.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: TrackingColors.accentRed.withOpacity(0.3)),
+            ),
+            child: Text(
+              AppLocalizations.of(context)!.translate('inactive_user_label'),
+              style: TextStyle(
+                fontSize: isMobile ? 7 : 9,
+                color: TrackingColors.accentRed,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ],
     ),
   );

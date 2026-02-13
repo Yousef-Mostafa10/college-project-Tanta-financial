@@ -14,14 +14,14 @@ class TrackingHelpers {
 
   // 🔹 الحصول على لون الحالة
   static int getStatusColor(String status) {
-    switch (status) {
-      case 'approved':
+    switch (status.toUpperCase()) {
+      case 'APPROVED':
         return 0xFF27AE60;
-      case 'rejected':
+      case 'REJECTED':
         return 0xFFE74C3C;
-      case 'needs-editing':
+      case 'NEEDS-EDITING':
         return 0xFFFFB74D;
-      case 'waiting':
+      case 'WAITING':
         return 0xFF1E88E5;
       default:
         return 0xFF7F8C8D;
@@ -30,14 +30,14 @@ class TrackingHelpers {
 
   // 🔹 الحصول على أيقونة الحالة
   static String getStatusIcon(String status) {
-    switch (status) {
-      case 'approved':
+    switch (status.toUpperCase()) {
+      case 'APPROVED':
         return "check_circle_rounded";
-      case 'rejected':
+      case 'REJECTED':
         return "cancel_rounded";
-      case 'needs-editing':
+      case 'NEEDS-EDITING':
         return "edit_note_rounded";
-      case 'waiting':
+      case 'WAITING':
         return "hourglass_empty_rounded";
       default:
         return "help_rounded";
@@ -46,14 +46,14 @@ class TrackingHelpers {
 
   // 🔹 الحصول على لون الحالة كـ Color
   static Color getStatusColorAsColor(String status) {
-    switch (status) {
-      case 'approved':
+    switch (status.toUpperCase()) {
+      case 'APPROVED':
         return Color(0xFF27AE60);
-      case 'rejected':
+      case 'REJECTED':
         return Color(0xFFE74C3C);
-      case 'needs-editing':
+      case 'NEEDS-EDITING':
         return Color(0xFFFFB74D);
-      case 'waiting':
+      case 'WAITING':
         return Color(0xFF1E88E5);
       default:
         return Color(0xFF7F8C8D);
@@ -62,14 +62,14 @@ class TrackingHelpers {
 
   // 🔹 الحصول على أيقونة الحالة كـ IconData
   static IconData getStatusIconAsIconData(String status) {
-    switch (status) {
-      case 'approved':
+    switch (status.toUpperCase()) {
+      case 'APPROVED':
         return Icons.check_circle_rounded;
-      case 'rejected':
+      case 'REJECTED':
         return Icons.cancel_rounded;
-      case 'needs-editing':
+      case 'NEEDS-EDITING':
         return Icons.edit_note_rounded;
-      case 'waiting':
+      case 'WAITING':
         return Icons.hourglass_empty_rounded;
       default:
         return Icons.help_rounded;

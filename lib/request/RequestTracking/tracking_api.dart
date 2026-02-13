@@ -15,28 +15,25 @@ class TrackingApi {
   Future<Map<String, dynamic>> fetchTransactionForwards(String transactionId) async {
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
+        Uri.parse("$baseUrl/transaction/$transactionId/forward"), // ✅ إزالة /api/v0 المكرر
         headers: {
-          'Content-Type': 'application/json',
+          'accept': 'application/json',
           'Authorization': 'Bearer $userToken',
         },
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> forwards = data is List 
-            ? data 
-            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
-        
+        final List<dynamic> forwards = jsonDecode(response.body);
+
         return {
           'success': true,
-          'transaction': data is Map ? (data['transaction'] ?? data) : null,
+          'transaction': null, // API لا ترجع معلومات المعاملة بشكل منفصل
           'forwards': forwards,
         };
       } else {
         return {
           'success': false,
-          'error': "Failed to load transaction data",
+          'error': "Failed to load transaction data (Status: ${response.statusCode})",
         };
       }
     } catch (e) {
