@@ -44,14 +44,21 @@ class UsersApiService {
     }
   }
 
-  // ✅ جلب تفاصيل مستخدم معين
-  Future<User> getUserDetails(String userName) async {
+  // ✅ حل User ID من الاسم
+  Future<int?> _resolveUserId(String userName) async {
+    final users = await fetchUsers();
+    final user = users.where((u) => u.name == userName).firstOrNull;
+    return user?.id;
+  }
+
+  // ✅ جلب تفاصيل مستخدم معين بالـ ID
+  Future<User> getUserDetailsById(int userId) async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('no_token_error');
     }
 
-    final url = Uri.parse("$baseUrl/users/$userName");
+    final url = Uri.parse("$baseUrl/users/$userId");
 
     final response = await http.get(
       url,
@@ -74,7 +81,16 @@ class UsersApiService {
     }
   }
 
-  // ✅ تحديث بيانات المستخدم
+  // ✅ جلب تفاصيل مستخدم معين بالاسم (يحل الـ ID تلقائياً)
+  Future<User> getUserDetails(String userName) async {
+    final userId = await _resolveUserId(userName);
+    if (userId == null) {
+      throw Exception('user_not_found');
+    }
+    return getUserDetailsById(userId);
+  }
+
+  // ✅ تحديث بيانات المستخدم (باستخدام ID بدلاً من الاسم)
   Future<User> updateUser(String userName, {
     String? newPassword,
     String? newRole,
@@ -87,7 +103,13 @@ class UsersApiService {
       throw Exception('no_token_error');
     }
 
-    final url = Uri.parse("$baseUrl/users/$userName");
+    // حل الـ ID من الاسم
+    final userId = await _resolveUserId(userName);
+    if (userId == null) {
+      throw Exception('user_not_found');
+    }
+
+    final url = Uri.parse("$baseUrl/users/$userId");
 
     Map<String, dynamic> updateData = {};
 
@@ -162,14 +184,20 @@ class UsersApiService {
     }
   }
 
-  // ✅ حذف مستخدم
+  // ✅ حذف مستخدم (باستخدام ID بدلاً من الاسم)
   Future<void> deleteUser(String userName) async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('no_token_error');
     }
 
-    final url = Uri.parse("$baseUrl/users/$userName");
+    // حل الـ ID من الاسم
+    final userId = await _resolveUserId(userName);
+    if (userId == null) {
+      throw Exception('user_not_found');
+    }
+
+    final url = Uri.parse("$baseUrl/users/$userId");
 
     final response = await http.delete(
       url,
@@ -260,7 +288,7 @@ class UsersApiService {
     return await updateUser(userName, departmentName: departmentName);
   }
 
-  // ✅ جلب ملفات المستخدم
+  // ✅ جلب ملفات المستخدم (الـ API الجديد يستخدم uploaderId بدلاً من uploaderName)
   Future<List<Map<String, dynamic>>> getUserUploadedDocuments(String userName) async {
     final token = await _getToken();
     if (token == null) {
@@ -280,9 +308,11 @@ class UsersApiService {
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
-      // تصفية النتائج بناءً على اسم المستخدم
+      // حل الـ userId من الاسم
+      final userId = await _resolveUserId(userName);
+      // تصفية النتائج: دعم كلا الحقلين uploaderName (قديم) و uploaderId (جديد)
       return data
-          .where((doc) => doc['uploaderName'] == userName)
+          .where((doc) => doc['uploaderName'] == userName || (userId != null && doc['uploaderId'] == userId))
           .map((doc) => doc as Map<String, dynamic>)
           .toList();
     } else if (response.statusCode == 401) {

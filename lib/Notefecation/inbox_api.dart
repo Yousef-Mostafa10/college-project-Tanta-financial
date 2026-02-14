@@ -41,8 +41,9 @@ class InboxApi {
     }
 
     try {
+      // الـ API الجديد يستخدم /users لجلب كل المستخدمين ثم البحث عن المستخدم بالاسم
       final response = await http.get(
-        Uri.parse("$baseUrl/users/$username"),
+        Uri.parse("$baseUrl/users"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -51,9 +52,15 @@ class InboxApi {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data["status"] == "success" && data["user"] != null) {
-          final userId = data["user"]["id"]?.toString();
+        List<dynamic> users = data is List ? data : (data["users"] ?? []);
 
+        final user = users.firstWhere(
+          (u) => u["name"] == username,
+          orElse: () => null,
+        );
+
+        if (user != null) {
+          final userId = user["id"]?.toString();
           if (userId != null && userId.isNotEmpty) {
             await prefs.setString('userId', userId);
             print("✅ Fetched and cached userId: $userId");
@@ -567,14 +574,14 @@ class InboxApi {
           body['status'] = 'REJECTED';
           break;
         case 'Needs Change':
-          body['status'] = 'NEEDS_CHANGE';
+          body['status'] = 'NEEDS_EDITING';
           break;
         default:
           return false;
       }
 
       if (comment != null && comment.isNotEmpty) {
-        body['receiverComment'] = comment;
+        body['comment'] = comment;
       }
 
       final response = await http.patch(
@@ -594,14 +601,44 @@ class InboxApi {
   }
 
   // 🔹 إرسال المعاملة لمستخدم آخر (Forward)
+  // الـ API الجديد يستخدم receiverId (رقم) بدلاً من receiverName (نص)
   Future<bool> forwardTransaction(
       String transactionId,
       String receiverName,
-      String? token,
-      ) async {
+      String? token, {
+      int? receiverId,
+      }) async {
     if (token == null) return false;
 
     try {
+      // إذا لم يتم تمرير receiverId، حاول حله من الاسم
+      int? resolvedReceiverId = receiverId;
+      if (resolvedReceiverId == null) {
+        final usersResponse = await http.get(
+          Uri.parse("$baseUrl/users"),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+        if (usersResponse.statusCode == 200) {
+          final usersData = jsonDecode(usersResponse.body);
+          final List<dynamic> users = usersData is List ? usersData : (usersData["users"] ?? []);
+          final user = users.firstWhere(
+            (u) => u['name'] == receiverName,
+            orElse: () => null,
+          );
+          if (user != null) {
+            resolvedReceiverId = user['id'] is int ? user['id'] : int.tryParse(user['id'].toString());
+          }
+        }
+      }
+
+      if (resolvedReceiverId == null) {
+        print("❌ Could not resolve receiverId for: $receiverName");
+        return false;
+      }
+
       final response = await http.post(
         Uri.parse("$baseUrl/transaction/$transactionId/forward"),
         headers: {
@@ -609,12 +646,12 @@ class InboxApi {
           'Authorization': 'Bearer $token',
         },
         body: json.encode({
-          "receiverName": receiverName,
-          "senderComment": "Forwarded via Mobile App"
+          "receiverId": resolvedReceiverId,
+          "comment": "Forwarded via Mobile App"
         }),
       );
 
-      return response.statusCode == 200;
+      return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       print("❌ Error in forwardTransaction: $e");
       return false;
