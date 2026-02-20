@@ -36,9 +36,9 @@ class DashboardHelpers {
         };
       default:
         return {
-          'text': 'Pending',
-          'color': AppColors.statusPending,
-          'icon': Icons.access_time_filled_rounded,
+          'text': 'Waiting',
+          'color': AppColors.statusWaiting,
+          'icon': Icons.hourglass_empty_rounded,
         };
     }
   }

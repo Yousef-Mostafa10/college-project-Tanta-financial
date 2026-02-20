@@ -175,7 +175,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
           setState(() {
             _requestTypesData = types;
-            _requestTypes = ['Request Type', ...types.map((t) => t.name)];
+            // ✅ إزالة الأسماء المكررة باستخدام Set
+            final typeNames = types.map((t) => t.name).toSet().toList();
+            _requestTypes = ['Request Type', ...typeNames];
             if (_selectedRequestType == 'Request Type' && _requestTypes.length > 1) {
               _selectedRequestType = _requestTypes[1];
             }
@@ -386,15 +388,15 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   Future<void> _uploadNewFiles() async {
     if (_selectedFiles.isEmpty) return;
 
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
     for (var file in _selectedFiles) {
       try {
-        final prefs = await SharedPreferences.getInstance();
-        final token = prefs.getString('token') ?? '';
-        final finalFileName = _generateUniqueFileName(file.name);
+        // ✅ استخدام الاسم الفريد الذي تم إنشاؤه عند الاختيار
+        final finalFileName = file.name;
 
-        if (file.path == null) {
-          continue;
-        }
+        if (file.path == null) continue;
 
         var request = http.MultipartRequest(
           'POST',
@@ -402,11 +404,15 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         );
 
         request.headers['Authorization'] = 'Bearer $token';
+        request.headers['accept'] = 'application/json'; // ✅ إضافة header مفقود
+        
         request.files.add(await http.MultipartFile.fromPath(
           'file',
           file.path!,
           filename: finalFileName,
         ));
+
+        debugPrint('📄 Uploading: $finalFileName');
 
         var response = await request.send();
 
@@ -418,9 +424,14 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             final dynamic rawId = documentData["id"];
             final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
             _uploadedDocumentIds.add(documentId);
+            debugPrint('✅ Uploaded: $finalFileName (ID: $documentId)');
           }
+        } else {
+          debugPrint('❌ Failed upload: ${response.statusCode}');
         }
-      } catch (e) {}
+      } catch (e) {
+        debugPrint('❌ Exception upload: $e');
+      }
     }
   }
 
@@ -524,8 +535,21 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                           allowMultiple: true,
                         );
                         if (result != null && result.files.isNotEmpty) {
+                          // ✅ إنشاء أسماء فريدة للملفات كما في editerequest.dart
+                          final List<PlatformFile> uniqueFiles = [];
+                          for (var file in result.files) {
+                            final uniqueFileName = _generateUniqueFileName(file.name);
+                            final uniqueFile = PlatformFile(
+                              name: uniqueFileName,
+                              size: file.size,
+                              path: file.path,
+                              bytes: file.bytes,
+                            );
+                            uniqueFiles.add(uniqueFile);
+                          }
+
                           setState(() {
-                            _selectedFiles.addAll(result.files);
+                            _selectedFiles.addAll(uniqueFiles);
                           });
                         }
                       } catch (e) {}
@@ -694,11 +718,53 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     );
   }
 
+  // ✅ ربط ملف بالعملية يدوياً (مثل editerequest.dart)
+  Future<void> _linkDocumentToTransaction(int transactionId, int documentId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_documentApiUrl/transactions/$transactionId/document/$documentId'),
+        headers: {
+          'accept': 'application/json',
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint('✅ Document $documentId linked successfully to transaction $transactionId');
+      } else {
+        debugPrint('❌ Link failed ($documentId): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error linking document: $e');
+    }
+  }
+
+  // ✅ تحديث: استخدام receiverId بدلاً من receiverName
   Future<void> _forwardTransaction(int transactionId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
 
     try {
+      // حل receiverId من الاسم
+      int? receiverId;
+      final user = _usersData.firstWhere(
+        (u) => u['name'] == _selectedReceiver,
+        orElse: () => {},
+      );
+      if (user.isNotEmpty) {
+        receiverId = user['id'] is int ? user['id'] : int.tryParse(user['id'].toString());
+      }
+
+      if (receiverId == null) {
+        debugPrint("❌ Could not resolve receiverId for: $_selectedReceiver");
+        return;
+      }
+
       final response = await http.post(
         Uri.parse('$_documentApiUrl/transaction/$transactionId/forward'),
         headers: {
@@ -706,13 +772,19 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           "Authorization": "Bearer $token"
         },
         body: jsonEncode({
-          "receiverName": _selectedReceiver,
+          "receiverId": receiverId,
           "comment": _commentController.text.trim().isEmpty
               ? "Request forwarded"
               : _commentController.text.trim(),
         }),
       );
-    } catch (e) {}
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        debugPrint("❌ Forward failed: ${response.statusCode} - ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("❌ Error forwarding transaction: $e");
+    }
   }
 
   void _submitForm() async {
@@ -748,6 +820,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           final transactionId = data["id"];
 
           if (transactionId != null) {
+            // ✅ ربط الملفات يدوياً بالعملية (لضمان ظهورها مثل editerequest.dart)
+            if (_uploadedDocumentIds.isNotEmpty) {
+              for (var docId in _uploadedDocumentIds) {
+                await _linkDocumentToTransaction(transactionId, docId);
+              }
+            }
+
             await _forwardTransaction(transactionId);
           }
 

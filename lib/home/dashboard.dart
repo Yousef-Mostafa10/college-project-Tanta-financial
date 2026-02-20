@@ -202,7 +202,7 @@ class _AdministrativeDashboardPageState
           case "Rejected":
             return lastForwardStatus == "rejected";
           case "Waiting":
-            return lastForwardStatus == "waiting";
+            return lastForwardStatus == "waiting" || lastForwardStatus == "pending";
           case "Fulfilled":
             return lastForwardStatus == "fulfilled";
           case "Needs Change":
@@ -273,7 +273,7 @@ class _AdministrativeDashboardPageState
     total = data.length;
     approved = data.where((e) => e["lastForwardStatus"] == "approved").length;
     rejected = data.where((e) => e["lastForwardStatus"] == "rejected").length;
-    waiting = data.where((e) => e["lastForwardStatus"] == "waiting").length;
+    waiting = data.where((e) => e["lastForwardStatus"] == "waiting" || e["lastForwardStatus"] == "pending").length;
     needsChange = data.where((e) => e["lastForwardStatus"] == "needsChange").length;
     fulfilled = data.where((e) => e["lastForwardStatus"] == "fulfilled").length;
   }
