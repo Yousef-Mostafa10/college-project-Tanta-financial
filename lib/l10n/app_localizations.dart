@@ -22,6 +22,7 @@ class AppLocalizations {
       'add_user': 'Add User',
       'add_new_user': 'Add New User',
       'view_users': 'View Users',
+      'departments': 'Departments',
       'requests': 'Requests',
 
       // Create Request
@@ -345,6 +346,7 @@ class AppLocalizations {
       'add_user': 'إضافة مستخدم',
       'add_new_user': 'إضافة مستخدم جديد',
       'view_users': 'عرض المستخدمين',
+      'departments': 'الأقسام',
       'requests': 'الطلبات',
 
       // Create Request
