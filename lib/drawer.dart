@@ -158,7 +158,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
               _buildMenuItem(
                 icon: Icons.corporate_fare,
-                title: AppLocalizations.of(context)!.translate('Add Department'),
+                title: AppLocalizations.of(context)!.translate('departments'),
                 color: AppColors.accentGreen,
                 isMobile: isMobile,
                 onTap: () {
