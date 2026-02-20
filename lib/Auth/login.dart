@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../home/dashboard.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
+import 'auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,6 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final AuthService _authService = AuthService();
 
   bool isLoading = false;
   bool isPasswordVisible = false;
@@ -28,90 +30,59 @@ class _LoginPageState extends State<LoginPage> {
   static const Color backgroundColor = Color(0xFFF5F6FA);
   static const Color cardColor = Colors.white;
 
-  // 🔹 جلب بيانات المستخدم
-  Future<Map<String, dynamic>> _fetchUserData(
-      String token, String username) async {
-    try {
-      final url = Uri.parse("${AppConfig.baseUrl}/users/$username");
-      final response = await http.get(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data["status"] == "success") {
-          return data["user"] ?? {};
-        }
-        return data; // Fallback if no status wrapper
-      }
-    } catch (e) {
-      debugPrint("Error fetching user data: $e");
-    }
-    return {};
-  }
-
-  // 🔹 LOGIN
+  // 🔹 LOGIN باستخدام الـ endpoint الجديد
   Future<void> login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => isLoading = true);
 
     try {
-      final url = Uri.parse("${AppConfig.baseUrl}/auth");
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "name": emailController.text.trim(),
-          "password": passwordController.text.trim(),
-        }),
+      final result = await _authService.login(
+        emailController.text.trim(),
+        passwordController.text.trim(),
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      if (!mounted) return;
 
-        if (data["status"] == "success") {
-          final token = data["token"];
-          final username = emailController.text.trim();
+      if (result['success'] == true) {
+        final userData = result['data']['user'];
+        final userName = userData['name'] ?? emailController.text.trim();
+        final userRole = userData['role'] ?? 'user';
 
-          final userData = await _fetchUserData(token, username);
-          final userGroup = userData["group"] ?? "user";
-
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('token', token);
-          await prefs.setString('username', username);
-          await prefs.setString('user_group', userGroup);
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("✅ ${AppLocalizations.of(context)!.translate('login_successful')}")),
-          );
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AdministrativeDashboardPage(),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data["message"] ?? "${AppLocalizations.of(context)!.translate('login_failed')} ❌")),
-          );
-        }
-      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: ${response.statusCode}")),
+          SnackBar(
+            content: Text("✅ ${AppLocalizations.of(context)!.translate('login_successful')}"),
+            backgroundColor: primaryColor,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const AdministrativeDashboardPage(),
+          ),
+        );
+      } else {
+        final errorMessage = result['error'] ?? AppLocalizations.of(context)!.translate('login_failed');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("❌ $errorMessage"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("⚠️ ${AppLocalizations.of(context)!.translate('connection_error')}")),
+        SnackBar(
+          content: Text("⚠️ ${AppLocalizations.of(context)!.translate('connection_error')}"),
+          backgroundColor: Colors.orange,
+        ),
       );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
