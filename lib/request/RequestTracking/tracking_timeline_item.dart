@@ -160,26 +160,26 @@ Widget buildTimelineStep({
                     ),
                     const Spacer(),
 
-                    // معلومات المشاهدة
+                    // معلومات المشاهدة (تحديث للAPI الجديد: senderSeen & receiverSeen)
                     Row(
                       children: [
                         Icon(
-                          forward['seen'] == true
+                          (forward['senderSeen'] == true || forward['receiverSeen'] == true)
                               ? Icons.visibility_rounded
                               : Icons.visibility_off_rounded,
                           size: isMobile ? 14 : 16,
-                          color: forward['seen'] == true
+                          color: (forward['senderSeen'] == true || forward['receiverSeen'] == true)
                               ? TrackingColors.statusApproved
                               : TrackingColors.textMuted,
                         ),
                         SizedBox(width: 4),
                         Text(
-                          forward['seen'] == true
+                          (forward['senderSeen'] == true || forward['receiverSeen'] == true)
                               ? AppLocalizations.of(context)!.translate('seen_label')
                               : AppLocalizations.of(context)!.translate('not_seen_label'),
                           style: TextStyle(
                             fontSize: isMobile ? 10 : 12,
-                            color: forward['seen'] == true
+                            color: (forward['senderSeen'] == true || forward['receiverSeen'] == true)
                                 ? TrackingColors.statusApproved
                                 : TrackingColors.textMuted,
                           ),
@@ -272,8 +272,7 @@ Widget buildTimelineStep({
               ],
             ),
           ),
-        ),
-      ],
+        )],
     ),
   );
 }

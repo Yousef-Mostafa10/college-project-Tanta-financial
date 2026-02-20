@@ -121,29 +121,29 @@ Widget buildTransactionHeader({
                   ),
                 ),
 
-                // معلومات المشاهدة
+                // معلومات المشاهدة (تحديث للAPI الجديد: senderSeen & receiverSeen)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Row(
                       children: [
                         Icon(
-                          forwards.last['seen'] == true
+                          (forwards.last['senderSeen'] == true || forwards.last['receiverSeen'] == true)
                               ? Icons.visibility_rounded
                               : Icons.visibility_off_rounded,
                           size: isMobile ? 14 : 16,
-                          color: forwards.last['seen'] == true
+                          color: (forwards.last['senderSeen'] == true || forwards.last['receiverSeen'] == true)
                               ? TrackingColors.statusApproved
                               : TrackingColors.textMuted,
                         ),
                         SizedBox(width: 4),
                         Text(
-                          forwards.last['seen'] == true
+                          (forwards.last['senderSeen'] == true || forwards.last['receiverSeen'] == true)
                               ? AppLocalizations.of(context)!.translate('seen_label')
                               : AppLocalizations.of(context)!.translate('not_seen_label'),
                           style: TextStyle(
                             fontSize: isMobile ? 10 : 12,
-                            color: forwards.last['seen'] == true
+                            color: (forwards.last['senderSeen'] == true || forwards.last['receiverSeen'] == true)
                                 ? TrackingColors.statusApproved
                                 : TrackingColors.textMuted,
                             fontWeight: FontWeight.w500,
