@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../app_config.dart';
 
 class DepartmentsPage extends StatefulWidget {
   const DepartmentsPage({Key? key}) : super(key: key);
@@ -10,7 +12,7 @@ class DepartmentsPage extends StatefulWidget {
 
 class _DepartmentsPageState extends State<DepartmentsPage> {
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://77.83.242.94:3300',
+    baseUrl: AppConfig.baseUrl,
     headers: {
       'accept': 'application/json',
       'Content-Type': 'application/json',
@@ -36,6 +38,18 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
     super.dispose();
   }
 
+  // 🔐 Get headers with authentication token
+  Future<Map<String, String>> _getAuthHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+    
+    return {
+      'Authorization': 'Bearer $token',
+      'accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+  }
+
   // 📥 Fetch all departments
   Future<void> fetchAllDepartments() async {
     setState(() {
@@ -44,14 +58,18 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
     });
 
     try {
-      final response = await _dio.get('/api/v0/departments');
+      final headers = await _getAuthHeaders();
+      final response = await _dio.get(
+        '/departments',
+        options: Options(headers: headers),
+      );
 
       if (response.statusCode == 200) {
         List<dynamic> data = response.data;
         setState(() {
           allDepartments = data.map((dept) => {
             'name': dept['name'] ?? '',
-            'managerName': dept['managerName'] ?? 'No manager',
+            'managerId': dept['managerId'],
           }).toList();
           filteredDepartments = allDepartments;
           isLoading = false;
@@ -82,14 +100,18 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
     });
 
     try {
-      final response = await _dio.get('/api/v0/departments/$query');
+      final headers = await _getAuthHeaders();
+      final response = await _dio.get(
+        '/departments/$query',
+        options: Options(headers: headers),
+      );
 
       if (response.statusCode == 200) {
         setState(() {
           Map<String, dynamic> dept = response.data;
           filteredDepartments = [{
             'name': dept['name'] ?? '',
-            'managerName': dept['managerName'] ?? 'No manager',
+            'managerId': dept['managerId'],
           }];
           isLoading = false;
         });
@@ -103,21 +125,25 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   }
 
   // ➕ Add new department
-  Future<void> addDepartment(String name, String managerName) async {
+  Future<void> addDepartment(String name, int? managerId) async {
     try {
+      final Map<String, dynamic> data = {'name': name};
+      if (managerId != null) {
+        data['managerId'] = managerId;
+      }
+      
+      final headers = await _getAuthHeaders();
       final response = await _dio.post(
-        '/api/v0/departments',
-        data: {
-          'name': name,
-          'managerName': managerName,
-        },
+        '/departments',
+        data: data,
+        options: Options(headers: headers),
       );
 
       if (response.statusCode == 201) {
         setState(() {
           allDepartments.add({
             'name': response.data['name'],
-            'managerName': response.data['managerName'],
+            'managerId': response.data['managerId'],
           });
           filteredDepartments = allDepartments;
         });
@@ -145,14 +171,23 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   }
 
   // ✏️ Update department
-  Future<void> updateDepartment(String oldName, String newName, String managerName) async {
+  Future<void> updateDepartment(String oldName, String newName, int? managerId) async {
     try {
+      // إرسال الاسم الجديد دائماً
+      final Map<String, dynamic> data = {
+        'name': newName,
+      };
+      
+      // إضافة managerId فقط إذا تم تحديده
+      if (managerId != null) {
+        data['managerId'] = managerId;
+      }
+      
+      final headers = await _getAuthHeaders();
       final response = await _dio.patch(
-        '/api/v0/departments/$oldName',
-        data: {
-          'name': newName,
-          'managerName': managerName,
-        },
+        '/departments/$oldName',
+        data: data,
+        options: Options(headers: headers),
       );
 
       if (response.statusCode == 200) {
@@ -161,7 +196,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           if (index != -1) {
             allDepartments[index] = {
               'name': response.data['name'],
-              'managerName': response.data['managerName'],
+              'managerId': response.data['managerId'],
             };
           }
 
@@ -185,7 +220,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update department'),
+            content: Text('Failed to update department: ${e.toString()}'),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -197,7 +232,11 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   // 🗑️ Delete department
   Future<void> deleteDepartment(String name) async {
     try {
-      final response = await _dio.delete('/api/v0/departments/$name');
+      final headers = await _getAuthHeaders();
+      final response = await _dio.delete(
+        '/departments/$name',
+        options: Options(headers: headers),
+      );
 
       if (response.statusCode == 200) {
         setState(() {
@@ -214,11 +253,39 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           );
         }
       }
+    } on DioException catch (e) {
+      String errorMessage = 'Failed to delete department';
+      
+      if (e.response != null) {
+        if (e.response!.statusCode == 500) {
+          errorMessage = 'Cannot delete: This department may have associated users or data';
+        } else if (e.response!.statusCode == 403) {
+          errorMessage = 'Permission denied';
+        } else if (e.response!.statusCode == 404) {
+          errorMessage = 'Department not found';
+        } else {
+          errorMessage = 'Server error (${e.response!.statusCode})';
+        }
+      } else {
+        errorMessage = 'Connection error: ${e.message}';
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: AppColors.accentRed,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      print('Error deleting department: $e');
+      print('Response: ${e.response?.data}');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to delete department'),
+            content: Text('Unexpected error: ${e.toString()}'),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -230,7 +297,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   // 🎨 Show add department dialog
   void _showAddDepartmentDialog() {
     TextEditingController nameController = TextEditingController();
-    TextEditingController managerController = TextEditingController();
+    TextEditingController managerIdController = TextEditingController();
 
     showDialog(
       context: context,
@@ -266,9 +333,11 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
               ),
               const SizedBox(height: 16),
               TextField(
-                controller: managerController,
+                controller: managerIdController,
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: 'Manager Name',
+                  labelText: 'Manager ID (Optional)',
+                  hintText: 'Enter manager user ID',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -282,11 +351,13 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     child: ElevatedButton(
                       onPressed: () {
                         if (nameController.text.isNotEmpty) {
+                          int? managerId;
+                          if (managerIdController.text.isNotEmpty) {
+                            managerId = int.tryParse(managerIdController.text);
+                          }
                           addDepartment(
                             nameController.text,
-                            managerController.text.isEmpty
-                                ? 'Not specified'
-                                : managerController.text,
+                            managerId,
                           );
                           Navigator.pop(context);
                         }
@@ -327,7 +398,9 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   // 🎨 Show edit department dialog
   void _showEditDepartmentDialog(Map<String, dynamic> department) {
     TextEditingController nameController = TextEditingController(text: department['name']);
-    TextEditingController managerController = TextEditingController(text: department['managerName']);
+    TextEditingController managerIdController = TextEditingController(
+      text: department['managerId'] != null ? department['managerId'].toString() : ''
+    );
 
     showDialog(
       context: context,
@@ -363,9 +436,11 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
               ),
               const SizedBox(height: 16),
               TextField(
-                controller: managerController,
+                controller: managerIdController,
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: 'Manager Name',
+                  labelText: 'Manager ID (Optional)',
+                  hintText: 'Enter manager user ID',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -378,10 +453,14 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
+                        int? managerId;
+                        if (managerIdController.text.isNotEmpty) {
+                          managerId = int.tryParse(managerIdController.text);
+                        }
                         updateDepartment(
                           department['name'],
                           nameController.text,
-                          managerController.text,
+                          managerId,
                         );
                         Navigator.pop(context);
                       },
@@ -426,13 +505,55 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Text(
-          'Confirm Delete',
-          style: TextStyle(color: AppColors.textPrimary),
+        title: Row(
+          children: [
+            Icon(Icons.warning_rounded, color: AppColors.accentRed, size: 28),
+            SizedBox(width: 12),
+            Text('Confirm Delete', style: TextStyle(color: AppColors.textPrimary)),
+          ],
         ),
-        content: Text(
-          'Are you sure you want to delete "${department['name']}" department?',
-          style: const TextStyle(color: AppColors.textSecondary),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete the department:',
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '"${department['name']}"',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.accentRed.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.accentRed.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: AppColors.accentRed, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Note: If this department has users, deletion may fail.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.accentRed,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -441,11 +562,12 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           ),
           ElevatedButton(
             onPressed: () {
-              deleteDepartment(department['name']);
               Navigator.pop(context);
+              deleteDepartment(department['name']);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentRed,
+              foregroundColor: Colors.white,
             ),
             child: const Text('Delete'),
           ),
@@ -701,7 +823,7 @@ class DepartmentCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
-                // Manager Name
+                // Manager ID
                 Row(
                   children: [
                     const Icon(
@@ -712,7 +834,9 @@ class DepartmentCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        department['managerName'] ?? 'No manager',
+                        department['managerId'] != null 
+                            ? 'Manager ID: ${department['managerId']}'
+                            : 'No manager assigned',
                         style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary,
