@@ -601,12 +601,13 @@ class InboxApi {
   }
 
   // 🔹 إرسال المعاملة لمستخدم آخر (Forward)
-  // الـ API الجديد يستخدم receiverId (رقم) بدلاً من receiverName (نص)
+  // ✅ الـ API الجديد يستخدم receiverId (رقم) بدلاً من receiverName (نص)
   Future<bool> forwardTransaction(
       String transactionId,
       String receiverName,
       String? token, {
       int? receiverId,
+      String? comment,
       }) async {
     if (token == null) return false;
 
@@ -647,7 +648,7 @@ class InboxApi {
         },
         body: json.encode({
           "receiverId": resolvedReceiverId,
-          "comment": "Forwarded via Mobile App"
+          "comment": comment ?? "Forwarded via Mobile App"
         }),
       );
 

@@ -104,8 +104,8 @@ class MyRequestsApi {
     try {
       List<dynamic> combinedRequests = [];
 
-      // دالة لجلب الطلبات حسب المعامل
-      Future<List<dynamic>> fetchByParam(String key) async {
+      // دالة لجلب الطلبات حسب المعامل (معدلة لدعم قيمة مخصصة)
+      Future<List<dynamic>> fetchByParam(String key, {String? value}) async {
         List<dynamic> allRequests = [];
         int currentPage = 1;
         int lastPage = 1;
@@ -114,7 +114,7 @@ class MyRequestsApi {
           final Map<String, String> queryParams = {
             "pageNumber": currentPage.toString(),
             "pageSize": "10",
-            key: userName!,
+            key: value ?? userName!,
           };
 
           final uri = Uri.parse("$baseUrl/transactions")
@@ -144,9 +144,44 @@ class MyRequestsApi {
         return allRequests;
       }
 
-      // جلب الطلبات من مصدرين
-      final creatorRequests = await fetchByParam("creatorName");
-      final senderRequests = await fetchByParam("senderName");
+      // ✅ تحديث: استخدام creatorId و userId بدلاً من creatorName و senderName
+      // الـ API الجديد يتطلب IDs بدلاً من Names
+      // نحاول أولاً استخدام الـ IDs، وإذا لم تكن متاحة نستخدم fallback إلى Names
+      
+      // جلب userId من userName
+      int? userId;
+      if (userToken != null) {
+        try {
+          final usersResponse = await http.get(
+            Uri.parse("$baseUrl/users"),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $userToken',
+            },
+          );
+          if (usersResponse.statusCode == 200) {
+            final usersData = jsonDecode(usersResponse.body);
+            final List<dynamic> users = usersData is List ? usersData : (usersData["users"] ?? []);
+            final user = users.firstWhere(
+              (u) => u['name'] == userName,
+              orElse: () => null,
+            );
+            if (user != null) {
+              userId = user['id'] is int ? user['id'] : int.tryParse(user['id'].toString());
+            }
+          }
+        } catch (e) {
+          print("⚠️ Could not resolve userId, falling back to userName: $e");
+        }
+      }
+
+      // جلب الطلبات باستخدام userId إن أمكن أو userName كـ fallback
+      final creatorRequests = userId != null 
+        ? await fetchByParam("creatorId", value: userId.toString())
+        : await fetchByParam("creatorName");
+      final senderRequests = userId != null
+        ? await fetchByParam("userId", value: userId.toString())
+        : await fetchByParam("senderName");
 
       // دمج بدون تكرار
       final ids = <dynamic>{};
