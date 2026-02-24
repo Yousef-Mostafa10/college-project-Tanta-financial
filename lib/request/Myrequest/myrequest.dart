@@ -28,13 +28,24 @@ class MyRequestsPage extends StatefulWidget {
 class _MyRequestsPageState extends State<MyRequestsPage> {
   final String baseUrl = AppConfig.baseUrl;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   List<dynamic> _requests = [];
   List<dynamic> _filteredRequests = [];
+  bool _hasMore = true;
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  int _currentPage = 1;
   String? _errorMessage;
   String? _userName;
   String? _userToken;
+
+  // إحصائيات من الـ API Summary
+  int _totalCount = 0;
+  int _waitingCount = 0;
+  int _approvedCount = 0;
+  int _rejectedCount = 0;
+  int _needsEditingCount = 0;
 
   // الفلاتر
   String _selectedStatus = "All";
@@ -51,7 +62,21 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _initializeData();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
   }
 
   // 🔹 تهيئة البيانات
@@ -102,7 +127,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     }
   }
 
-  // 🔹 جلب كل الطلبات بدون فلترة أولية
+  // 🔹 جلب الطلبات - صفحة واحدة
   Future<void> _fetchMyRequests() async {
     if (_userToken == null || _userName == null) {
       setState(() {
@@ -115,15 +140,55 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _requests = [];
+      _currentPage = 1;
+      _hasMore = true;
     });
 
     try {
-      final requests = await _api.fetchMyRequests();
-      setState(() {
-        _requests = requests;
-        _applyFilters();
-        _isLoading = false;
-      });
+      final result = await _api.fetchMyRequests(page: 1, perPage: 10);
+
+      if (result['success'] == true) {
+        final pagination = result['pagination'] as Map<String, dynamic>?;
+        final summary = result['summary'] as Map<String, dynamic>?;
+        final rawData = result['data'] as List<dynamic>? ?? [];
+
+        // استخدام الحالات القادمة من السيرفر مباشرة لتحسين الأداء
+        final updatedRequests = rawData.map((req) {
+          final request = Map<String, dynamic>.from(req);
+          String status = (request["lastForwardStatus"] ?? "waiting").toString().toLowerCase();
+          
+          if (request["fulfilled"] == true) {
+            status = "fulfilled";
+          }
+          
+          request["status"] = status; // توحيد الحقل المستخدم في العرض
+          return request;
+        }).toList();
+
+        setState(() {
+          _requests = updatedRequests;
+          _currentPage = pagination?['currentPage'] ?? 1;
+          _hasMore = pagination?['next'] != null;
+          _totalCount = pagination?['total'] ?? _requests.length;
+
+          // إحصائيات من الـ Summary
+          if (summary != null) {
+            _waitingCount = summary['WAITING'] ?? 0;
+            _approvedCount = summary['APPROVED'] ?? 0;
+            _rejectedCount = summary['REJECTED'] ?? 0;
+            _needsEditingCount = summary['NEEDS_EDITING'] ?? 0;
+          }
+
+          _applyFilters();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = result['error'] ?? AppLocalizations.of(context)!.translate('failed_load_requests');
+        });
+      }
     } catch (e) {
       print("❌ Error fetching requests: $e");
       setState(() {
@@ -133,6 +198,47 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     }
   }
 
+  // 🔹 تحميل المزيد عند الـ scroll
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final nextPage = _currentPage + 1;
+      final result = await _api.fetchMyRequests(page: nextPage, perPage: 10);
+
+      if (mounted && result['success'] == true) {
+        final pagination = result['pagination'] as Map<String, dynamic>?;
+        final newRawRequests = result['data'] as List<dynamic>? ?? [];
+
+        // استخدام الحالات القادمة من السيرفر مباشرة
+        final updatedNewRequests = newRawRequests.map((req) {
+          final request = Map<String, dynamic>.from(req);
+          String status = (request["lastForwardStatus"] ?? "waiting").toString().toLowerCase();
+          
+          if (request["fulfilled"] == true) {
+            status = "fulfilled";
+          }
+          
+          request["status"] = status;
+          return request;
+        }).toList();
+
+        setState(() {
+          _requests.addAll(updatedNewRequests);
+          _currentPage = pagination?['currentPage'] ?? nextPage;
+          _hasMore = pagination?['next'] != null;
+          _applyFilters();
+        });
+      }
+    } catch (e) {
+      print("❌ Error loading more: $e");
+    }
+
+    if (mounted) setState(() => _isLoadingMore = false);
+  }
+
   // 🔹 تطبيق الفلاتر محلياً
   void _applyFilters() {
     List<dynamic> filtered = _requests;
@@ -140,7 +246,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     // فلترة النوع
     if (_selectedType != "All Types") {
       filtered = filtered.where((request) {
-        final type = request["type"]?["name"] ?? "";
+        final type = request["typeName"] ?? request["type"]?["name"] ?? "";
         return type == _selectedType;
       }).toList();
     }
@@ -149,28 +255,25 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     if (_selectedPriority != "All") {
       filtered = filtered.where((request) {
         final priority = request["priority"] ?? "";
-        return priority.toLowerCase() == _selectedPriority.toLowerCase();
+        return priority.toUpperCase() == _selectedPriority.toUpperCase();
       }).toList();
     }
 
     // فلترة الحالة
     if (_selectedStatus != "All") {
       filtered = filtered.where((request) {
-        final userForwardStatus = request["userForwardStatus"];
+        final lastForwardStatus = (request["lastForwardStatus"] ?? "").toString().toUpperCase();
         final fulfilled = request["fulfilled"] == true;
 
         switch (_selectedStatus) {
           case "Approved":
-            return userForwardStatus == "approved";
+            return lastForwardStatus == "APPROVED";
           case "Rejected":
-            return userForwardStatus == "rejected";
+            return lastForwardStatus == "REJECTED";
           case "Waiting":
-            return (userForwardStatus != "approved" &&
-                userForwardStatus != "rejected" &&
-                userForwardStatus != "needs_change") ||
-                (userForwardStatus == null && !fulfilled);
+            return lastForwardStatus == "WAITING";
           case "Needs Change":
-            return userForwardStatus == "needs_change";
+            return lastForwardStatus == "NEEDS_EDITING";
           case "Fulfilled":
             return fulfilled == true;
           default:
@@ -224,10 +327,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       final success = await _api.deleteRequest(requestId);
 
       if (success) {
-        setState(() {
-          _requests.removeWhere((req) => req["id"].toString() == requestId);
-          _applyFilters();
-        });
+        _fetchMyRequests(); // إعادة جلب البيانات من السيرفر
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -250,6 +350,290 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  // 🔹 إلغاء التوجيه
+  Future<void> _cancelForward(String transactionId, dynamic forwardId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(AppLocalizations.of(context)!.translate('cancel_forward_confirm_title') ?? 'Cancel Forward'),
+          content: Text(AppLocalizations.of(context)!.translate('cancel_forward_confirm_content') ?? 'Are you sure you want to cancel this forward?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(AppLocalizations.of(context)!.translate('no_button') ?? 'No'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(
+                AppLocalizations.of(context)!.translate('yes_button') ?? 'Yes',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isLoading = true; // إظهار حالة التحميل أثناء الإلغاء
+    });
+
+    try {
+      final success = await _api.cancelForward(transactionId, forwardId);
+
+      if (success) {
+        await _fetchMyRequests(); // إعادة جلب البيانات لتحديث المستند
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('forward_cancelled_success') ?? 'Forward cancelled successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('failed_cancel_forward') ?? 'Failed to cancel forward'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      print("❌ Error cancelling forward: $e");
+    }
+  }
+
+  // 🔹 فتح نافذة التوجيه (Forward)
+  Future<void> _forwardTransaction(String transactionId) async {
+    try {
+      if (!mounted) return;
+
+      Map<String, dynamic>? selectedUser;
+      String forwardComment = '';
+      List<Map<String, dynamic>> allUsers = [];
+      int userPage = 1;
+      bool hasMoreUsers = true;
+      bool isLoadingUsers = false;
+      
+      TextEditingController searchController = TextEditingController();
+      ScrollController dialogScrollController = ScrollController();
+
+      // دالة لجلب المستخدمين داخل الديالوج
+      Future<void> loadMoreUsers(Function setStateDialog) async {
+        if (isLoadingUsers || !hasMoreUsers) return;
+
+        setStateDialog(() => isLoadingUsers = true);
+        try {
+          final result = await _api.fetchUsers(page: userPage, perPage: 10);
+          final List<Map<String, dynamic>> newUsers = List<Map<String, dynamic>>.from(result['users']);
+          
+          setStateDialog(() {
+            allUsers.addAll(newUsers);
+            hasMoreUsers = result['hasMore'];
+            userPage++;
+            isLoadingUsers = false;
+          });
+        } catch (e) {
+          print("❌ Error loading more users: $e");
+          setStateDialog(() => isLoadingUsers = false);
+        }
+      }
+
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setStateDialog) {
+              // إعداد الـ ScrollListener عند أول مرة
+              if (allUsers.isEmpty && !isLoadingUsers && userPage == 1) {
+                loadMoreUsers(setStateDialog);
+                dialogScrollController.addListener(() {
+                  if (dialogScrollController.position.pixels >= 
+                      dialogScrollController.position.maxScrollExtent - 50) {
+                    loadMoreUsers(setStateDialog);
+                  }
+                });
+              }
+
+              List<Map<String, dynamic>> filteredUsers = searchController.text.isEmpty 
+                ? allUsers 
+                : allUsers.where((u) => (u["name"]?.toString() ?? "").toLowerCase().contains(searchController.text.toLowerCase())).toList();
+
+              return Dialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  constraints: BoxConstraints(maxHeight: 500),
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // عنوان الديلوج
+                      Row(
+                        children: [
+                          Icon(Icons.person_search_rounded, color: MyRequestsColors.primary, size: 24),
+                          SizedBox(width: 12),
+                          Text(
+                            AppLocalizations.of(context)!.translate('select_user_hint') ?? 'Select User',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: MyRequestsColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 16),
+
+                      // شريط البحث
+                      TextField(
+                        controller: searchController,
+                        decoration: InputDecoration(
+                          hintText: AppLocalizations.of(context)!.translate('search_users') ?? 'Search users...',
+                          prefixIcon: Icon(Icons.search_rounded, color: MyRequestsColors.primary),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        onChanged: (value) {
+                          setStateDialog(() {}); // إعادة بناء القائمة للفلترة المحلية
+                        },
+                      ),
+                      SizedBox(height: 16),
+
+                      // قائمة المستخدمين
+                      Expanded(
+                        child: ListView.builder(
+                          controller: dialogScrollController,
+                          itemCount: filteredUsers.length + (hasMoreUsers ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == filteredUsers.length) {
+                              return Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: MyRequestsColors.primary),
+                                ),
+                              );
+                            }
+
+                            final user = filteredUsers[index];
+                            final isSelected = selectedUser != null && selectedUser!["id"] == user["id"];
+
+                            return ListTile(
+                              leading: Icon(
+                                Icons.person_rounded,
+                                color: isSelected ? MyRequestsColors.primary : MyRequestsColors.textSecondary,
+                              ),
+                              title: Text(
+                                user["name"] ?? "Unknown",
+                                style: TextStyle(
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color: isSelected ? MyRequestsColors.primary : MyRequestsColors.textPrimary,
+                                ),
+                              ),
+                              trailing: isSelected ? Icon(Icons.check_rounded, color: MyRequestsColors.primary) : null,
+                              onTap: () => setStateDialog(() => selectedUser = user),
+                            );
+                          },
+                        ),
+                      ),
+                      SizedBox(height: 16),
+
+                      // حقل التعليق
+                      TextField(
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          hintText: AppLocalizations.of(context)!.translate('enter_comments') ?? 'Add a comment (optional)',
+                          prefixIcon: Icon(Icons.comment_rounded, color: MyRequestsColors.primary),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        onChanged: (value) => forwardComment = value,
+                      ),
+                      SizedBox(height: 16),
+
+                      // أزرار الإجراء
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: MyRequestsColors.primary,
+                                side: BorderSide(color: MyRequestsColors.primary),
+                              ),
+                              child: Text(AppLocalizations.of(context)!.translate('no') ?? 'Cancel'),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: selectedUser == null
+                                  ? null
+                                  : () {
+                                      Navigator.pop(context);
+                                      _performForwardAction(transactionId, selectedUser!["id"], forwardComment);
+                                    },
+                              style: ElevatedButton.styleFrom(backgroundColor: MyRequestsColors.primary),
+                              child: Text(
+                                AppLocalizations.of(context)!.translate('forward') ?? 'Forward',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } catch (e) {
+      print("❌ Error in _forwardTransaction: $e");
+    }
+  }
+
+  // 🔹 تنفيذ عملية التوجيه فعلياً
+  Future<void> _performForwardAction(String transactionId, dynamic receiverId, String comment) async {
+    setState(() => _isLoading = true);
+    try {
+      final success = await _api.forwardTransaction(
+        transactionId,
+        receiverId is int ? receiverId : int.parse(receiverId.toString()),
+        comment: comment.isNotEmpty ? comment : null,
+      );
+
+      if (success) {
+        await _fetchMyRequests();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('transaction_forwarded_success') ?? 'Forwarded successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('failed_to_forward') ?? 'Failed to forward'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      print("❌ Error in _performForwardAction: $e");
     }
   }
 
@@ -370,31 +754,32 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       ),
       body: _isLoading
           ? buildLoadingState(isMobile)
-          : isMobile
-          ? _buildMobileBody()
-          : _buildDesktopBody(),
+          : Stack(
+              children: [
+                isMobile ? _buildMobileBody() : _buildDesktopBody(),
+                if (_isLoadingMore)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: LinearProgressIndicator(
+                      backgroundColor: Colors.transparent,
+                      valueColor: AlwaysStoppedAnimation<Color>(MyRequestsColors.primary),
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 
   // ⭐ تصميم الجوال
   Widget _buildMobileBody() {
-    final total = _requests.length;
-    final approvedForwards = _requests.where((req) => req["userForwardStatus"] == "approved").length;
-    final rejectedForwards = _requests.where((req) => req["userForwardStatus"] == "rejected").length;
-    final waitingForwards = _requests.where((req) =>
-    (req["userForwardStatus"] != "approved" &&
-        req["userForwardStatus"] != "rejected" &&
-        req["userForwardStatus"] != "needs_change") ||
-        (req["userForwardStatus"] == null && req["fulfilled"] != true)).length;
-
-    // الحالات الجديدة
-    final needsChangeForwards = _requests.where((req) => req["userForwardStatus"] == "needs_change").length;
     final fulfilledForwards = _requests.where((req) => req["fulfilled"] == true).length;
 
     return Column(
       children: [
-        // 1️⃣ الجزء الثابت عند الأعلى - الإحصائيات
-        buildMobileStatsSection(context, total, approvedForwards, rejectedForwards, waitingForwards, needsChangeForwards, fulfilledForwards),
+        // 1️⃣ الجزء الثابت عند الأعلى - الإحصائيات من الـ Summary
+        buildMobileStatsSection(context, _totalCount, _approvedCount, _rejectedCount, _waitingCount, _needsEditingCount, fulfilledForwards),
 
         // 2️⃣ الجزء الثابت عند الأعلى - البحث والفلترة
         buildMobileFilterSection(
@@ -458,69 +843,73 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     }
 
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      itemCount: _filteredRequests.length,
+      itemCount: _filteredRequests.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index >= _filteredRequests.length) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(MyRequestsColors.primary),
+                strokeWidth: 2,
+              ),
+            ),
+          );
+        }
+
         final req = _filteredRequests[index];
         final id = req["id"].toString();
         final title = req["title"] ?? "No Title";
-        final type = req["type"]?["name"] ?? AppLocalizations.of(context)!.translate('not_available');
+        final type = req["typeName"] ?? req["type"]?["name"] ?? AppLocalizations.of(context)!.translate('not_available');
         String priority = req["priority"] ?? AppLocalizations.of(context)!.translate('not_available');
-        if (priority.toLowerCase() == 'high') priority = AppLocalizations.of(context)!.translate('priority_high');
-        else if (priority.toLowerCase() == 'medium') priority = AppLocalizations.of(context)!.translate('priority_medium');
-        else if (priority.toLowerCase() == 'low') priority = AppLocalizations.of(context)!.translate('priority_low');
+        if (priority.toUpperCase() == 'HIGH') priority = AppLocalizations.of(context)!.translate('priority_high');
+        else if (priority.toUpperCase() == 'MEDIUM') priority = AppLocalizations.of(context)!.translate('priority_medium');
+        else if (priority.toUpperCase() == 'LOW') priority = AppLocalizations.of(context)!.translate('priority_low');
 
         final createdAt = req["createdAt"] ?? req["created_at"];
         final formattedDate = MyRequestsHelpers.formatDate(context, createdAt);
 
-        final userForwardStatus = req["userForwardStatus"];
+        final lastForwardStatus = (req["lastForwardStatus"] ?? "").toString().toUpperCase();
         final fulfilled = req["fulfilled"] == true;
 
-        final documents = req["documents"] as List?;
-        final documentsCount = documents?.length ?? 0;
+        final documentsCount = req["documentsCount"] ?? (req["documents"] as List?)?.length ?? 0;
 
         final String status;
         final Color statusColor;
         final IconData statusIcon;
 
-        if (userForwardStatus != null) {
-          switch (userForwardStatus) {
-            case "approved":
+        if (fulfilled) {
+          status = AppLocalizations.of(context)!.translate('status_fulfilled');
+          statusColor = MyRequestsColors.statusFulfilled;
+          statusIcon = Icons.task_alt_rounded;
+        } else {
+          switch (lastForwardStatus) {
+            case "APPROVED":
               status = AppLocalizations.of(context)!.translate('status_approved');
               statusColor = MyRequestsColors.statusApproved;
               statusIcon = Icons.check_circle_rounded;
               break;
-            case "rejected":
+            case "REJECTED":
               status = AppLocalizations.of(context)!.translate('status_rejected');
               statusColor = MyRequestsColors.statusRejected;
               statusIcon = Icons.cancel_rounded;
               break;
-            case "waiting":
-              status = AppLocalizations.of(context)!.translate('status_waiting');
-              statusColor = MyRequestsColors.statusWaiting;
-              statusIcon = Icons.hourglass_empty_rounded;
-              break;
-            case "needs_change":
+            case "NEEDS_EDITING":
               status = AppLocalizations.of(context)!.translate('status_needs_editing');
               statusColor = MyRequestsColors.statusNeedsChange;
               statusIcon = Icons.edit_note_rounded;
               break;
+            case "WAITING":
             default:
               status = AppLocalizations.of(context)!.translate('status_waiting');
               statusColor = MyRequestsColors.statusWaiting;
               statusIcon = Icons.hourglass_empty_rounded;
           }
-        } else {
-          if (fulfilled) {
-            status = AppLocalizations.of(context)!.translate('status_fulfilled');
-            statusColor = MyRequestsColors.statusFulfilled;
-            statusIcon = Icons.task_alt_rounded;
-          } else {
-            status = AppLocalizations.of(context)!.translate('status_waiting');
-            statusColor = MyRequestsColors.statusWaiting;
-            statusIcon = Icons.hourglass_empty_rounded;
-          }
         }
+
+        final lastForwardSentTo = req["lastForwardSentTo"];
 
         return buildMobileRequestCard(
           id: id,
@@ -531,9 +920,16 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
           statusText: status,
           statusColor: statusColor,
           statusIcon: statusIcon,
-          documentsCount: documentsCount,  // ✅ إضافة ده
-          onDelete: _deleteRequest,
+          documentsCount: documentsCount,
           context: context,
+          lastForwardSentTo: lastForwardSentTo,
+          onCancelForward: lastForwardSentTo != null
+              ? () => _cancelForward(id, lastForwardSentTo['id'])
+              : null,
+          onForward: lastForwardSentTo == null
+              ? () => _forwardTransaction(id)
+              : null,
+          onDelete: _deleteRequest,
         );
       },
     );
@@ -542,6 +938,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   // ⭐ تصميم الديسكتوب
   Widget _buildDesktopBody() {
     return SingleChildScrollView(
+      controller: _scrollController,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -575,9 +972,21 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
             ),
 
             SizedBox(height: 20),
-            _buildDesktopHeader(_filteredRequests.length),
+            _buildDesktopHeader(_totalCount),
             SizedBox(height: 16),
             _buildDesktopRequestsList(),
+
+            // مؤشر تحميل المزيد
+            if (_isLoadingMore)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(MyRequestsColors.primary),
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -585,26 +994,15 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   }
 
   Widget _buildDesktopStatsRow() {
-    final total = _requests.length;
-    final approvedForwards = _requests.where((req) => req["userForwardStatus"] == "approved").length;
-    final rejectedForwards = _requests.where((req) => req["userForwardStatus"] == "rejected").length;
-    final waitingForwards = _requests.where((req) =>
-    (req["userForwardStatus"] != "approved" &&
-        req["userForwardStatus"] != "rejected" &&
-        req["userForwardStatus"] != "needs_change") ||
-        (req["userForwardStatus"] == null && req["fulfilled"] != true)).length;
-
-    // الحالات الجديدة
-    final needsChangeForwards = _requests.where((req) => req["userForwardStatus"] == "needs_change").length;
     final fulfilledForwards = _requests.where((req) => req["fulfilled"] == true).length;
 
     return buildDesktopStatsRow(
         context,
-        total,
-        approvedForwards,
-        rejectedForwards,
-        waitingForwards,
-        needsChangeForwards,
+        _totalCount,
+        _approvedCount,
+        _rejectedCount,
+        _waitingCount,
+        _needsEditingCount,
         fulfilledForwards
     );
   }
@@ -631,27 +1029,31 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         ..._filteredRequests.map((req) {
           final id = req["id"].toString();
           final title = req["title"] ?? "No Title";
-          final type = req["type"]?["name"] ?? AppLocalizations.of(context)!.translate('not_available');
+          final type = req["typeName"] ?? req["type"]?["name"] ?? AppLocalizations.of(context)!.translate('not_available');
           String priority = req["priority"] ?? AppLocalizations.of(context)!.translate('not_available');
-          if (priority.toLowerCase() == 'high') priority = AppLocalizations.of(context)!.translate('priority_high');
-          else if (priority.toLowerCase() == 'medium') priority = AppLocalizations.of(context)!.translate('priority_medium');
-          else if (priority.toLowerCase() == 'low') priority = AppLocalizations.of(context)!.translate('priority_low');
+          if (priority.toUpperCase() == 'HIGH') priority = AppLocalizations.of(context)!.translate('priority_high');
+          else if (priority.toUpperCase() == 'MEDIUM') priority = AppLocalizations.of(context)!.translate('priority_medium');
+          else if (priority.toUpperCase() == 'LOW') priority = AppLocalizations.of(context)!.translate('priority_low');
 
           final createdAt = req["createdAt"] ?? req["created_at"];
           final formattedDate = MyRequestsHelpers.formatDate(context, createdAt);
 
-          final userForwardStatus = req["userForwardStatus"];
           final fulfilled = req["fulfilled"] == true;
 
-          final documents = req["documents"] as List?;
-          final documentsCount = documents?.length ?? 0;
+          final documentsCount = req["documentsCount"] ?? (req["documents"] as List?)?.length ?? 0;
 
           final String status;
           final Color statusColor;
           final IconData statusIcon;
 
-          if (userForwardStatus != null) {
-            switch (userForwardStatus) {
+          final String lastForwardStatus = (req["status"] ?? "waiting").toString().toLowerCase();
+
+          if (fulfilled) {
+            status = AppLocalizations.of(context)!.translate('status_fulfilled');
+            statusColor = MyRequestsColors.statusFulfilled;
+            statusIcon = Icons.task_alt_rounded;
+          } else {
+            switch (lastForwardStatus) {
               case "approved":
                 status = AppLocalizations.of(context)!.translate('status_approved');
                 statusColor = MyRequestsColors.statusApproved;
@@ -662,32 +1064,23 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                 statusColor = MyRequestsColors.statusRejected;
                 statusIcon = Icons.cancel_rounded;
                 break;
-              case "waiting":
-                status = AppLocalizations.of(context)!.translate('status_waiting');
-                statusColor = MyRequestsColors.statusWaiting;
-                statusIcon = Icons.hourglass_empty_rounded;
-                break;
-              case "needs_change":
+              case "needs_editing":
+              case "needs-editing":
+              case "needs change":
                 status = AppLocalizations.of(context)!.translate('status_needs_editing');
                 statusColor = MyRequestsColors.statusNeedsChange;
                 statusIcon = Icons.edit_note_rounded;
                 break;
+              case "waiting":
+              case "pending":
               default:
                 status = AppLocalizations.of(context)!.translate('status_waiting');
                 statusColor = MyRequestsColors.statusWaiting;
                 statusIcon = Icons.hourglass_empty_rounded;
             }
-          } else {
-            if (fulfilled) {
-              status = AppLocalizations.of(context)!.translate('status_fulfilled');
-              statusColor = MyRequestsColors.statusFulfilled;
-              statusIcon = Icons.task_alt_rounded;
-            } else {
-              status = AppLocalizations.of(context)!.translate('status_waiting');
-              statusColor = MyRequestsColors.statusWaiting;
-              statusIcon = Icons.hourglass_empty_rounded;
-            }
           }
+
+          final lastForwardSentTo = req["lastForwardSentTo"];
 
           return buildDesktopRequestCard(
             id: id,
@@ -701,6 +1094,13 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
             documentsCount: documentsCount,
             onDelete: _deleteRequest,
             context: context,
+            lastForwardSentTo: lastForwardSentTo,
+            onCancelForward: lastForwardSentTo != null
+                ? () => _cancelForward(id, lastForwardSentTo['id'])
+                : null,
+            onForward: lastForwardSentTo == null
+                ? () => _forwardTransaction(id)
+                : null,
           );
         }).toList(),
       ],

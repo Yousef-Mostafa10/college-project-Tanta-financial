@@ -16,6 +16,9 @@ Widget buildMobileRequestCard({
   required int documentsCount,
   required Function(String) onDelete,
   required BuildContext context,
+  Map<String, dynamic>? lastForwardSentTo,
+  VoidCallback? onCancelForward,
+  VoidCallback? onForward,
 }) {
   Color getPriorityColor(String priority) {
     switch (priority.toLowerCase()) {
@@ -112,6 +115,55 @@ Widget buildMobileRequestCard({
             ),
             const SizedBox(height: 6),
 
+            // معلومات التوجيه (إذا وجد)
+            if (lastForwardSentTo != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: MyRequestsColors.bodyBg,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: MyRequestsColors.statBorder),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.send_rounded, size: 14, color: MyRequestsColors.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        "${AppLocalizations.of(context)!.translate('forwarded_to_prefix')} ${lastForwardSentTo['receiverName']}",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: MyRequestsColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    if (onCancelForward != null)
+                      PopupMenuButton<String>(
+                        icon: Icon(Icons.more_vert_rounded, size: 16, color: MyRequestsColors.textSecondary),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onSelected: (value) {
+                          if (value == 'cancel') onCancelForward();
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'cancel',
+                            child: Text(
+                              AppLocalizations.of(context)!.translate('cancel_forward'),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+
             // النوع والأولوية والمستندات
             Row(
               children: [
@@ -126,6 +178,15 @@ Widget buildMobileRequestCard({
                   documentsCount > 0 ? MyRequestsColors.accentBlue : MyRequestsColors.textMuted,
                 ),
                 const Spacer(),
+                if (onForward != null) ...[
+                  _buildMobileActionButton(
+                    onPressed: onForward!,
+                    text: AppLocalizations.of(context)!.translate('forward') ?? 'Forward',
+                    icon: Icons.forward_to_inbox_rounded,
+                    color: MyRequestsColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert_rounded, size: 16, color: MyRequestsColors.textSecondary),
                   shape: RoundedRectangleBorder(
@@ -188,6 +249,35 @@ Widget buildMobileRequestCard({
           ],
         ),
       ),
+    ),
+  );
+}
+
+Widget _buildMobileActionButton({
+  required VoidCallback onPressed,
+  required String text,
+  required IconData icon,
+  required Color color,
+}) {
+  return TextButton.icon(
+    onPressed: onPressed,
+    icon: Icon(icon, size: 14, color: color),
+    label: Text(
+      text,
+      style: TextStyle(
+        fontSize: 11,
+        color: color,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    style: TextButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      backgroundColor: color.withOpacity(0.08),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      minimumSize: Size.zero,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     ),
   );
 }

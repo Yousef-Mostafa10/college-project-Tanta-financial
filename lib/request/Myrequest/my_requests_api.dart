@@ -13,51 +13,64 @@ class MyRequestsApi {
     required this.userName,
   });
 
-  // 🔹 جلب أنواع المعاملات
+  // 🔹 جلب أنواع المعاملات مع Pagination
   Future<List<String>> fetchTypes() async {
     try {
       if (userToken == null) return ['All Types'];
 
-      final response = await http.get(
-        Uri.parse("$baseUrl/transactions/types"),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $userToken',
-        },
-      );
+      List<String> allTypes = ['All Types'];
+      int page = 1;
+      bool hasMore = true;
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<String> typeNames = ['All Types'];
-        
-        List<dynamic> typesList = [];
-        if (data is List) {
-          typesList = data;
-        } else if (data is Map && data["transactionTypes"] != null) {
-          typesList = data["transactionTypes"];
-        }
+      while (hasMore) {
+        final response = await http.get(
+          Uri.parse("$baseUrl/transactions/types?page=$page&perPage=10"),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $userToken',
+          },
+        );
 
-        for (var item in typesList) {
-          if (item["name"] != null) {
-            typeNames.add(item["name"]);
+        if (response.statusCode == 200) {
+          final responseData = jsonDecode(response.body);
+          List<dynamic> typesList = [];
+          Map<String, dynamic>? pagination;
+
+          if (responseData is Map) {
+            typesList = responseData['data'] ?? responseData['transactionTypes'] ?? [];
+            pagination = responseData['pagination'];
+          } else if (responseData is List) {
+            typesList = responseData;
           }
+
+          for (var item in typesList) {
+            if (item["name"] != null) {
+              allTypes.add(item["name"]);
+            }
+          }
+
+          if (pagination != null && pagination['next'] != null) {
+            page = pagination['next'];
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
         }
-        return typeNames;
       }
-      return ['All Types'];
+
+      return allTypes.toSet().toList(); // إزالة المكررات
     } catch (e) {
       print("⚠️ Error fetching types: $e");
       return ['All Types'];
     }
   }
 
-  // 🔹 جلب حالة الـ Forward للمستخدم الحالي فقط
-  Future<String?> getUserForwardStatus(String transactionId) async {
-    if (userToken == null || userName == null) return null;
-
+  // 🔹 جلب الطلبات الخاصة بالمستخدم - صفحة واحدة
+  Future<Map<String, dynamic>> fetchMyRequests({int page = 1, int perPage = 10}) async {
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
+        Uri.parse("$baseUrl/transactions?page=$page&perPage=$perPage&query=outgoing"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $userToken',
@@ -65,140 +78,37 @@ class MyRequestsApi {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> forwards = data is List 
-            ? data 
-            : (data["transaction"]?["forwards"] ?? data["forwards"] ?? []);
+        final responseData = jsonDecode(response.body);
+        List<dynamic> requests = [];
+        Map<String, dynamic>? pagination;
+        Map<String, dynamic>? summary;
 
-        // البحث من الأحدث إلى الأقدم
-        for (var i = forwards.length - 1; i >= 0; i--) {
-          final forward = forwards[i];
-          final sender = forward["sender"];
-          final receiver = forward["receiver"];
-
-          // إذا كان المستخدم هو sender
-          if (sender != null && sender["name"] == userName) {
-            return forward["status"];
-          }
+        if (responseData is Map) {
+          requests = responseData['data'] ?? [];
+          pagination = responseData['pagination'];
+          summary = responseData['summary'];
+        } else if (responseData is List) {
+          requests = responseData;
         }
 
-        // إذا كان المستخدم هو receiver
-        for (var i = forwards.length - 1; i >= 0; i--) {
-          final forward = forwards[i];
-          final receiver = forward["receiver"];
-
-          if (receiver != null && receiver["name"] == userName) {
-            return forward["status"];
-          }
-        }
+        return {
+          'success': true,
+          'data': requests,
+          'pagination': pagination,
+          'summary': summary,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': "Failed to load requests (Status: ${response.statusCode})",
+        };
       }
-      return null;
-    } catch (e) {
-      print("❌ Error fetching forward status for transaction $transactionId: $e");
-      return null;
-    }
-  }
-
-  // 🔹 جلب كل الطلبات بدون فلترة أولية
-  Future<List<dynamic>> fetchMyRequests() async {
-    try {
-      List<dynamic> combinedRequests = [];
-
-      // دالة لجلب الطلبات حسب المعامل (معدلة لدعم قيمة مخصصة)
-      Future<List<dynamic>> fetchByParam(String key, {String? value}) async {
-        List<dynamic> allRequests = [];
-        int currentPage = 1;
-        int lastPage = 1;
-
-        do {
-          final Map<String, String> queryParams = {
-            "pageNumber": currentPage.toString(),
-            "pageSize": "10",
-            key: value ?? userName!,
-          };
-
-          final uri = Uri.parse("$baseUrl/transactions")
-              .replace(queryParameters: queryParams);
-
-          final response = await http.get(
-            uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $userToken',
-            },
-          );
-
-          if (response.statusCode == 200) {
-            final data = jsonDecode(response.body);
-            final List<dynamic> pageRequests = data is List 
-                ? data 
-                : (data["transactions"] ?? []);
-            allRequests.addAll(pageRequests);
-            lastPage = data is Map ? (data["page"]?["last"] ?? 1) : 1;
-            currentPage++;
-          } else {
-            break;
-          }
-        } while (currentPage <= lastPage);
-
-        return allRequests;
-      }
-
-      // ✅ تحديث: استخدام creatorId و userId بدلاً من creatorName و senderName
-      // الـ API الجديد يتطلب IDs بدلاً من Names
-      // نحاول أولاً استخدام الـ IDs، وإذا لم تكن متاحة نستخدم fallback إلى Names
-      
-      // جلب userId من userName
-      int? userId;
-      if (userToken != null) {
-        try {
-          final usersResponse = await http.get(
-            Uri.parse("$baseUrl/users"),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $userToken',
-            },
-          );
-          if (usersResponse.statusCode == 200) {
-            final usersData = jsonDecode(usersResponse.body);
-            final List<dynamic> users = usersData is List ? usersData : (usersData["users"] ?? []);
-            final user = users.firstWhere(
-              (u) => u['name'] == userName,
-              orElse: () => null,
-            );
-            if (user != null) {
-              userId = user['id'] is int ? user['id'] : int.tryParse(user['id'].toString());
-            }
-          }
-        } catch (e) {
-          print("⚠️ Could not resolve userId, falling back to userName: $e");
-        }
-      }
-
-      // جلب الطلبات باستخدام userId إن أمكن أو userName كـ fallback
-      final creatorRequests = userId != null 
-        ? await fetchByParam("creatorId", value: userId.toString())
-        : await fetchByParam("creatorName");
-      final senderRequests = userId != null
-        ? await fetchByParam("userId", value: userId.toString())
-        : await fetchByParam("senderName");
-
-      // دمج بدون تكرار
-      final ids = <dynamic>{};
-      combinedRequests = [...creatorRequests, ...senderRequests]
-          .where((req) => ids.add(req["id"]))
-          .toList();
-
-      // جلب حالة الـ Forward لكل طلب
-      for (var request in combinedRequests) {
-        final forwardStatus = await getUserForwardStatus(request["id"].toString());
-        request["userForwardStatus"] = forwardStatus;
-      }
-
-      return combinedRequests;
     } catch (e) {
       print("❌ Error fetching requests: $e");
-      throw Exception("Failed to load requests");
+      return {
+        'success': false,
+        'error': "Network error: $e",
+      };
     }
   }
 
@@ -219,6 +129,145 @@ class MyRequestsApi {
       return false;
     } catch (e) {
       print("❌ Error deleting request: $e");
+      return false;
+    }
+  }
+
+  // 🔹 جلب معلومات الforward الأخير الذي أرسلته (لمعرفة من استلم المعاملة)
+  Future<Map<String, dynamic>?> getLastForwardSentByYou(String transactionId) async {
+    try {
+      if (userToken == null || userName == null) return null;
+
+      final res = await http.get(
+        Uri.parse("$baseUrl/transaction/$transactionId/forward?page=1&perPage=10"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $userToken',
+        },
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        List<dynamic> forwards = [];
+
+        if (data is Map) {
+          forwards = data['data'] ?? [];
+        } else if (data is List) {
+          forwards = data;
+        }
+
+        if (forwards.isEmpty) return null;
+
+        // البحث عن آخر توجيه قمنا به
+        dynamic myForward;
+        try {
+          myForward = forwards.lastWhere(
+            (f) => f['sender']?['name'] == userName,
+            orElse: () => null,
+          );
+        } catch (e) {
+          myForward = null;
+        }
+
+        if (myForward != null) {
+          return {
+            'id': myForward['id'],
+            'receiverName': myForward['receiver']?['name'],
+            'status': myForward['status'],
+          };
+        }
+      }
+      return null;
+    } catch (e) {
+      print("⚠️ Error fetching my forwards for request $transactionId: $e");
+      return null;
+    }
+  }
+
+  // 🔹 إلغاء الـ forward
+  Future<bool> cancelForward(String transactionId, dynamic forwardId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null || forwardId == null) return false;
+
+      final response = await http.delete(
+        Uri.parse("$baseUrl/transaction/$transactionId/forward/$forwardId"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print("❌ Error in cancelForward: $e");
+      return false;
+    }
+  }
+
+  // 🔹 جلب المستخدمين (paginated)
+  Future<Map<String, dynamic>> fetchUsers({int page = 1, int perPage = 10}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return {'users': [], 'hasMore': false};
+
+      final response = await http.get(
+        Uri.parse("$baseUrl/users?page=$page&perPage=$perPage"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        List<dynamic> pageUsers = [];
+        bool hasMore = false;
+
+        if (data is Map) {
+          pageUsers = data['data'] ?? data['users'] ?? [];
+          final pagination = data['pagination'];
+          if (pagination != null && pagination['next'] != null) {
+            hasMore = true;
+          }
+        } else if (data is List) {
+          pageUsers = data;
+        }
+
+        return {'users': pageUsers, 'hasMore': hasMore};
+      }
+      return {'users': [], 'hasMore': false};
+    } catch (e) {
+      print("❌ Error in fetchUsers: $e");
+      return {'users': [], 'hasMore': false};
+    }
+  }
+
+  // 🔹 إرسال المعاملة لمستخدم آخر (Forward)
+  Future<bool> forwardTransaction(String transactionId, int receiverId, {String? comment}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return false;
+
+      final response = await http.post(
+        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          "receiverId": receiverId,
+          "comment": comment ?? "Forwarded via My Requests"
+        }),
+      );
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print("❌ Error in forwardTransaction: $e");
       return false;
     }
   }

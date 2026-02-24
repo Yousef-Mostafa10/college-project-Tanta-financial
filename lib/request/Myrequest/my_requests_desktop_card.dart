@@ -16,6 +16,9 @@ Widget buildDesktopRequestCard({
   required int documentsCount,
   required Function(String) onDelete,
   required BuildContext context,
+  Map<String, dynamic>? lastForwardSentTo,
+  VoidCallback? onCancelForward,
+  VoidCallback? onForward,
 }) {
   Color getPriorityColor(String priority) {
     switch (priority.toLowerCase()) {
@@ -95,22 +98,67 @@ Widget buildDesktopRequestCard({
             ),
             const SizedBox(height: 12),
 
-            // 2️⃣ التاريخ
+            // 2️⃣ التاريخ وعمليات التوجيه
             Row(
               children: [
                 Icon(Icons.calendar_today_rounded, size: 14, color: MyRequestsColors.textSecondary),
                 const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    date,
-                    style: TextStyle(fontSize: 13, color: MyRequestsColors.textSecondary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text(
+                  date,
+                  style: TextStyle(fontSize: 13, color: MyRequestsColors.textSecondary),
                 ),
               ],
             ),
             const SizedBox(height: 12),
+
+            // معلومات التوجيه (إذا وجد) - سطر منفصل مثل الإشعارات
+            if (lastForwardSentTo != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: MyRequestsColors.bodyBg,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: MyRequestsColors.statBorder),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.send_rounded, size: 16, color: MyRequestsColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "${AppLocalizations.of(context)!.translate('forwarded_to_prefix')} ${lastForwardSentTo['receiverName']}",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: MyRequestsColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    if (onCancelForward != null)
+                      PopupMenuButton<String>(
+                        icon: Icon(Icons.more_vert_rounded, size: 18, color: MyRequestsColors.textSecondary),
+                        onSelected: (value) {
+                          if (value == 'cancel') onCancelForward();
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'cancel',
+                            child: Row(
+                              children: [
+                                const Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
+                                const SizedBox(width: 8),
+                                Text(AppLocalizations.of(context)!.translate('cancel_forward')),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
 
             // 3️⃣ النوع والأولوية والمستندات والأزرار
             Row(
@@ -126,6 +174,15 @@ Widget buildDesktopRequestCard({
                   documentsCount > 0 ? MyRequestsColors.accentBlue : MyRequestsColors.textMuted,
                 ),
                 const Spacer(),
+                if (onForward != null) ...[
+                  _buildDesktopActionButton(
+                    onPressed: onForward!,
+                    text: AppLocalizations.of(context)!.translate('forward') ?? 'Forward',
+                    icon: Icons.forward_to_inbox_rounded,
+                    color: MyRequestsColors.primary,
+                  ),
+                  const SizedBox(width: 12),
+                ],
 
                 // 4️⃣ أزرار الإجراءات
                 PopupMenuButton<String>(
@@ -190,6 +247,34 @@ Widget buildDesktopRequestCard({
           ],
         ),
       ),
+    ),
+  );
+}
+
+Widget _buildDesktopActionButton({
+  required VoidCallback onPressed,
+  required String text,
+  required IconData icon,
+  required Color color,
+}) {
+  return ElevatedButton.icon(
+    onPressed: onPressed,
+    icon: Icon(icon, size: 16, color: Colors.white),
+    label: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    style: ElevatedButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      backgroundColor: color,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      elevation: 0,
     ),
   );
 }
