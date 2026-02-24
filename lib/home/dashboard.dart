@@ -37,6 +37,7 @@ class _AdministrativeDashboardPageState
   List<dynamic> filteredRequests = [];
   List<dynamic> paginatedRequests = [];
   bool isLoading = false;
+  bool isRefreshing = false; // loading خفيف للفلاتر وتغيير الصفحات
 
   // ✅ Pagination
   int currentPage = 1;
@@ -63,7 +64,7 @@ class _AdministrativeDashboardPageState
   void initState() {
     super.initState();
     fetchTypes();
-    fetchRequests();
+    fetchRequests(fullLoad: true);
   }
 
   Future<void> fetchTypes() async {
@@ -121,10 +122,7 @@ class _AdministrativeDashboardPageState
     try {
       final success = await _api.deleteRequest(requestId);
       if (success) {
-        setState(() {
-          requests.removeWhere((req) => req["id"].toString() == requestId);
-          _applyFilters(requests);
-        });
+        fetchRequests(page: currentPage);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -150,47 +148,54 @@ class _AdministrativeDashboardPageState
     }
   }
 
-  Future<void> fetchRequests() async {
-    setState(() => isLoading = true);
+  Future<void> fetchRequests({int page = 1, bool fullLoad = false}) async {
+    if (fullLoad || requests.isEmpty) {
+      setState(() => isLoading = true);
+    } else {
+      setState(() => isRefreshing = true);
+    }
     try {
-      final allRequests = await _api.fetchAllRequests(
+      final result = await _api.fetchAllRequests(
+        page: page,
+        perPage: itemsPerPage,
         priority: selectedPriority != 'All' ? selectedPriority : null,
         typeName: selectedType != 'All Types' ? selectedType : null,
       );
 
-      _updateStats(allRequests);
-      _applyFilters(allRequests);
+      final List<dynamic> fetchedTransactions = result['data'] ?? [];
+      final pagination = result['pagination'] as Map<String, dynamic>?;
+      final summary = result['summary'] as Map<String, dynamic>?;
+
+      // تحديث الإحصائيات من الـ summary
+      _updateStatsFromSummary(summary);
 
       setState(() {
-        requests = allRequests;
+        requests = fetchedTransactions;
+        currentPage = pagination?['currentPage'] ?? page;
+        totalPages = pagination?['lastPage'] ?? 1;
+        if (totalPages == 0) totalPages = 1;
+        total = pagination?['total'] ?? fetchedTransactions.length;
       });
 
-      debugPrint("✅ Total requests loaded: ${allRequests.length}");
+      // تطبيق الفلاتر المحلية (البحث والاستيتس)
+      _applyLocalFilters();
+
+      debugPrint("✅ Loaded page $currentPage/$totalPages - ${fetchedTransactions.length} items");
     } catch (e) {
       debugPrint("❌ Exception while fetching data: $e");
       if (e.toString().contains('Unauthorized')) {
         _handleTokenExpired();
       }
     }
-    setState(() => isLoading = false);
+    setState(() {
+      isLoading = false;
+      isRefreshing = false;
+    });
   }
 
-  void _applyFilters(List<dynamic> allRequests) {
-    List<dynamic> filtered = allRequests;
-
-    if (selectedType != "All Types") {
-      filtered = filtered.where((request) {
-        final type = request["type"]?["name"] ?? request["typeName"] ?? "";
-        return type == selectedType;
-      }).toList();
-    }
-
-    if (selectedPriority != "All") {
-      filtered = filtered.where((request) {
-        final priority = request["priority"] ?? "";
-        return priority.toLowerCase() == selectedPriority.toLowerCase();
-      }).toList();
-    }
+  // فلاتر محلية (بحث + ستاتس) على البيانات الحالية
+  void _applyLocalFilters() {
+    List<dynamic> filtered = requests;
 
     if (selectedStatus != "All") {
       filtered = filtered.where((request) {
@@ -224,32 +229,24 @@ class _AdministrativeDashboardPageState
 
     setState(() {
       filteredRequests = filtered;
-      totalPages = (filteredRequests.length / itemsPerPage).ceil();
-      if (totalPages == 0) totalPages = 1;
-      currentPage = 1;
-      _updatePaginatedRequests();
+      paginatedRequests = filtered; // الداتا جاية من السيرفر مـ paginated أصلاً
     });
   }
 
-  void _updatePaginatedRequests() {
-    final startIndex = (currentPage - 1) * itemsPerPage;
-    final endIndex = startIndex + itemsPerPage;
+  void _applyFilters(List<dynamic> allRequests) {
+    // لما الفلاتر تتغير، نجيب الداتا من السيرفر تاني
+    fetchRequests(page: 1);
+  }
 
+  void _updatePaginatedRequests() {
+    // الداتا جاية من السيرفر مـ paginated أصلاً
     setState(() {
-      paginatedRequests = filteredRequests.length > startIndex
-          ? filteredRequests.sublist(
-        startIndex,
-        endIndex > filteredRequests.length ? filteredRequests.length : endIndex,
-      )
-          : [];
+      paginatedRequests = filteredRequests;
     });
   }
 
   void _goToPage(int page) {
-    setState(() {
-      currentPage = page;
-      _updatePaginatedRequests();
-    });
+    fetchRequests(page: page);
   }
 
   void _handleTokenExpired() {
@@ -269,13 +266,15 @@ class _AdministrativeDashboardPageState
     );
   }
 
-  void _updateStats(List<dynamic> data) {
-    total = data.length;
-    approved = data.where((e) => e["lastForwardStatus"] == "approved").length;
-    rejected = data.where((e) => e["lastForwardStatus"] == "rejected").length;
-    waiting = data.where((e) => e["lastForwardStatus"] == "waiting" || e["lastForwardStatus"] == "pending").length;
-    needsChange = data.where((e) => e["lastForwardStatus"] == "needsChange").length;
-    fulfilled = data.where((e) => e["lastForwardStatus"] == "fulfilled").length;
+  void _updateStatsFromSummary(Map<String, dynamic>? summary) {
+    if (summary != null) {
+      waiting = summary['WAITING'] ?? 0;
+      needsChange = summary['NEEDS_EDITING'] ?? 0;
+      rejected = summary['REJECTED'] ?? 0;
+      approved = summary['APPROVED'] ?? 0;
+      fulfilled = summary['FULFILLED'] ?? 0;
+      total = waiting + needsChange + rejected + approved + fulfilled;
+    }
   }
 
   Future<void> logout() async {
@@ -344,9 +343,23 @@ class _AdministrativeDashboardPageState
       drawer: CustomDrawer(onLogout: logout),
       body: isLoading
           ? _buildLoadingState()
-          : isMobile
-          ? _buildMobileOptimizedBody()
-          : _buildDesktopBodyWithScroll(),
+          : Stack(
+              children: [
+                isMobile
+                    ? _buildMobileOptimizedBody()
+                    : _buildDesktopBodyWithScroll(),
+                if (isRefreshing)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: LinearProgressIndicator(
+                      backgroundColor: Colors.transparent,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 
@@ -452,7 +465,7 @@ class _AdministrativeDashboardPageState
             vertical: isMobile ? 12 : 14,
           ),
         ),
-        onChanged: (value) => _applyFilters(requests),
+        onChanged: (value) => _applyLocalFilters(),
       ),
     );
   }
@@ -467,25 +480,25 @@ class _AdministrativeDashboardPageState
       typeNames: typeNames,
       statuses: statuses,
       isMobile: isMobile,
-      onSearchChanged: (value) => _applyFilters(requests),
+      onSearchChanged: (value) => _applyLocalFilters(),
       onPriorityChanged: (value) {
         setState(() => selectedPriority = value!);
-        _applyFilters(requests);
+        fetchRequests(page: 1);
       },
       onTypeChanged: (value) {
         setState(() => selectedType = value!);
-        _applyFilters(requests);
+        fetchRequests(page: 1);
       },
       onStatusChanged: (value) {
         setState(() => selectedStatus = value!);
-        _applyFilters(requests);
+        _applyLocalFilters();
       },
     );
   }
 
   Widget _buildHeader(bool isMobile) {
     return HeaderWidget(
-      itemCount: filteredRequests.length,
+      itemCount: total,
       isMobile: isMobile,
       currentPage: currentPage,
       itemsPerPage: itemsPerPage,
@@ -706,7 +719,7 @@ class _AdministrativeDashboardPageState
               const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               isDense: true,
             ),
-            onChanged: (value) => _applyFilters(requests),
+            onChanged: (value) => _applyLocalFilters(),
           ),
           const SizedBox(height: 12),
           Row(
@@ -722,7 +735,7 @@ class _AdministrativeDashboardPageState
                     selectedPriority,
                         (value) {
                       setState(() => selectedPriority = value);
-                      _applyFilters(requests);
+                      fetchRequests(page: 1);
                     },
                   ),
                 ),
@@ -739,7 +752,7 @@ class _AdministrativeDashboardPageState
                     selectedType,
                         (value) {
                       setState(() => selectedType = value);
-                      _applyFilters(requests);
+                      fetchRequests(page: 1);
                     },
                   ),
                 ),
@@ -756,7 +769,7 @@ class _AdministrativeDashboardPageState
                     selectedStatus,
                         (value) {
                       setState(() => selectedStatus = value);
-                      _applyFilters(requests);
+                      _applyLocalFilters();
                     },
                   ),
                 ),
