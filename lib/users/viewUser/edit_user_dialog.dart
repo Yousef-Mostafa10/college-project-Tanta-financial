@@ -7,12 +7,14 @@ import 'package:college_project/l10n/app_localizations.dart';
 
 class EditUserDialog extends StatefulWidget {
   final String userName;
+  final int userId;
   final UsersApiService apiService;
   final bool isMobile;
 
   const EditUserDialog({
     super.key,
     required this.userName,
+    required this.userId,
     required this.apiService,
     required this.isMobile,
   });
@@ -45,7 +47,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
   Future<void> _loadInitialData() async {
     try {
-      final user = await widget.apiService.getUserDetails(widget.userName);
+      final user = await widget.apiService.getUserDetailsById(widget.userId);
       final departments = await widget.apiService.fetchDepartments();
 
       setState(() {
@@ -256,8 +258,8 @@ class _EditUserDialogState extends State<EditUserDialog> {
         newPasswordToSend = _passwordController.text;
       }
 
-      await widget.apiService.updateUser(
-        widget.userName,
+      await widget.apiService.updateUserById(
+        widget.userId,
         newName: _nameController.text,
         newRole: _selectedRole,
         active: _isActive,
