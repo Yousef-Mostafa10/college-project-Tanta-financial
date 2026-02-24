@@ -65,9 +65,11 @@ class _EditRequestPageState extends State<EditRequestPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _senderCommentController = TextEditingController();
 
   String? _userToken;
   String? _userName;
+  int? _userId; // 🔥 معرف المستخدم
   String _selectedRequestType = 'Request Type';
   String _selectedPriority = 'Medium';
 
@@ -77,6 +79,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
   bool _isLoading = true;
   bool _isUpdating = false;
   bool _isUploadingFile = false;
+  bool _isCreator = false; // 🔥 الافتراضي هو false للبدء بفصح الصلاحيات
 
   final String _baseUrl = AppConfig.baseUrl;
   final String _documentApiUrl = AppConfig.baseUrl;
@@ -87,10 +90,18 @@ class _EditRequestPageState extends State<EditRequestPage> {
   List<PlatformFile> _selectedFiles = []; // ملفات جديدة من الجهاز
   List<Map<String, dynamic>> _previousDocuments = []; // ملفات المستخدم السابقة
   bool _isLoadingPreviousDocs = false;
+  bool _isLoadingMoreDocs = false;
+  bool _hasMoreDocs = true;
+  int _docsCurrentPage = 1;
   List<Map<String, dynamic>> _selectedPreviousDocuments = []; // ملفات قديمة تم اختيارها
 
   // 🔥 متغير لتتبع الملفات المرفوعة حديثاً
   List<String> _recentlyLinkedFiles = [];
+
+  // ✅ متغيرات الـ Forward Comment
+  int? _forwardId;
+  bool _isLoadingForward = false;
+  bool _isUpdatingComment = false;
 
   final List<String> _priorityOptions = ['Low', 'Medium', 'High'];
 
@@ -126,6 +137,8 @@ class _EditRequestPageState extends State<EditRequestPage> {
         _fetchRequestTypes(),
         _fetchRequestDetails(),
       ]);
+      // جلب بيانات الـ Forward بعد تحميل تفاصيل الطلب
+      await _fetchForwardData();
     } catch (e) {
       _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
     } finally {
@@ -139,7 +152,10 @@ class _EditRequestPageState extends State<EditRequestPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       _userToken = prefs.getString('token');
-      _userName = prefs.getString('userName') ?? prefs.getString('username') ?? 'user1';
+      _userName = prefs.getString('userName') ?? prefs.getString('username');
+      _userId = prefs.getInt('user_id');
+      
+      debugPrint('👤 User Info Loaded: Name=$_userName, ID=$_userId');
     } catch (e) {
       debugPrint('Error loading user info: $e');
     }
@@ -147,33 +163,54 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
   Future<void> _fetchRequestTypes() async {
     try {
-      final response = await http.get(
-        Uri.parse('$_documentApiUrl/transactions/types'),
-        headers: {'Authorization': 'Bearer $_userToken'},
-      );
+      final List<TransactionType> allTypes = [];
+      int page = 1;
+      bool hasMore = true;
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+      while (hasMore) {
+        final response = await http.get(
+          Uri.parse('$_documentApiUrl/transactions/types?page=$page&perPage=10'),
+          headers: {'Authorization': 'Bearer $_userToken'},
+        );
 
-        List<dynamic> typesList = [];
-        if (data is List) {
-          typesList = data;
-        } else if (data is Map && data["transactionTypes"] != null) {
-          typesList = data["transactionTypes"];
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+
+          List<dynamic> typesList = [];
+          Map<String, dynamic>? pagination;
+
+          if (data is Map) {
+            typesList = data['data'] ?? data['transactionTypes'] ?? [];
+            pagination = data['pagination'];
+          } else if (data is List) {
+            typesList = data;
+          }
+
+          for (var item in typesList) {
+            allTypes.add(TransactionType.fromJson(item));
+          }
+
+          if (pagination != null && pagination['next'] != null) {
+            page = pagination['next'];
+          } else {
+            hasMore = false;
+          }
+        } else {
+          debugPrint('Error fetching types: ${response.statusCode}');
+          hasMore = false;
         }
-
-        final List<TransactionType> types = [];
-        for (var item in typesList) {
-          types.add(TransactionType.fromJson(item));
-        }
-
-        setState(() {
-          _requestTypesData = types;
-          _requestTypes = ['Request Type', ...types.map((t) => t.name)];
-        });
-      } else {
-        debugPrint('Error fetching types: ${response.statusCode}');
       }
+
+      // إزالة المكررات
+      final uniqueTypes = <String, TransactionType>{};
+      for (var t in allTypes) {
+        uniqueTypes[t.name] = t;
+      }
+
+      setState(() {
+        _requestTypesData = uniqueTypes.values.toList();
+        _requestTypes = ['Request Type', ..._requestTypesData.map((t) => t.name)];
+      });
     } catch (e) {
       debugPrint('Error fetching types: $e');
     }
@@ -326,12 +363,136 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
           _documents = data["documents"] ?? [];
           debugPrint('📋 Loaded ${_documents.length} documents');
+
+          // 🔥 فحص الصلاحيات الأكثر دقة
+          _checkPermissions(data);
         });
       } else {
         _showErrorSnackBar('Failed to load request details: ${response.statusCode}');
       }
     } catch (e) {
       _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
+    }
+  }
+
+  // 🔥 دالة فحص الصلاحيات
+  void _checkPermissions(dynamic data) {
+    if (data == null) return;
+
+    // 1. محاولة الفحص بواسطة الـ IDs (الأكثر دقة)
+    final dynamic creatorIdRaw = data["creatorId"] ?? data["creator"]?["id"];
+    if (creatorIdRaw != null && _userId != null) {
+      final int cId = creatorIdRaw is int ? creatorIdRaw : int.tryParse(creatorIdRaw.toString()) ?? -1;
+      if (cId != -1 && cId == _userId) {
+        _isCreator = true;
+        debugPrint('✅ Permission Granted: Match by ID ($cId)');
+        return;
+      }
+    }
+
+    // 2. محاولة الفحص بواسطة الأسماء (كحل احتياطي)
+    final String? creatorName = (data["creatorName"] ?? data["creator"]?["name"])?.toString();
+    if (creatorName != null && _userName != null) {
+      if (creatorName.trim().toLowerCase() == _userName!.trim().toLowerCase()) {
+        _isCreator = true;
+        debugPrint('✅ Permission Granted: Match by Name ($creatorName)');
+        return;
+      }
+    }
+
+    // 3. إذا لم يتطابق شيء، نعتبره ليس صاحب الطلب
+    _isCreator = false;
+    debugPrint('🚫 Permission Denied: User is not the creator (User: $_userName/$_userId, Creator: $creatorName/$creatorIdRaw)');
+  }
+
+  // ✅ جلب بيانات الـ Forward (أول forward) للحصول على senderComment
+  Future<void> _fetchForwardData() async {
+    setState(() => _isLoadingForward = true);
+
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/transaction/${widget.requestId}/forward?page=1&perPage=10'),
+        headers: {
+          'accept': 'application/json',
+          'Authorization': 'Bearer $_userToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        List<dynamic> forwards = [];
+
+        if (responseData is Map) {
+          forwards = responseData['data'] ?? [];
+        } else if (responseData is List) {
+          forwards = responseData;
+        }
+
+        if (forwards.isNotEmpty) {
+          // 🔥 البحث عن الـ Forward الذي قمت أنا بإرساله
+          final myForward = forwards.firstWhere(
+            (f) {
+              final sender = f['sender'];
+              if (sender == null) return false;
+              
+              // مطابقة بالـ ID أو بالاسم كحل احتياطي
+              final sId = sender['id'];
+              final sName = sender['name']?.toString().toLowerCase();
+              
+              bool matchId = (sId != null && _userId != null && sId == _userId);
+              bool matchName = (sName != null && _userName != null && sName == _userName!.toLowerCase());
+              
+              return matchId || matchName;
+            },
+            orElse: () => null,
+          );
+
+          if (myForward != null) {
+            setState(() {
+              _forwardId = myForward['id'];
+              _senderCommentController.text = myForward['senderComment'] ?? '';
+            });
+            debugPrint('✅ Found my forward: id=$_forwardId, comment=${_senderCommentController.text}');
+          } else {
+            debugPrint('ℹ️ No forward sent by current user found in this page');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching forward data: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingForward = false);
+    }
+  }
+
+  // ✅ تحديث تعليق المرسل
+  Future<void> _updateSenderComment() async {
+    if (_forwardId == null) return;
+
+    setState(() => _isUpdatingComment = true);
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$_baseUrl/transaction/${widget.requestId}/forward/$_forwardId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_userToken',
+        },
+        body: json.encode({
+          'comment': _senderCommentController.text,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ Sender comment updated successfully');
+      } else {
+        debugPrint('❌ Failed to update comment: ${response.statusCode}');
+        _showErrorSnackBar('Failed to update comment: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error updating comment: $e');
+    } finally {
+      if (mounted) setState(() => _isUpdatingComment = false);
     }
   }
 
@@ -385,31 +546,47 @@ class _EditRequestPageState extends State<EditRequestPage> {
   }
 
   // ✅ جلب الملفات التي رفعها المستخدم سابقاً
-  Future<void> _fetchPreviousDocuments() async {
-    setState(() => _isLoadingPreviousDocs = true);
+    Future<void> _fetchPreviousDocuments() async {
+    setState(() {
+      _isLoadingPreviousDocs = true;
+      _previousDocuments = [];
+      _docsCurrentPage = 1;
+      _hasMoreDocs = true;
+    });
 
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token') ?? '';
 
       final response = await http.get(
-        Uri.parse('$_documentApiUrl/documents/uploaded'),
+        Uri.parse('$_documentApiUrl/documents/uploaded?page=1&perPage=10'),
         headers: {"Authorization": "Bearer $token"},
       );
 
       if (mounted) {
         if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          if (data is List) {
-            setState(() {
-              _previousDocuments = List<Map<String, dynamic>>.from(data);
-              _isLoadingPreviousDocs = false;
-            });
+          final responseData = json.decode(response.body);
+          List<dynamic> docs = [];
+          Map<String, dynamic>? pagination;
+
+          if (responseData is Map) {
+            docs = responseData['data'] ?? [];
+            pagination = responseData['pagination'];
+          } else if (responseData is List) {
+            docs = responseData;
           }
+
+          setState(() {
+            _previousDocuments = List<Map<String, dynamic>>.from(docs);
+            _docsCurrentPage = pagination?['currentPage'] ?? 1;
+            _hasMoreDocs = pagination?['next'] != null;
+            _isLoadingPreviousDocs = false;
+          });
         } else {
           setState(() {
             _previousDocuments = [];
             _isLoadingPreviousDocs = false;
+            _hasMoreDocs = false;
           });
         }
       }
@@ -418,11 +595,59 @@ class _EditRequestPageState extends State<EditRequestPage> {
         setState(() {
           _previousDocuments = [];
           _isLoadingPreviousDocs = false;
+          _hasMoreDocs = false;
         });
       }
     }
   }
 
+  Future<void> _loadMorePreviousDocuments({void Function(void Function())? setStateSheet}) async {
+    if (_isLoadingMoreDocs || !_hasMoreDocs) return;
+
+    setState(() => _isLoadingMoreDocs = true);
+    setStateSheet?.call(() {});
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final nextPage = _docsCurrentPage + 1;
+
+      final response = await http.get(
+        Uri.parse('$_documentApiUrl/documents/uploaded?page=$nextPage&perPage=10'),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (mounted && response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        List<dynamic> docs = [];
+        Map<String, dynamic>? pagination;
+
+        if (responseData is Map) {
+          docs = responseData['data'] ?? [];
+          pagination = responseData['pagination'];
+        } else if (responseData is List) {
+          docs = responseData;
+        }
+
+        final newDocs = List<Map<String, dynamic>>.from(docs);
+        setState(() {
+          _previousDocuments.addAll(newDocs);
+          _docsCurrentPage = pagination?['currentPage'] ?? nextPage;
+          _hasMoreDocs = pagination?['next'] != null;
+          _isLoadingMoreDocs = false;
+        });
+        setStateSheet?.call(() {});
+      } else {
+        setState(() => _isLoadingMoreDocs = false);
+        setStateSheet?.call(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMoreDocs = false);
+        setStateSheet?.call(() {});
+      }
+    }
+  }
   // ✅ إضافة ملف قديم
   void _addPreviousDocument(Map<String, dynamic> document) {
     setState(() {
@@ -462,7 +687,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
                 maxHeight: MediaQuery.of(context).size.height * 0.7,
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -523,7 +747,6 @@ class _EditRequestPageState extends State<EditRequestPage> {
                           allowMultiple: true,
                         );
                         if (result != null && result.files.isNotEmpty) {
-                          // إنشاء أسماء فريدة للملفات
                           final List<PlatformFile> uniqueFiles = [];
                           for (var file in result.files) {
                             final uniqueFileName = _generateUniqueFileName(file.name);
@@ -562,106 +785,93 @@ class _EditRequestPageState extends State<EditRequestPage> {
                   ),
                   SizedBox(height: 12),
 
-                  _isLoadingPreviousDocs
-                      ? Container(
-                    height: 200,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  )
-                      : _previousDocuments.isEmpty
-                      ? Container(
-                    height: 100,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.folder_open_rounded,
-                            size: 32,
-                            color: AppColors.textMuted,
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'No previous files found',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
+                  Expanded(
+                    child: _isLoadingPreviousDocs
+                        ? Center(child: CircularProgressIndicator(color: AppColors.primary))
+                        : _previousDocuments.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.folder_open_rounded, size: 32, color: AppColors.textMuted),
+                                SizedBox(height: 8),
+                                Text('No previous files found', style: TextStyle(color: AppColors.textMuted)),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                      : Container(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.35,
-                    ),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: _previousDocuments.length,
-                      separatorBuilder: (context, index) => Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final doc = _previousDocuments[index];
-                        final isSelected = _selectedPreviousDocuments.any((d) => d['id'] == doc['id']);
-                        // تحقق إذا كان الملف مرفق بالفعل بالطلب
-                        final isAlreadyAttached = _documents.any((d) => d['id'] == doc['id']);
-
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: AppColors.primary.withOpacity(0.1),
-                            child: Icon(
-                              Icons.description_rounded,
-                              color: AppColors.primary,
-                              size: 20,
-                            ),
-                          ),
-                          title: Text(
-                            doc['title'] ?? 'Untitled',
-                            style: TextStyle(
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            isAlreadyAttached 
-                                ? 'Already attached to this request'
-                                : _formatDate(doc['uploadedAt'] ?? ''),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isAlreadyAttached ? AppColors.accentGreen : AppColors.textSecondary,
-                            ),
-                          ),
-                          trailing: isAlreadyAttached
-                              ? Icon(
-                                  Icons.check_circle,
-                                  color: AppColors.accentGreen,
-                                )
-                              : isSelected
-                                  ? Icon(
-                                      Icons.check_circle_rounded,
-                                      color: AppColors.accentGreen,
-                                    )
-                                  : Icon(
-                                      Icons.add_circle_outline_rounded,
-                                      color: AppColors.primary,
+                          )
+                        : NotificationListener<ScrollNotification>(
+                            onNotification: (scrollInfo) {
+                              if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 100 &&
+                                  !_isLoadingMoreDocs && _hasMoreDocs) {
+                                _loadMorePreviousDocuments(setStateSheet: setStateSheet);
+                              }
+                              return false;
+                            },
+                            child: ListView.separated(
+                              itemCount: _previousDocuments.length + (_hasMoreDocs ? 1 : 0),
+                              separatorBuilder: (context, index) => Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                if (index >= _previousDocuments.length) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Center(
+                                      child: _isLoadingMoreDocs
+                                          ? SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+                                            )
+                                          : Text('Scroll for more...', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                                     ),
-                          enabled: !isAlreadyAttached,
-                          onTap: isAlreadyAttached ? null : () {
-                            if (isSelected) {
-                              _removePreviousDocument(doc);
-                            } else {
-                              _addPreviousDocument(doc);
-                            }
-                            setStateSheet(() {});
-                            setState(() {});
-                          },
-                        );
-                      },
-                    ),
+                                  );
+                                }
+
+                                final doc = _previousDocuments[index];
+                                final isSelected = _selectedPreviousDocuments.any((d) => d['id'] == doc['id']);
+                                final isAlreadyAttached = _documents.any((d) => d['id'] == doc['id']);
+
+                                return ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                                    child: Icon(Icons.description_rounded, color: AppColors.primary, size: 20),
+                                  ),
+                                  title: Text(
+                                    doc['title'] ?? 'Untitled',
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  subtitle: Text(
+                                    isAlreadyAttached
+                                        ? 'Already attached to this request'
+                                        : _formatDate(doc['uploadedAt'] ?? ''),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isAlreadyAttached ? AppColors.accentGreen : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                  trailing: isAlreadyAttached
+                                      ? Icon(Icons.check_circle, color: AppColors.accentGreen)
+                                      : isSelected
+                                          ? Icon(Icons.check_circle_rounded, color: AppColors.accentGreen)
+                                          : Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
+                                  enabled: !isAlreadyAttached,
+                                  onTap: isAlreadyAttached ? null : () {
+                                    if (isSelected) {
+                                      _removePreviousDocument(doc);
+                                    } else {
+                                      _addPreviousDocument(doc);
+                                    }
+                                    setStateSheet(() {});
+                                    setState(() {});
+                                  },
+                                );
+                              },
+                            ),
+                          ),
                   ),
 
                   SizedBox(height: 16),
@@ -877,6 +1087,11 @@ class _EditRequestPageState extends State<EditRequestPage> {
     });
 
     try {
+      // 0. تحديث تعليق المرسل
+      if (_forwardId != null) {
+        await _updateSenderComment();
+      }
+
       // 1. رفع الملفات الجديدة وربطها
       if (_selectedFiles.isNotEmpty) {
         await _uploadNewFiles();
@@ -1305,6 +1520,30 @@ class _EditRequestPageState extends State<EditRequestPage> {
                 color: AppColors.textSecondary,
               ),
             ),
+            if (!_isCreator) ...[
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.accentBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.accentBlue.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: AppColors.accentBlue, size: 20),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(context)!.translate('view_only_mode_hint') ?? 
+                        'You are viewing this request. You can only upload new documents.',
+                        style: TextStyle(color: AppColors.accentBlue, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             SizedBox(height: isMobile ? 16 : 24),
 
             Text(
@@ -1346,6 +1585,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                 ),
               ),
               validator: (value) => (value == null || value.isEmpty) ? AppLocalizations.of(context)!.translate('request_title_error') : null,
+              enabled: _isCreator,
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
@@ -1369,8 +1609,24 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
             SizedBox(height: isMobile ? 6 : 8),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               value: _selectedRequestType,
               decoration: _buildInputDecoration(),
+              selectedItemBuilder: (BuildContext context) {
+                return _requestTypes.map<Widget>((String item) {
+                  return Container(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      item == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : item,
+                      style: TextStyle(
+                        color: item == 'Request Type' ? AppColors.textMuted : AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList();
+              },
               items: _requestTypes.map((v) {
                 final typeData = _requestTypesData.firstWhere(
                       (t) => t.name == v,
@@ -1388,6 +1644,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                         style: TextStyle(
                           color: v == 'Request Type' ? AppColors.textMuted : AppColors.textPrimary,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                       if (v != 'Request Type' && typeData.creatorName != 'System' && typeData.creatorName != '')
                         Text(
@@ -1397,17 +1654,18 @@ class _EditRequestPageState extends State<EditRequestPage> {
                             color: AppColors.textSecondary,
                             fontStyle: FontStyle.italic,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                     ],
                   ),
                 );
               }).toList(),
-              onChanged: (newValue) {
+              onChanged: _isCreator ? (newValue) {
                 setState(() { _selectedRequestType = newValue!; });
-              },
+              } : null,
               validator: (value) => (value == 'Request Type') ? AppLocalizations.of(context)!.translate('request_type_hint') : null,
             ),
-            SizedBox(height: isMobile ? 12 : 16),
+            SizedBox(height: isMobile ? 16 : 20),
 
             Text(
               AppLocalizations.of(context)!.translate('priority_label'),
@@ -1451,9 +1709,9 @@ class _EditRequestPageState extends State<EditRequestPage> {
                   ),
                 );
               }).toList(),
-              onChanged: (newValue) {
+              onChanged: _isCreator ? (newValue) {
                 setState(() { _selectedPriority = newValue!; });
-              },
+              } : null,
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
@@ -1487,7 +1745,83 @@ class _EditRequestPageState extends State<EditRequestPage> {
                 ),
               ),
               validator: (value) => (value == null || value.isEmpty) ? AppLocalizations.of(context)!.translate('description_error') : null,
+              enabled: _isCreator,
             ),
+            SizedBox(height: isMobile ? 12 : 16),
+
+            // ✅ خانة تعليق المرسل
+            Text(
+              AppLocalizations.of(context)!.translate('sender_comment_label') ?? 'Sender Comment',
+              style: TextStyle(
+                fontSize: isMobile ? 14 : 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: isMobile ? 6 : 8),
+            _isLoadingForward
+                ? Container(
+                    height: 60,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.borderColor),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  )
+                : TextFormField(
+                    controller: _senderCommentController,
+                    maxLines: isMobile ? 3 : 4,
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context)!.translate('enter_sender_comment') ?? 'Enter your comment...',
+                      hintStyle: TextStyle(color: AppColors.textMuted),
+                      prefixIcon: Padding(
+                        padding: EdgeInsets.only(bottom: isMobile ? 40 : 60),
+                        child: Icon(Icons.comment_rounded, color: AppColors.primary, size: 20),
+                      ),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 12 : 16,
+                        vertical: isMobile ? 14 : 16,
+                      ),
+                       suffixIcon: _forwardId == null
+                           ? Tooltip(
+                               message: 'No forward found',
+                               child: Icon(Icons.info_outline, color: AppColors.textMuted, size: 18),
+                             )
+                           : null,
+                     ),
+                     enabled: _forwardId != null, // 👈 متاح للتعديل لأي شخص له Forward ID خاص به
+                   ),
+            if (_forwardId == null && !_isLoadingForward)
+              Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Text(
+                  AppLocalizations.of(context)!.translate('no_forward_comment_hint') ?? 'No forward found for this request',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textMuted,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+
             SizedBox(height: isMobile ? 20 : 32),
 
             _buildDocumentsSection(isMobile, isTablet),
