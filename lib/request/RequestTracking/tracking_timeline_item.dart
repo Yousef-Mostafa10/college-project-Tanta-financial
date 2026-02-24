@@ -160,26 +160,49 @@ Widget buildTimelineStep({
                     ),
                     const Spacer(),
 
-                    // معلومات المشاهدة (تحديث للAPI الجديد: senderSeen & receiverSeen)
+                    // معلومات المشاهدة - المرسل
                     Row(
                       children: [
                         Icon(
-                          (forward['senderSeen'] == true || forward['receiverSeen'] == true)
-                              ? Icons.visibility_rounded
-                              : Icons.visibility_off_rounded,
-                          size: isMobile ? 14 : 16,
-                          color: (forward['senderSeen'] == true || forward['receiverSeen'] == true)
+                          forward['senderSeen'] == true
+                              ? Icons.done_all_rounded
+                              : Icons.done_rounded,
+                          size: isMobile ? 13 : 15,
+                          color: forward['senderSeen'] == true
+                              ? TrackingColors.accentBlue
+                              : TrackingColors.textMuted,
+                        ),
+                        SizedBox(width: 2),
+                        Text(
+                          AppLocalizations.of(context)!.translate('from_label'),
+                          style: TextStyle(
+                            fontSize: isMobile ? 9 : 11,
+                            color: forward['senderSeen'] == true
+                                ? TrackingColors.accentBlue
+                                : TrackingColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(width: isMobile ? 6 : 8),
+                    // معلومات المشاهدة - المستقبل
+                    Row(
+                      children: [
+                        Icon(
+                          forward['receiverSeen'] == true
+                              ? Icons.done_all_rounded
+                              : Icons.done_rounded,
+                          size: isMobile ? 13 : 15,
+                          color: forward['receiverSeen'] == true
                               ? TrackingColors.statusApproved
                               : TrackingColors.textMuted,
                         ),
-                        SizedBox(width: 4),
+                        SizedBox(width: 2),
                         Text(
-                          (forward['senderSeen'] == true || forward['receiverSeen'] == true)
-                              ? AppLocalizations.of(context)!.translate('seen_label')
-                              : AppLocalizations.of(context)!.translate('not_seen_label'),
+                          AppLocalizations.of(context)!.translate('to_label'),
                           style: TextStyle(
-                            fontSize: isMobile ? 10 : 12,
-                            color: (forward['senderSeen'] == true || forward['receiverSeen'] == true)
+                            fontSize: isMobile ? 9 : 11,
+                            color: forward['receiverSeen'] == true
                                 ? TrackingColors.statusApproved
                                 : TrackingColors.textMuted,
                           ),
@@ -199,7 +222,7 @@ Widget buildTimelineStep({
                 ),
 
                 // تعليق المرسل (senderComment)
-                if (forward['senderComment'] != null && forward['senderComment'].isNotEmpty) ...[
+                if (forward['senderComment'] != null && forward['senderComment'].toString().isNotEmpty) ...[
                   SizedBox(height: isMobile ? 8 : 12),
                   Container(
                     width: double.infinity,
@@ -234,7 +257,7 @@ Widget buildTimelineStep({
                         ),
                         SizedBox(height: isMobile ? 4 : 6),
                         Text(
-                          forward['senderComment'],
+                          forward['senderComment'].toString(),
                           style: TextStyle(
                             fontSize: isMobile ? 12 : 14,
                             color: TrackingColors.textPrimary,
@@ -246,27 +269,51 @@ Widget buildTimelineStep({
                   ),
                 ],
 
-                // وقت التحديث إذا كان مختلفاً
-                if (forward['updatedAt'] != null &&
-                    forward['updatedAt'] != forward['forwardedAt']) ...[
-                  SizedBox(height: isMobile ? 6 : 8),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.update_rounded,
-                        size: isMobile ? 12 : 14,
-                        color: TrackingColors.textMuted,
+                // تعليق المستقبل (receiverComment)
+                if (forward['receiverComment'] != null && forward['receiverComment'].toString().isNotEmpty) ...[
+                  SizedBox(height: isMobile ? 8 : 12),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(isMobile ? 10 : 12),
+                    decoration: BoxDecoration(
+                      color: TrackingColors.accentGreen.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: TrackingColors.accentGreen.withOpacity(0.2),
                       ),
-                      SizedBox(width: 4),
-                      Text(
-                        '${AppLocalizations.of(context)!.translate('updated_at')}: ${TrackingHelpers.formatDate(forward['updatedAt'])}',
-                        style: TextStyle(
-                          fontSize: isMobile ? 10 : 11,
-                          color: TrackingColors.textMuted,
-                          fontStyle: FontStyle.italic,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.reply_rounded,
+                              size: isMobile ? 14 : 16,
+                              color: TrackingColors.accentGreen,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              AppLocalizations.of(context)!.translate('receiver_comment_label'),
+                              style: TextStyle(
+                                fontSize: isMobile ? 11 : 12,
+                                fontWeight: FontWeight.w600,
+                                color: TrackingColors.accentGreen,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        SizedBox(height: isMobile ? 4 : 6),
+                        Text(
+                          forward['receiverComment'].toString(),
+                          style: TextStyle(
+                            fontSize: isMobile ? 12 : 14,
+                            color: TrackingColors.textPrimary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ],

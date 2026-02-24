@@ -11,11 +11,11 @@ class TrackingApi {
     required this.userToken,
   });
 
-  // 🔹 جلب معلومات التتبع
-  Future<Map<String, dynamic>> fetchTransactionForwards(String transactionId) async {
+  // 🔹 جلب معلومات التتبع - صفحة واحدة
+  Future<Map<String, dynamic>> fetchTransactionForwards(String transactionId, {int page = 1, int perPage = 10}) async {
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/transaction/$transactionId/forward"), // ✅ إزالة /api/v0 المكرر
+        Uri.parse("$baseUrl/transaction/$transactionId/forward?page=$page&perPage=$perPage"),
         headers: {
           'accept': 'application/json',
           'Authorization': 'Bearer $userToken',
@@ -23,12 +23,22 @@ class TrackingApi {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> forwards = jsonDecode(response.body);
+        final responseData = jsonDecode(response.body);
+        List<dynamic> forwards = [];
+        Map<String, dynamic>? pagination;
+
+        if (responseData is Map) {
+          forwards = responseData['data'] ?? [];
+          pagination = responseData['pagination'];
+        } else if (responseData is List) {
+          forwards = responseData;
+        }
 
         return {
           'success': true,
-          'transaction': null, // API لا ترجع معلومات المعاملة بشكل منفصل
+          'transaction': null,
           'forwards': forwards,
+          'pagination': pagination,
         };
       } else {
         return {

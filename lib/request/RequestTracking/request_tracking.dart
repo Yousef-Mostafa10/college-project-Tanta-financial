@@ -22,22 +22,39 @@ class TransactionTrackingPage extends StatefulWidget {
 
 class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
   final String baseUrl = AppConfig.baseUrl;
+  final ScrollController _scrollController = ScrollController();
   String? _userToken;
   List<dynamic> _forwards = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _currentPage = 1;
   String? _errorMessage;
   Map<String, dynamic>? _transactionInfo;
 
   // الفلاتر
   String _selectedStatus = "All";
-  final List<String> _statusFilters = ["All", "waiting", "approved", "rejected", "needs-editing"];
+  final List<String> _statusFilters = ["All", "WAITING", "APPROVED", "REJECTED", "NEEDS_EDITING"];
 
   late TrackingApi _api;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _initializeData();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreForwards();
+    }
   }
 
   Future<void> _initializeData() async {
@@ -61,15 +78,21 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _forwards = [];
+      _currentPage = 1;
+      _hasMore = true;
     });
 
     _api = TrackingApi(baseUrl: baseUrl, userToken: _userToken);
-    final result = await _api.fetchTransactionForwards(widget.transactionId);
+    final result = await _api.fetchTransactionForwards(widget.transactionId, page: 1, perPage: 10);
 
     setState(() {
       if (result['success'] == true) {
         _transactionInfo = result['transaction'];
         _forwards = result['forwards'];
+        final pagination = result['pagination'] as Map<String, dynamic>?;
+        _currentPage = pagination?['currentPage'] ?? 1;
+        _hasMore = pagination?['next'] != null;
       } else {
         _errorMessage = result['error'];
       }
@@ -77,9 +100,33 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
     });
   }
 
+  Future<void> _loadMoreForwards() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() => _isLoadingMore = true);
+
+    final nextPage = _currentPage + 1;
+    final result = await _api.fetchTransactionForwards(widget.transactionId, page: nextPage, perPage: 10);
+
+    if (mounted) {
+      setState(() {
+        if (result['success'] == true) {
+          final newForwards = result['forwards'] as List<dynamic>;
+          _forwards.addAll(newForwards);
+          final pagination = result['pagination'] as Map<String, dynamic>?;
+          _currentPage = pagination?['currentPage'] ?? nextPage;
+          _hasMore = pagination?['next'] != null;
+        }
+        _isLoadingMore = false;
+      });
+    }
+  }
+
   List<dynamic> get _filteredForwards {
     if (_selectedStatus == "All") return _forwards;
-    return _forwards.where((forward) => forward['status'] == _selectedStatus).toList();
+    return _forwards.where((forward) =>
+        forward['status'].toString().toUpperCase() == _selectedStatus.toUpperCase()
+    ).toList();
   }
 
   @override
@@ -128,6 +175,7 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
 
   Widget _buildMainContent(bool isMobile, bool isTablet) {
     return SingleChildScrollView(
+      controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       child: Column(
         children: [
@@ -171,6 +219,31 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
             isMobile: isMobile,
             isTablet: isTablet,
           ),
+
+          // مؤشر تحميل المزيد
+          if (_isLoadingMore)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(TrackingColors.primary),
+                  strokeWidth: 2,
+                ),
+              ),
+            ),
+
+          // رسالة نهاية القائمة
+          if (!_hasMore && _forwards.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                '— ${AppLocalizations.of(context)!.translate('no_more_data') ?? 'No more data'} —',
+                style: TextStyle(
+                  color: TrackingColors.textMuted,
+                  fontSize: 12,
+                ),
+              ),
+            ),
         ],
       ),
     );
