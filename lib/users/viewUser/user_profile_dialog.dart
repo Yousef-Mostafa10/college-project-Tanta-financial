@@ -7,12 +7,14 @@ import 'user_model.dart';
 
 class UserProfileDialog extends StatefulWidget {
   final String userName;
+  final int userId;
   final UsersApiService apiService;
   final bool isMobile;
 
   const UserProfileDialog({
     super.key,
     required this.userName,
+    required this.userId,
     required this.apiService,
     required this.isMobile,
   });
@@ -33,7 +35,7 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
 
   Future<void> _loadUserData() async {
     try {
-      final user = await widget.apiService.getUserDetails(widget.userName);
+      final user = await widget.apiService.getUserDetailsById(widget.userId);
       setState(() {
         _userData = user;
         _isLoading = false;

@@ -6,12 +6,14 @@ import 'package:college_project/l10n/app_localizations.dart';
 
 class UserFilesDialog extends StatefulWidget {
   final String userName;
+  final int userId;
   final UsersApiService apiService;
   final bool isMobile;
 
   const UserFilesDialog({
     super.key,
     required this.userName,
+    required this.userId,
     required this.apiService,
     required this.isMobile,
   });

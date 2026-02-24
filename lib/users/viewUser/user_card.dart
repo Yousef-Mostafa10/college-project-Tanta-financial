@@ -263,7 +263,7 @@ class UserCard extends StatelessWidget {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                await apiService.deleteUser(user.name);
+                await apiService.deleteUserById(user.id!);
                 if (onUpdate != null) onUpdate!();
                 UsersHelpers.showSuccessMessage(context, 'User deleted successfully');
               } catch (e) {
@@ -302,6 +302,7 @@ class UserCard extends StatelessWidget {
       context: context,
       builder: (context) => UserProfileDialog(
         userName: user.name,
+        userId: user.id!,
         apiService: apiService,
         isMobile: isMobile,
       ),
@@ -313,6 +314,7 @@ class UserCard extends StatelessWidget {
       context: context,
       builder: (context) => UserFilesDialog(
         userName: user.name,
+        userId: user.id!,
         apiService: apiService,
         isMobile: isMobile,
       ),
@@ -324,6 +326,7 @@ class UserCard extends StatelessWidget {
       context: context,
       builder: (context) => EditUserDialog(
         userName: user.name,
+        userId: user.id!,
         apiService: apiService,
         isMobile: isMobile,
       ),

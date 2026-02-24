@@ -23,27 +23,94 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
   String _searchQuery = '';
   String _selectedFilter = 'all';
 
+  // Pagination
+  int _currentPage = 1;
+  bool _hasMorePages = true;
+  bool _isLoadingMore = false;
+  int _totalUsers = 0;
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     _loadUsers();
+
+    // Scroll listener للتحميل التدريجي
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 300 &&
+          !_isLoadingMore &&
+          _hasMorePages &&
+          _searchQuery.isEmpty &&
+          _selectedFilter == 'all') {
+        _loadMoreUsers();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUsers() async {
     setState(() {
       _isLoading = true;
       _users.clear();
+      _currentPage = 1;
+      _hasMorePages = true;
     });
 
     try {
-      final List<User> fetchedUsers = await _apiService.fetchUsers();
+      final result = await _apiService.fetchUsersPaginated(page: 1, perPage: 10);
+      final List<User> fetchedUsers = result['users'] as List<User>;
+      final pagination = result['pagination'] as Map<String, dynamic>?;
+
       setState(() {
         _users.addAll(fetchedUsers);
+        _totalUsers = pagination?['total'] ?? _users.length;
+
+        if (pagination != null && pagination['next'] != null) {
+          _currentPage = pagination['next'];
+          _hasMorePages = true;
+        } else {
+          _hasMorePages = false;
+        }
+
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
       UsersHelpers.showErrorMessage(context, e.toString());
+    }
+  }
+
+  Future<void> _loadMoreUsers() async {
+    if (_isLoadingMore || !_hasMorePages) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final result = await _apiService.fetchUsersPaginated(page: _currentPage, perPage: 10);
+      final List<User> fetchedUsers = result['users'] as List<User>;
+      final pagination = result['pagination'] as Map<String, dynamic>?;
+
+      setState(() {
+        _users.addAll(fetchedUsers);
+        _totalUsers = pagination?['total'] ?? _users.length;
+
+        if (pagination != null && pagination['next'] != null) {
+          _currentPage = pagination['next'];
+          _hasMorePages = true;
+        } else {
+          _hasMorePages = false;
+        }
+
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingMore = false);
     }
   }
 
@@ -110,17 +177,35 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
                 : Column(
               children: [
                 UsersListHeader(
-                  filteredUsersCount: _filteredUsers.length,
+                  filteredUsersCount: _searchQuery.isEmpty && _selectedFilter == 'all'
+                      ? _totalUsers
+                      : _filteredUsers.length,
                   selectedFilter: _selectedFilter,
-                  hasMore: false,
+                  hasMore: _hasMorePages,
                   searchQuery: _searchQuery,
                   isMobile: isMobile,
                 ),
                 Expanded(
                   child: ListView.builder(
+                    controller: _scrollController,
                     padding: EdgeInsets.all(isMobile ? 12 : 16),
-                    itemCount: _filteredUsers.length,
+                    itemCount: _filteredUsers.length + (_hasMorePages && _searchQuery.isEmpty && _selectedFilter == 'all' ? 1 : 0),
                     itemBuilder: (context, index) {
+                      // عنصر اللودينج في الآخر
+                      if (index == _filteredUsers.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
                       final user = _filteredUsers[index];
                       return UserCard(
                         user: user,

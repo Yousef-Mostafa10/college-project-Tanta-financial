@@ -12,14 +12,14 @@ class UsersApiService {
     return prefs.getString('token');
   }
 
-  // ✅ جلب جميع المستخدمين
-  Future<List<User>> fetchUsers() async {
+  // ✅ جلب المستخدمين مع Pagination
+  Future<Map<String, dynamic>> fetchUsersPaginated({int page = 1, int perPage = 10}) async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('no_token_error');
     }
 
-    final url = Uri.parse("$baseUrl/users");
+    final url = Uri.parse("$baseUrl/users?page=$page&perPage=$perPage");
 
     final response = await http.get(
       url,
@@ -31,17 +31,35 @@ class UsersApiService {
     );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data is List) {
-        return data.map((userJson) => User.fromJson(userJson)).toList();
-      } else {
-        throw Exception('Invalid API response format');
+      final responseData = jsonDecode(response.body);
+
+      List<dynamic> usersData = [];
+      Map<String, dynamic>? pagination;
+
+      if (responseData is Map) {
+        usersData = responseData['data'] ?? [];
+        pagination = responseData['pagination'];
+      } else if (responseData is List) {
+        usersData = responseData;
       }
+
+      final users = usersData.map((userJson) => User.fromJson(userJson)).toList();
+
+      return {
+        'users': users,
+        'pagination': pagination,
+      };
     } else if (response.statusCode == 401) {
       throw Exception('unauthorized_error');
     } else {
       throw Exception('error_code: ${response.statusCode}');
     }
+  }
+
+  // ✅ جلب جميع المستخدمين (للتوافق مع الكود القديم)
+  Future<List<User>> fetchUsers() async {
+    final result = await fetchUsersPaginated(page: 1, perPage: 10);
+    return result['users'] as List<User>;
   }
 
   // ✅ حل User ID من الاسم
@@ -90,8 +108,8 @@ class UsersApiService {
     return getUserDetailsById(userId);
   }
 
-  // ✅ تحديث بيانات المستخدم (باستخدام ID بدلاً من الاسم)
-  Future<User> updateUser(String userName, {
+  // ✅ تحديث بيانات المستخدم بالـ ID مباشرة
+  Future<User> updateUserById(int userId, {
     String? newPassword,
     String? newRole,
     bool? active,
@@ -101,12 +119,6 @@ class UsersApiService {
     final token = await _getToken();
     if (token == null) {
       throw Exception('no_token_error');
-    }
-
-    // حل الـ ID من الاسم
-    final userId = await _resolveUserId(userName);
-    if (userId == null) {
-      throw Exception('user_not_found');
     }
 
     final url = Uri.parse("$baseUrl/users/$userId");
@@ -159,42 +171,82 @@ class UsersApiService {
     }
   }
 
-  // ✅ جلب قائمة الأقسام
+  // ✅ تحديث بيانات المستخدم (باستخدام الاسم - للتوافق مع الكود القديم)
+  Future<User> updateUser(String userName, {
+    String? newPassword,
+    String? newRole,
+    bool? active,
+    String? newName,
+    String? departmentName,
+  }) async {
+    final userId = await _resolveUserId(userName);
+    if (userId == null) {
+      throw Exception('user_not_found');
+    }
+    return updateUserById(userId,
+      newPassword: newPassword,
+      newRole: newRole,
+      active: active,
+      newName: newName,
+      departmentName: departmentName,
+    );
+  }
+
+  // ✅ جلب قائمة الأقسام مع Pagination
   Future<List<String>> fetchDepartments() async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('no_token_error');
     }
 
-    final url = Uri.parse("$baseUrl/departments");
+    // جلب كل الأقسام (بعدد كبير للدروب داون)
+    List<String> allDepartments = [];
+    int page = 1;
+    bool hasMore = true;
 
-    final response = await http.get(
-      url,
-      headers: {
-        "Authorization": "Bearer $token",
-        "accept": "application/json",
-      },
-    );
+    while (hasMore) {
+      final url = Uri.parse("$baseUrl/departments?page=$page&perPage=50");
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((dept) => dept['name'].toString()).toList();
-    } else {
-      throw Exception('error_code: ${response.statusCode}');
+      final response = await http.get(
+        url,
+        headers: {
+          "Authorization": "Bearer $token",
+          "accept": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        List<dynamic> data = [];
+        Map<String, dynamic>? pagination;
+
+        if (responseData is Map) {
+          data = responseData['data'] ?? [];
+          pagination = responseData['pagination'];
+        } else if (responseData is List) {
+          data = responseData;
+        }
+
+        allDepartments.addAll(data.map((dept) => dept['name'].toString()));
+
+        if (pagination != null && pagination['next'] != null) {
+          page = pagination['next'];
+        } else {
+          hasMore = false;
+        }
+      } else {
+        throw Exception('error_code: ${response.statusCode}');
+      }
     }
+
+    return allDepartments;
   }
 
-  // ✅ حذف مستخدم (باستخدام ID بدلاً من الاسم)
-  Future<void> deleteUser(String userName) async {
+  // ✅ حذف مستخدم بالـ ID مباشرة
+  Future<void> deleteUserById(int userId) async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('no_token_error');
-    }
-
-    // حل الـ ID من الاسم
-    final userId = await _resolveUserId(userName);
-    if (userId == null) {
-      throw Exception('user_not_found');
     }
 
     final url = Uri.parse("$baseUrl/users/$userId");
@@ -219,6 +271,15 @@ class UsersApiService {
     } else {
       throw Exception('error_code: ${response.statusCode}: ${response.body}');
     }
+  }
+
+  // ✅ حذف مستخدم بالاسم (للتوافق مع الكود القديم)
+  Future<void> deleteUser(String userName) async {
+    final userId = await _resolveUserId(userName);
+    if (userId == null) {
+      throw Exception('user_not_found');
+    }
+    return deleteUserById(userId);
   }
 
   // ✅ إنشاء مستخدم جديد
@@ -268,7 +329,12 @@ class UsersApiService {
     }
   }
 
-  // ✅ تغيير كلمة المرور فقط
+  // ✅ تغيير كلمة المرور بالـ ID
+  Future<User> changePasswordById(int userId, String newPassword) async {
+    return await updateUserById(userId, newPassword: newPassword);
+  }
+
+  // ✅ تغيير كلمة المرور بالاسم (للتوافق)
   Future<User> changePassword(String userName, String newPassword) async {
     return await updateUser(userName, newPassword: newPassword);
   }
