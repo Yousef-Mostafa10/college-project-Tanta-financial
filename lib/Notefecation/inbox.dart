@@ -35,9 +35,23 @@ class _InboxPageState extends State<InboxPage> {
   List<dynamic> _filteredRequests = [];
   bool _isLoading = true;
   bool _isRefreshing = false;
+  bool _isLoadingMore = false;
   String? _errorMessage;
   String? _userName;
   String? _userToken;
+
+  // ✅ Pagination
+  int _currentPage = 1;
+  bool _hasMorePages = true;
+
+  // ✅ Summary من الـ API
+  Map<String, int> _apiSummary = {
+    'WAITING': 0,
+    'NEEDS_EDITING': 0,
+    'REJECTED': 0,
+    'APPROVED': 0,
+  };
+  int _totalRequests = 0;
 
   // الفلاتر
   String _selectedStatus = "All";
@@ -114,7 +128,6 @@ class _InboxPageState extends State<InboxPage> {
         _errorMessage = AppLocalizations.of(context)!.translate('please_login_first');
         _isLoading = false;
       });
-      print('❌ Missing token or userName');
       return;
     }
 
@@ -124,44 +137,65 @@ class _InboxPageState extends State<InboxPage> {
       _isLoading = true;
       _isRefreshing = true;
       _errorMessage = null;
+      _currentPage = 1;
+      _hasMorePages = true;
     });
 
     try {
-      final allRequests = await _apiService.fetchInboxRequests(_userName!, _userToken!);
+      final result = await _apiService.fetchInboxRequestsPage(_userToken, page: 1, perPage: 10);
+      final pageRequests = result['data'] as List<dynamic>;
+      final pagination = result['pagination'] as Map<String, dynamic>?;
+      final summary = result['summary'] as Map<String, dynamic>?;
 
-      // تحديث البيانات المساعدة لكل طلب
-      final updatedRequests = <dynamic>[];
-      for (var req in allRequests) {
-        try {
-          final request = Map<String, dynamic>.from(req);
-
-          // جلب البيانات الإضافية
-          request['yourCurrentStatus'] = await _apiService.getYourForwardStatusForRequestUpdated(
-            request, _userToken, _userName,
-          );
-
-          request['lastSenderName'] = await _apiService.getLastSenderNameForYou(
-            request, _userToken, _userName,
-          );
-
-          request['lastForwardSentTo'] = await _apiService.getLastForwardSentByYou(
-            request, _userToken, _userName,
-          );
-
-          // 🔹 إضافة: التحقق مما إذا كان يمكن التوجيه (حسب منطق Angular الجديد)
-          final canForward = await _apiService.checkIfCanForward(
-            request['id'].toString(),
-            _userToken,
-            _userName,
-          );
-          request['hasForwarded'] = !canForward; // حفظ القيمة العكسية للحفاظ على التوافق
-
-          updatedRequests.add(request);
-        } catch (e) {
-          print('⚠️ Error processing request ${req['id']}: $e');
-          updatedRequests.add(req);
-        }
+      // تحديث الـ summary
+      if (summary != null) {
+        _apiSummary = {
+          'WAITING': (summary['WAITING'] ?? 0) as int,
+          'NEEDS_EDITING': (summary['NEEDS_EDITING'] ?? 0) as int,
+          'REJECTED': (summary['REJECTED'] ?? 0) as int,
+          'APPROVED': (summary['APPROVED'] ?? 0) as int,
+        };
       }
+
+      _totalRequests = pagination?['total'] ?? pageRequests.length;
+      _hasMorePages = pagination?['next'] != null;
+      _currentPage = pagination?['currentPage'] ?? 1;
+
+      // تحديث البيانات المساعدة لكل طلب بشكل سريع (دون طلبات API إضافية في حلقة)
+      final updatedRequests = pageRequests.map((req) {
+        final request = Map<String, dynamic>.from(req);
+        
+        // استخدام الحالة القادمة من السيرفر مباشرة وتوحيدها
+        String status = (request["lastForwardStatus"] ?? "waiting").toString().toLowerCase();
+        
+        // توحيد المسميات لتتوافق مع الـ UI
+        if (status == 'needs_editing' || status == 'needs-editing') {
+          status = 'needs_change';
+        } else if (status == 'pending') {
+          status = 'waiting';
+        }
+
+        if (request["fulfilled"] == true) {
+          status = "fulfilled";
+        }
+        
+        request['yourCurrentStatus'] = status;
+        request['lastForwardStatus'] = status;
+        
+        // المحاولة الذكية للحصول على اسم المرسل (استخدام المنشئ كاحتياط)
+        request['lastSenderName'] = request['lastForwardSenderName'] ?? 
+                                   request['creatorName'] ?? 
+                                   request['creator']?['name'] ?? 'Unknown';
+                                   
+        request['hasForwarded'] = request['isForwardedByMe'] ?? false;
+
+        // توحيد هيكل النوع (Fix n/a issue)
+        request['type'] = {
+          'name': request['typeName'] ?? (request['type'] is Map ? request['type']['name'] : 'N/A')
+        };
+        
+        return request;
+      }).toList();
 
       setState(() {
         _requests = updatedRequests;
@@ -170,7 +204,7 @@ class _InboxPageState extends State<InboxPage> {
         _isRefreshing = false;
       });
 
-      print('✅ fetchInboxRequests completed - ${_requests.length} requests');
+      print('✅ fetchInboxRequests completed - ${_requests.length} requests (total: $_totalRequests)');
 
     } catch (e) {
       print("❌ Network error: $e");
@@ -180,7 +214,6 @@ class _InboxPageState extends State<InboxPage> {
         _errorMessage = "${AppLocalizations.of(context)!.translate('failed_load_requests')}: ${e.toString()}";
       });
 
-      // إظهار رسالة خطأ للمستخدم
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -191,6 +224,64 @@ class _InboxPageState extends State<InboxPage> {
           );
         }
       });
+    }
+  }
+
+  // ✅ تحميل المزيد (infinite scroll)
+  Future<void> _loadMoreRequests() async {
+    if (_isLoadingMore || !_hasMorePages) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final nextPage = _currentPage + 1;
+      final result = await _apiService.fetchInboxRequestsPage(_userToken, page: nextPage, perPage: 10);
+      final pageRequests = result['data'] as List<dynamic>;
+      final pagination = result['pagination'] as Map<String, dynamic>?;
+
+      final updatedRequests = pageRequests.map((req) {
+        final request = Map<String, dynamic>.from(req);
+        
+        String status = (request["lastForwardStatus"] ?? "waiting").toString().toLowerCase();
+        
+        // توحيد المسميات
+        if (status == 'needs_editing' || status == 'needs-editing') {
+          status = 'needs_change';
+        } else if (status == 'pending') {
+          status = 'waiting';
+        }
+
+        if (request["fulfilled"] == true) {
+          status = "fulfilled";
+        }
+        
+        request['yourCurrentStatus'] = status;
+        request['lastForwardStatus'] = status;
+        request['lastSenderName'] = request['lastForwardSenderName'] ?? 
+                                   request['creatorName'] ?? 
+                                   request['creator']?['name'] ?? 'Unknown';
+        request['hasForwarded'] = request['isForwardedByMe'] ?? false;
+        
+        // توحيد هيكل النوع (Fix n/a issue)
+        request['type'] = {
+          'name': request['typeName'] ?? (request['type'] is Map ? request['type']['name'] : 'N/A')
+        };
+
+        return request;
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _requests.addAll(updatedRequests);
+          _currentPage = pagination?['currentPage'] ?? nextPage;
+          _hasMorePages = pagination?['next'] != null;
+          _applyFilters();
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading more: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 
@@ -289,13 +380,28 @@ class _InboxPageState extends State<InboxPage> {
     if (_isLoading) return;
 
     final requestId = request["id"].toString();
-    final actionLower = action.toLowerCase();
+
+    // تحويل اسم الإجراء إلى الصيغة المستخدمة في الـ UI
+    String uiStatus;
+    switch (action) {
+      case 'Approve':
+        uiStatus = 'approved';
+        break;
+      case 'Reject':
+        uiStatus = 'rejected';
+        break;
+      case 'Needs Change':
+        uiStatus = 'needs_change';
+        break;
+      default:
+        uiStatus = action.toLowerCase();
+    }
 
     print('🎯 Performing $action on request $requestId');
 
     // تحديث حالة الطلب فوراً في الـ UI (قبل استجابة السيرفر)
     _updateRequestInList(requestId, {
-      'yourCurrentStatus': actionLower,
+      'yourCurrentStatus': uiStatus,
       'isUpdating': true, // علامة للتحديث
     });
 
@@ -327,9 +433,9 @@ class _InboxPageState extends State<InboxPage> {
           }
         });
 
-        String successMessage = actionLower == 'approve'
+        String successMessage = uiStatus == 'approved'
             ? AppLocalizations.of(context)!.translate('action_approved_success')
-            : (actionLower == 'reject'
+            : (uiStatus == 'rejected'
             ? AppLocalizations.of(context)!.translate('action_rejected_success')
             : AppLocalizations.of(context)!.translate('change_request_sent_success'));
 
@@ -379,6 +485,97 @@ class _InboxPageState extends State<InboxPage> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // 🔹 دالة موحدة لإظهار dialog للإجراءات (موافقة/رفض/طلب تعديل) مع تعليق
+  Future<void> _showActionDialog(Map<String, dynamic> request, String action, Color color, IconData icon) async {
+    String comment = '';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                action == 'Approve'
+                    ? (AppLocalizations.of(context)!.translate('approve'))
+                    : action == 'Reject'
+                        ? (AppLocalizations.of(context)!.translate('reject'))
+                        : (AppLocalizations.of(context)!.translate('need_change')),
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                action == 'Approve'
+                    ? 'Add a comment for approval (optional):'
+                    : action == 'Reject'
+                        ? (AppLocalizations.of(context)!.translate('reject_reason_hint'))
+                        : (AppLocalizations.of(context)!.translate('specify_changes_hint')),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: InboxColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context)!.translate('enter_comments'),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: color, width: 2),
+                  ),
+                ),
+                onChanged: (value) => comment = value,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(AppLocalizations.of(context)!.translate('cancel')),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: Icon(icon, size: 18),
+              label: Text(
+                action == 'Approve'
+                    ? (AppLocalizations.of(context)!.translate('approve'))
+                    : action == 'Reject'
+                        ? (AppLocalizations.of(context)!.translate('reject'))
+                        : (AppLocalizations.of(context)!.translate('need_change')),
+                style: const TextStyle(color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _performAction(
+        request,
+        action,
+        color,
+        comment: comment.isNotEmpty ? comment : null,
+      );
     }
   }
 
@@ -645,8 +842,9 @@ class _InboxPageState extends State<InboxPage> {
       if (!mounted) return;
 
       String? selectedUser;
-      List<String> userNames = users.map<String>((user) => user["name"]?.toString() ?? "Unknown").toList(); List<String> filteredUsers = List.from(userNames);
-      TextEditingController searchController = TextEditingController();
+    String forwardComment = '';
+    List<String> userNames = users.map<String>((user) => user["name"]?.toString() ?? "Unknown").toList(); List<String> filteredUsers = List.from(userNames);
+    TextEditingController searchController = TextEditingController();
 
       void filterUsers(String query) {
         if (query.isEmpty) {
@@ -766,6 +964,23 @@ class _InboxPageState extends State<InboxPage> {
 
                       SizedBox(height: 16),
 
+                      // حقل التعليق
+                      TextField(
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          hintText: AppLocalizations.of(context)!.translate('enter_comments') ?? 'Add a comment (optional)',
+                          prefixIcon: Icon(Icons.comment_rounded, color: CreateRequestColors.primary),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        onChanged: (value) {
+                          forwardComment = value;
+                        },
+                      ),
+                      SizedBox(height: 16),
+
                       // أزرار الإجراء
                       Row(
                         children: [
@@ -790,7 +1005,12 @@ class _InboxPageState extends State<InboxPage> {
                                   : () {
                                 Navigator.pop(context);
                                 searchController.clear();
-                                _performForwardAction(transactionId, selectedUser!, request);
+                                _performForwardAction(
+                                  transactionId,
+                                  selectedUser!,
+                                  request,
+                                  comment: forwardComment.isNotEmpty ? forwardComment : null,
+                                );
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: CreateRequestColors.primary,
@@ -826,8 +1046,9 @@ class _InboxPageState extends State<InboxPage> {
   Future<void> _performForwardAction(
       String transactionId,
       String selectedUser,
-      Map<String, dynamic> request,
-      ) async {
+      Map<String, dynamic> request, {
+        String? comment,
+      }) async {
     final requestId = transactionId;
 
     // تحديث حالة الطلب فوراً في الـ UI
@@ -851,6 +1072,7 @@ class _InboxPageState extends State<InboxPage> {
         transactionId,
         selectedUser,
         _userToken,
+        comment: comment,
       );
 
       if (!mounted) return;
@@ -1187,25 +1409,15 @@ class _InboxPageState extends State<InboxPage> {
       return _buildErrorState();
     }
 
-    // استخدام الدوال المساعدة لحساب الإحصائيات
-    final stats = {
-      'total': _requests.length,
-      'waiting': _requests.where((req) => InboxHelpers.isRequestPending(req)).length,
-      'approved': _requests.where((req) => InboxHelpers.isRequestApproved(req)).length,
-      'rejected': _requests.where((req) => InboxHelpers.isRequestRejected(req)).length,
-      'needs_change': _requests.where((req) => InboxHelpers.isRequestNeedsChange(req)).length,
-      'fulfilled': _requests.where((req) => req["fulfilled"] == true).length,
-    };
-
     return Column(
       children: [
         InboxMobileStats(
-          total: stats['total']!,
-          waiting: stats['waiting']!,
-          approved: stats['approved']!,
-          rejected: stats['rejected']!,
-          fulfilled: stats['fulfilled']!,
-          needsChange: stats['needs_change']!,
+          total: _totalRequests,
+          waiting: _apiSummary['WAITING'] ?? 0,
+          approved: _apiSummary['APPROVED'] ?? 0,
+          rejected: _apiSummary['REJECTED'] ?? 0,
+          fulfilled: 0,
+          needsChange: _apiSummary['NEEDS_EDITING'] ?? 0,
         ),
 
         InboxMobileFilters(
@@ -1247,36 +1459,255 @@ class _InboxPageState extends State<InboxPage> {
     return RefreshIndicator(
       onRefresh: _fetchInboxRequests,
       color: InboxColors.primary,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        itemCount: _filteredRequests.length,
-        itemBuilder: (context, index) {
-          final req = _filteredRequests[index];
-          final hasForwarded = req['hasForwarded'] ?? false;
-          final lastForwardSentTo = req['lastForwardSentTo'];
-          final isUpdating = req['isUpdating'] == true;
-
-          return Opacity(
-            opacity: isUpdating ? 0.7 : 1.0,
-            child: InboxMobileCard(
-              request: req,
-              onViewDetails: () => _viewDetails(req["id"].toString()),
-              onApprove: () => _performAction(req, 'Approve', InboxColors.accentGreen),
-              onReject: () => _showRejectWithCommentDialog(req),
-              onForward: () => _forwardTransaction(req["id"].toString(), req),
-              onCancelForward: () => _cancelForward(
-                req["id"].toString(),
-                lastForwardSentTo?['id'],
-                req,
-              ),
-              onNeedChange: () => _showNeedChangeDialog(req),
-              onEditRequest: () => _navigateToEditRequest(req),
-              hasForwarded: hasForwarded,
-            ),
-          );
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (scrollInfo) {
+          if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 &&
+              !_isLoadingMore && _hasMorePages) {
+            _loadMoreRequests();
+          }
+          return false;
         },
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          itemCount: _filteredRequests.length + (_hasMorePages ? 1 : 0),
+          itemBuilder: (context, index) {
+            // Loading indicator في الأسفل
+            if (index == _filteredRequests.length) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: _isLoadingMore
+                      ? CircularProgressIndicator(color: InboxColors.primary, strokeWidth: 2)
+                      : TextButton.icon(
+                          onPressed: _loadMoreRequests,
+                          icon: Icon(Icons.expand_more, color: InboxColors.primary),
+                          label: Text(
+                            AppLocalizations.of(context)!.translate('load_more') ?? 'Load More',
+                            style: TextStyle(color: InboxColors.primary),
+                          ),
+                        ),
+                ),
+              );
+            }
+
+            final req = _filteredRequests[index];
+            final hasForwarded = req['hasForwarded'] ?? false;
+            final lastForwardSentTo = req['lastForwardSentTo'];
+            final isUpdating = req['isUpdating'] == true;
+
+            return Opacity(
+              opacity: isUpdating ? 0.7 : 1.0,
+              child: InboxMobileCard(
+                request: req,
+                onViewDetails: () => _viewDetails(req["id"].toString()),
+                onApprove: () => _showActionDialog(req, 'Approve', InboxColors.accentGreen, Icons.check_circle_rounded),
+                onReject: () => _showActionDialog(req, 'Reject', InboxColors.accentRed, Icons.cancel_rounded),
+                onForward: () => _forwardTransaction(req["id"].toString(), req),
+                onCancelForward: () => _cancelForward(
+                  req["id"].toString(),
+                  lastForwardSentTo?['id'],
+                  req,
+                ),
+                onNeedChange: () => _showActionDialog(req, 'Needs Change', Colors.orange, Icons.edit_note_rounded),
+                onEditRequest: () => _navigateToEditRequest(req),
+                onEditResponse: () => _showEditResponseDialog(req),
+                hasForwarded: hasForwarded,
+              ),
+            );
+          },
+        ),
       ),
     );
+  }
+
+  // ✅ دالة لعرض dialog تعديل الرد
+  Future<void> _showEditResponseDialog(Map<String, dynamic> request) async {
+    String? selectedAction;
+    String comment = '';
+    final forwardStatus = (request['yourCurrentStatus'] ?? 'not-assigned').toString().toLowerCase();
+    final isPending = forwardStatus == 'waiting' || forwardStatus == 'not-assigned' || forwardStatus == 'pending';
+    final isApproved = forwardStatus == 'approved';
+    final isRejected = forwardStatus == 'rejected';
+    final needsChange = forwardStatus == 'needs_change' || forwardStatus == 'needs_editing' || forwardStatus == 'needs-editing';
+
+    // تحديد الحالة الحالية
+    if (isApproved) selectedAction = 'Approve';
+    else if (isRejected) selectedAction = 'Reject';
+    else if (needsChange) selectedAction = 'Needs Change';
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: Row(
+                children: [
+                  Icon(Icons.edit_rounded, color: InboxColors.primary),
+                  SizedBox(width: 8),
+                  Text(AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppLocalizations.of(context)!.translate('select_new_status') ?? 'Select new status:',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  SizedBox(height: 12),
+                  // أزرار الحالة
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      _buildResponseChip(
+                        'Approve',
+                        Icons.check_circle_rounded,
+                        InboxColors.accentGreen,
+                        selectedAction == 'Approve',
+                        () => setStateDialog(() => selectedAction = 'Approve'),
+                      ),
+                      _buildResponseChip(
+                        'Reject',
+                        Icons.cancel_rounded,
+                        InboxColors.accentRed,
+                        selectedAction == 'Reject',
+                        () => setStateDialog(() => selectedAction = 'Reject'),
+                      ),
+                      _buildResponseChip(
+                        'Needs Change',
+                        Icons.edit_note_rounded,
+                        Colors.orange,
+                        selectedAction == 'Needs Change',
+                        () => setStateDialog(() => selectedAction = 'Needs Change'),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  TextField(
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context)!.translate('enter_comments') ?? 'Enter comment (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) => comment = value,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(AppLocalizations.of(context)!.translate('cancel')),
+                ),
+                ElevatedButton(
+                  onPressed: selectedAction == null ? null : () async {
+                    Navigator.pop(context);
+                    await _editResponse(request, selectedAction!, comment);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: InboxColors.primary,
+                  ),
+                  child: Text(
+                    AppLocalizations.of(context)!.translate('update_response') ?? 'Update',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildResponseChip(String label, IconData icon, Color color, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : Colors.grey.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.withOpacity(0.3),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: isSelected ? color : Colors.grey),
+            SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? color : Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ تعديل الرد الحالي
+  Future<void> _editResponse(Map<String, dynamic> request, String action, String comment) async {
+    final requestId = request['id'].toString();
+
+    _updateRequestInList(requestId, {'isUpdating': true});
+
+    try {
+      if (mounted) setState(() => _isLoading = true);
+
+      final success = await _apiService.editMyResponse(
+        requestId,
+        action,
+        _userToken,
+        _userName,
+        comment: comment.isNotEmpty ? comment : null,
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        _updateRequestInList(requestId, {'isUpdating': null});
+
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) _recalculateRequestData(requestId);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('response_updated_success') ?? 'Response updated successfully'),
+            backgroundColor: InboxColors.accentGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        _updateRequestInList(requestId, {'isUpdating': null});
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('failed_to_update_response') ?? 'Failed to update response'),
+            backgroundColor: InboxColors.accentRed,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _updateRequestInList(requestId, {'isUpdating': null});
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: InboxColors.accentRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Widget _buildDesktopBody() {
@@ -1284,47 +1715,78 @@ class _InboxPageState extends State<InboxPage> {
       return _buildErrorState();
     }
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            InboxStatsWidget(requests: _requests),
-            const SizedBox(height: 16),
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollInfo) {
+        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 &&
+            !_isLoadingMore && _hasMorePages) {
+          _loadMoreRequests();
+        }
+        return false;
+      },
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              InboxStatsWidget(
+                requests: _requests,
+                apiSummary: _apiSummary,
+                totalRequests: _totalRequests,
+              ),
+              const SizedBox(height: 16),
 
-            InboxDesktopFilters(
-              selectedPriority: _selectedPriority,
-              selectedType: _selectedType,
-              selectedStatus: _selectedStatus,
-              priorities: priorities,
-              typeNames: typeNames,
-              statuses: statuses,
-              searchController: _searchController,
-              onPriorityChanged: (value) {
-                setState(() => _selectedPriority = value);
-                _applyFilters();
-              },
-              onTypeChanged: (value) {
-                setState(() => _selectedType = value);
-                _applyFilters();
-              },
-              onStatusChanged: (value) {
-                setState(() => _selectedStatus = value);
-                _applyFilters();
-              },
-              onSearchChanged: _onSearchChanged,
-            ),
-            const SizedBox(height: 20),
+              InboxDesktopFilters(
+                selectedPriority: _selectedPriority,
+                selectedType: _selectedType,
+                selectedStatus: _selectedStatus,
+                priorities: priorities,
+                typeNames: typeNames,
+                statuses: statuses,
+                searchController: _searchController,
+                onPriorityChanged: (value) {
+                  setState(() => _selectedPriority = value);
+                  _applyFilters();
+                },
+                onTypeChanged: (value) {
+                  setState(() => _selectedType = value);
+                  _applyFilters();
+                },
+                onStatusChanged: (value) {
+                  setState(() => _selectedStatus = value);
+                  _applyFilters();
+                },
+                onSearchChanged: _onSearchChanged,
+              ),
+              const SizedBox(height: 20),
 
-            InboxHeader(
-              isMobile: false,
-              itemCount: _filteredRequests.length,
-            ),
-            const SizedBox(height: 16),
+              InboxHeader(
+                isMobile: false,
+                itemCount: _filteredRequests.length,
+              ),
+              const SizedBox(height: 16),
 
-            _buildDesktopRequestsList(),
-          ],
+              _buildDesktopRequestsList(),
+
+              // Loading more indicator
+              if (_hasMorePages)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: _isLoadingMore
+                        ? CircularProgressIndicator(color: InboxColors.primary, strokeWidth: 2)
+                        : TextButton.icon(
+                            onPressed: _loadMoreRequests,
+                            icon: Icon(Icons.expand_more, color: InboxColors.primary),
+                            label: Text(
+                              AppLocalizations.of(context)!.translate('load_more') ?? 'Load More',
+                              style: TextStyle(color: InboxColors.primary),
+                            ),
+                          ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -1346,16 +1808,17 @@ class _InboxPageState extends State<InboxPage> {
           child: InboxDesktopCard(
             request: req,
             onViewDetails: () => _viewDetails(req["id"].toString()),
-            onApprove: () => _performAction(req, 'Approve', InboxColors.accentGreen),
-            onReject: () => _showRejectWithCommentDialog(req),
+            onApprove: () => _showActionDialog(req, 'Approve', InboxColors.accentGreen, Icons.check_circle_rounded),
+            onReject: () => _showActionDialog(req, 'Reject', InboxColors.accentRed, Icons.cancel_rounded),
             onForward: () => _forwardTransaction(req["id"].toString(), req),
             onCancelForward: () => _cancelForward(
               req["id"].toString(),
               lastForwardSentTo?['id'],
               req,
             ),
-            onNeedChange: () => _showNeedChangeDialog(req),
+            onNeedChange: () => _showActionDialog(req, 'Needs Change', Colors.orange, Icons.edit_note_rounded),
             onEditRequest: () => _navigateToEditRequest(req),
+            onEditResponse: () => _showEditResponseDialog(req),
             hasForwarded: hasForwarded,
           ),
         );

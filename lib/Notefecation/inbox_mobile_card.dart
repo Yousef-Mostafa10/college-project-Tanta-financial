@@ -13,6 +13,7 @@ class InboxMobileCard extends StatelessWidget {
   final VoidCallback onCancelForward;
   final VoidCallback onNeedChange;
   final VoidCallback onEditRequest;
+  final VoidCallback? onEditResponse;
   final bool hasForwarded;
 
   const InboxMobileCard({
@@ -26,6 +27,7 @@ class InboxMobileCard extends StatelessWidget {
     required this.hasForwarded,
     required this.onNeedChange,
     required this.onEditRequest,
+    this.onEditResponse,
   }) : super(key: key);
 
   Widget _buildMobileChip(BuildContext context, String text, IconData icon, Color color) {
@@ -115,13 +117,14 @@ class InboxMobileCard extends StatelessWidget {
     final senderName = request["lastSenderName"] ?? request["creator"]?["name"] ?? AppLocalizations.of(context)!.translate('unknown');
     final createdAt = request["createdAt"];
     final formattedDate = InboxFormatters.formatDate(createdAt);
-    final forwardStatus = (request['yourCurrentStatus'] ?? 'not-assigned').toString();
-    final isPending = forwardStatus == 'waiting' || forwardStatus == 'not-assigned';
+    final forwardStatus = (request['yourCurrentStatus'] ?? 'not-assigned').toString().toLowerCase();
+    final isPending = forwardStatus == 'waiting' || forwardStatus == 'not-assigned' || forwardStatus == 'pending';
     final isApproved = forwardStatus == 'approved';
     final isRejected = forwardStatus == 'rejected';
-    final needsChange = forwardStatus == 'needs_change';
+    final needsChange = forwardStatus == 'needs_change' || forwardStatus == 'needs_editing' || forwardStatus == 'needs-editing';
     final fulfilled = request["fulfilled"] == true;
     final isUpdating = request['isUpdating'] == true;
+    final documentsCount = request["documentsCount"] ?? (request["documents"] as List?)?.length ?? 0;
     final statusLabel = fulfilled
         ? AppLocalizations.of(context)!.translate('fulfilled')
         : (isApproved 
@@ -269,21 +272,6 @@ class InboxMobileCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // المرسل
-              Row(
-                children: [
-                  Icon(Icons.person_rounded, size: 12, color: InboxColors.textSecondary),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      "${AppLocalizations.of(context)!.translate('from_prefix')} $senderName",
-                      style: TextStyle(fontSize: 11, color: InboxColors.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 6),
 
               // التاريخ
@@ -303,12 +291,37 @@ class InboxMobileCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
 
-              // النوع والأولوية
               Row(
                 children: [
                   _buildMobileChip(context, type, Icons.category_outlined, InboxColors.primary),
                   const SizedBox(width: 6),
                   _buildMobileChip(context, priority, Icons.flag_outlined, InboxHelpers.getPriorityColor(priority)),
+                  const SizedBox(width: 6),
+                  // عدد الملفات
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: InboxColors.textSecondary.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: InboxColors.textSecondary.withOpacity(0.1)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.attach_file_rounded, size: 12, color: InboxColors.textSecondary),
+                        const SizedBox(width: 2),
+                        Text(
+                          documentsCount > 0 
+                              ? "$documentsCount" 
+                              : AppLocalizations.of(context)!.translate('no_attachments'),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: InboxColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -443,13 +456,21 @@ class InboxMobileCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        _buildMobileActionButton(
-                          text: AppLocalizations.of(context)!.translate('edit'),
-                          onPressed: onEditRequest,
-                          color: Colors.blue,
-                          isOutlined: true,
-                        ),
-                        const SizedBox(width: 6),
+                        if (onEditResponse != null)
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: onEditResponse,
+                              icon: Icon(Icons.edit_rounded, size: 14),
+                              label: Text(AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response', style: const TextStyle(fontSize: 11)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.deepPurple,
+                                side: BorderSide(color: Colors.deepPurple),
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                minimumSize: const Size(0, 30),
+                              ),
+                            ),
+                          ),
+                        if (onEditResponse != null) const SizedBox(width: 6),
                         _buildMobileActionButton(
                           text: AppLocalizations.of(context)!.translate('forward'),
                           onPressed: onForward,
@@ -458,26 +479,48 @@ class InboxMobileCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: onViewDetails,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: InboxColors.primary,
-                          side: BorderSide(color: InboxColors.primary),
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          minimumSize: const Size(0, 30),
+                    Row(
+                      children: [
+                        _buildMobileActionButton(
+                          text: AppLocalizations.of(context)!.translate('edit'),
+                          onPressed: onEditRequest,
+                          color: Colors.blue,
+                          isOutlined: true,
                         ),
-                        child: Text(AppLocalizations.of(context)!.translate('view_details'), style: const TextStyle(fontSize: 11)),
-                      ),
+                        const SizedBox(width: 6),
+                        _buildMobileActionButton(
+                          text: AppLocalizations.of(context)!.translate('view_details'),
+                          onPressed: onViewDetails,
+                          color: InboxColors.primary,
+                          isOutlined: true,
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ] else ...[
-                // 🔹 الحالات الأخرى (لا يوجد توجيه نشط ولا يمكن التوجيه)
+                // 🔹 الحالات الأخرى
                 Column(
                   children: [
-                    // زر Edit Request فقط
+                    if (onEditResponse != null && !isPending)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: onEditResponse,
+                            icon: Icon(Icons.edit_rounded, size: 14),
+                            label: Text(AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response', style: const TextStyle(fontSize: 11)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.deepPurple,
+                              side: BorderSide(color: Colors.deepPurple),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              minimumSize: const Size(0, 30),
+                            ),
+                          ),
+                        ),
+                      ),
+                    // زر Edit Request
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -492,7 +535,7 @@ class InboxMobileCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    // زر View Details فقط
+                    // زر View Details
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(

@@ -13,6 +13,7 @@ class InboxDesktopCard extends StatelessWidget {
   final VoidCallback onCancelForward;
   final VoidCallback onNeedChange;
   final VoidCallback onEditRequest;
+  final VoidCallback? onEditResponse;
   final bool hasForwarded;
 
   const InboxDesktopCard({
@@ -26,6 +27,7 @@ class InboxDesktopCard extends StatelessWidget {
     required this.hasForwarded,
     required this.onNeedChange,
     required this.onEditRequest,
+    this.onEditResponse,
   }) : super(key: key);
 
   Widget _buildDesktopChip(BuildContext context, String text, IconData icon, Color color) {
@@ -114,13 +116,14 @@ class InboxDesktopCard extends StatelessWidget {
     final senderName = request["lastSenderName"] ?? request["creator"]?["name"] ?? AppLocalizations.of(context)!.translate('unknown');
     final createdAt = request["createdAt"];
     final formattedDate = InboxFormatters.formatDate(createdAt);
-    final forwardStatus = (request['yourCurrentStatus'] ?? 'not-assigned').toString();
-    final isPending = forwardStatus == 'waiting' || forwardStatus == 'not-assigned';
+    final forwardStatus = (request['yourCurrentStatus'] ?? 'not-assigned').toString().toLowerCase();
+    final isPending = forwardStatus == 'waiting' || forwardStatus == 'not-assigned' || forwardStatus == 'pending';
     final isApproved = forwardStatus == 'approved';
     final isRejected = forwardStatus == 'rejected';
-    final needsChange = forwardStatus == 'needs_change';
+    final needsChange = forwardStatus == 'needs_change' || forwardStatus == 'needs_editing' || forwardStatus == 'needs-editing';
     final fulfilled = request["fulfilled"] == true;
     final isUpdating = request['isUpdating'] == true;
+    final documentsCount = request["documentsCount"] ?? (request["documents"] as List?)?.length ?? 0;
     final statusLabel = fulfilled
         ? AppLocalizations.of(context)!.translate('fulfilled')
         : (isApproved 
@@ -271,16 +274,8 @@ class InboxDesktopCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // 2️⃣ معلومات المرسل والتاريخ
               Row(
                 children: [
-                  Icon(Icons.person_rounded, size: 14, color: InboxColors.textSecondary),
-                  const SizedBox(width: 6),
-                  Text(
-                    "${AppLocalizations.of(context)!.translate('from_prefix')} $senderName",
-                    style: TextStyle(fontSize: 13, color: InboxColors.textSecondary),
-                  ),
-                  const SizedBox(width: 24),
                   Icon(Icons.calendar_today_rounded, size: 14, color: InboxColors.textSecondary),
                   const SizedBox(width: 6),
                   Expanded(
@@ -295,12 +290,37 @@ class InboxDesktopCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // 3️⃣ النوع والأولوية
               Row(
                 children: [
                   _buildDesktopChip(context, type, Icons.category_outlined, InboxColors.primary),
                   const SizedBox(width: 8),
                   _buildDesktopChip(context, priority, Icons.flag_outlined, InboxHelpers.getPriorityColor(priority)),
+                  const SizedBox(width: 8),
+                  // عدد الملفات
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: InboxColors.textSecondary.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: InboxColors.textSecondary.withOpacity(0.1)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.attach_file_rounded, size: 14, color: InboxColors.textSecondary),
+                        const SizedBox(width: 4),
+                        Text(
+                          documentsCount > 0 
+                              ? "$documentsCount" 
+                              : AppLocalizations.of(context)!.translate('no_attachments'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: InboxColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -436,9 +456,27 @@ class InboxDesktopCard extends StatelessWidget {
                   ],
                 ),
               ] else if (showForwardButton) ...[
-                // 🔹 حالة: العملية في حالة نهائية (موافق/مرفوض/طلب تعديل/مكتمل) ويمكن التوجيه
+                // 🔹 حالة: العملية في حالة نهائية ويمكن التوجيه
                 Column(
                   children: [
+                    Row(
+                      children: [
+                        if (onEditResponse != null)
+                          _buildActionButton(
+                            text: AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response',
+                            onPressed: onEditResponse!,
+                            color: Colors.deepPurple,
+                            isOutlined: true,
+                          ),
+                        if (onEditResponse != null) const SizedBox(width: 12),
+                        _buildActionButton(
+                          text: AppLocalizations.of(context)!.translate('forward'),
+                          onPressed: onForward,
+                          color: InboxColors.primary,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
                         _buildActionButton(
@@ -449,32 +487,37 @@ class InboxDesktopCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         _buildActionButton(
-                          text: AppLocalizations.of(context)!.translate('forward'),
-                          onPressed: onForward,
+                          text: AppLocalizations.of(context)!.translate('view_details'),
+                          onPressed: onViewDetails,
                           color: InboxColors.primary,
+                          isOutlined: true,
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: onViewDetails,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: InboxColors.primary,
-                          side: BorderSide(color: InboxColors.primary),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                        child: Text(AppLocalizations.of(context)!.translate('view_details')),
-                      ),
                     ),
                   ],
                 ),
               ] else ...[
-                // 🔹 الحالات الأخرى (لا يوجد توجيه نشط ولا يمكن التوجيه)
+                // 🔹 الحالات الأخرى
                 Column(
                   children: [
-                    // زر Edit Request فقط
+                    if (onEditResponse != null && !isPending)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: onEditResponse,
+                            icon: Icon(Icons.edit_rounded, size: 16),
+                            label: Text(AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.deepPurple,
+                              side: BorderSide(color: Colors.deepPurple),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    // زر Edit Request
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -488,7 +531,7 @@ class InboxDesktopCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // زر View Details فقط
+                    // زر View Details
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(

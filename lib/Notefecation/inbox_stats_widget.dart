@@ -8,15 +8,30 @@ import './inbox_helpers.dart';
 class InboxStatsWidget extends StatelessWidget {
   final List<dynamic> requests;
   final bool isMobile;
+  final Map<String, int>? apiSummary;
+  final int? totalRequests;
 
   const InboxStatsWidget({
     Key? key,
     required this.requests,
     this.isMobile = false,
+    this.apiSummary,
+    this.totalRequests,
   }) : super(key: key);
 
-  // حساب الإحصائيات
+  // حساب الإحصائيات من الـ API summary أو من البيانات المحلية
   Map<String, int> _calculateStats() {
+    if (apiSummary != null) {
+      return {
+        'total': totalRequests ?? requests.length,
+        'waiting': apiSummary!['WAITING'] ?? 0,
+        'approved': apiSummary!['APPROVED'] ?? 0,
+        'rejected': apiSummary!['REJECTED'] ?? 0,
+        'needs_change': apiSummary!['NEEDS_EDITING'] ?? 0,
+        'fulfilled': 0,
+      };
+    }
+
     final total = requests.length;
 
     final waiting = requests.where((req) =>

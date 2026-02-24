@@ -22,53 +22,66 @@ class InboxApi {
     }
   }
 
-  // ✅ NEW: جلب الـ User ID من الـ API
+  // ✅ جلب الـ User ID من الـ API
   Future<String?> getCurrentUserId() async {
     final prefs = await SharedPreferences.getInstance();
     String? cachedUserId = prefs.getString('userId');
 
     if (cachedUserId != null && cachedUserId.isNotEmpty) {
-      print("✅ Using cached userId: $cachedUserId");
       return cachedUserId;
     }
 
     final token = prefs.getString('token');
     final username = prefs.getString('userName') ?? prefs.getString('username');
 
-    if (token == null || username == null) {
-      print("❌ No token or username found");
-      return null;
-    }
+    if (token == null || username == null) return null;
 
     try {
-      // الـ API الجديد يستخدم /users لجلب كل المستخدمين ثم البحث عن المستخدم بالاسم
-      final response = await http.get(
-        Uri.parse("$baseUrl/users"),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      int page = 1;
+      bool hasMore = true;
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        List<dynamic> users = data is List ? data : (data["users"] ?? []);
-
-        final user = users.firstWhere(
-          (u) => u["name"] == username,
-          orElse: () => null,
+      while (hasMore) {
+        final response = await http.get(
+          Uri.parse("$baseUrl/users?page=$page&perPage=50"),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
         );
 
-        if (user != null) {
-          final userId = user["id"]?.toString();
-          if (userId != null && userId.isNotEmpty) {
-            await prefs.setString('userId', userId);
-            print("✅ Fetched and cached userId: $userId");
-            return userId;
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          List<dynamic> users = [];
+
+          if (data is Map) {
+            users = data['data'] ?? data['users'] ?? [];
+          } else if (data is List) {
+            users = data;
           }
+
+          final user = users.firstWhere(
+            (u) => u["name"] == username,
+            orElse: () => null,
+          );
+
+          if (user != null) {
+            final userId = user["id"]?.toString();
+            if (userId != null && userId.isNotEmpty) {
+              await prefs.setString('userId', userId);
+              return userId;
+            }
+          }
+
+          // Check pagination
+          final pagination = data is Map ? data['pagination'] : null;
+          if (pagination != null && pagination['next'] != null) {
+            page = pagination['next'];
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
         }
-      } else {
-        print("❌ Failed to fetch user data: ${response.statusCode}");
       }
     } catch (e) {
       print("❌ Error fetching userId: $e");
@@ -77,7 +90,7 @@ class InboxApi {
     return null;
   }
 
-  // ✅ NEW: جلب آخر حالة قام بها المستخدم الحالي فقط (لحل المشكلة الأساسية)
+  // ✅ جلب آخر حالة قام بها المستخدم الحالي
   Future<String?> getMyLastForwardStatus(String transactionId, String myUserId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -86,7 +99,7 @@ class InboxApi {
       if (token == null) return null;
 
       final response = await http.get(
-        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
+        Uri.parse("$baseUrl/transaction/$transactionId/forward?page=1&perPage=100"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -95,27 +108,27 @@ class InboxApi {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> forwards = data is List 
-            ? data 
-            : (data["transaction"]?["forwards"] ?? data["forwards"] ?? []);
+        List<dynamic> forwards = [];
 
-        // 🔹 فلترة: جلب فقط الـ forwards التي قام بها المستخدم الحالي كـ sender
+        if (data is Map) {
+          forwards = data['data'] ?? [];
+        } else if (data is List) {
+          forwards = data;
+        }
+
         final myForwards = forwards.where((forward) {
-          // جرب كلا الحقلين (sender و forwardedBy) للتوافق
           final senderId = forward["sender"]?["id"]?.toString() ??
               forward["forwardedBy"]?["id"]?.toString();
           return senderId == myUserId;
         }).toList();
 
         if (myForwards.isNotEmpty) {
-          // ترتيب حسب التاريخ (الأحدث أولاً)
           myForwards.sort((a, b) {
-            final timeA = DateTime.parse(a["updatedAt"] ?? a["forwardedAt"] ?? a["createdAt"] ?? "2000-01-01");
-            final timeB = DateTime.parse(b["updatedAt"] ?? b["forwardedAt"] ?? b["createdAt"] ?? "2000-01-01");
+            final timeA = DateTime.parse(a["updatedAt"] ?? a["forwardedAt"] ?? "2000-01-01");
+            final timeB = DateTime.parse(b["updatedAt"] ?? b["forwardedAt"] ?? "2000-01-01");
             return timeB.compareTo(timeA);
           });
 
-          // إرجاع آخر حالة قمت بها
           return myForwards.first["status"];
         }
       }
@@ -126,52 +139,68 @@ class InboxApi {
     }
   }
 
-  // 🔹 جلب أنواع المعاملات
+  // 🔹 جلب أنواع المعاملات (paginated)
   Future<List<String>> fetchTypes(String? token) async {
     try {
       if (token == null) return ['All Types'];
 
-      final response = await http.get(
-        Uri.parse("$baseUrl/transactions/types"),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final List<String> typeNames = ['All Types'];
+      int page = 1;
+      bool hasMore = true;
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<String> typeNames = ['All Types'];
-        
-        List<dynamic> typesList = [];
-        if (data is List) {
-          typesList = data;
-        } else if (data is Map && data["transactionTypes"] != null) {
-          typesList = data["transactionTypes"];
-        }
+      while (hasMore) {
+        final response = await http.get(
+          Uri.parse("$baseUrl/transactions/types?page=$page&perPage=10"),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
 
-        for (var item in typesList) {
-          if (item["name"] != null) {
-            typeNames.add(item["name"]);
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+
+          List<dynamic> typesList = [];
+          Map<String, dynamic>? pagination;
+
+          if (data is Map) {
+            typesList = data['data'] ?? data['transactionTypes'] ?? [];
+            pagination = data['pagination'];
+          } else if (data is List) {
+            typesList = data;
           }
+
+          for (var item in typesList) {
+            if (item["name"] != null && !typeNames.contains(item["name"])) {
+              typeNames.add(item["name"]);
+            }
+          }
+
+          if (pagination != null && pagination['next'] != null) {
+            page = pagination['next'];
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
         }
-        return typeNames;
       }
-      return ['All Types'];
+
+      return typeNames;
     } catch (e) {
       print("⚠️ Error fetching types: $e");
       return ['All Types'];
     }
   }
 
-  // 🔹 جلب الforwards للمعاملة وتحديد حالة المستخدم الحالي (القديمة - محفوظة للتوافق)
+  // 🔹 جلب الforwards للمعاملة وتحديد حالة المستخدم الحالي
   Future<String> getYourForwardStatusForRequest(
       dynamic request, String? token, String? userName) async {
     try {
       if (token == null || userName == null) return 'unknown';
 
       final res = await http.get(
-        Uri.parse("$baseUrl/transaction/${request['id']}/forward"),
+        Uri.parse("$baseUrl/transaction/${request['id']}/forward?page=1&perPage=100"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -180,9 +209,13 @@ class InboxApi {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List<dynamic> forwards = data is List 
-            ? data 
-            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
+        List<dynamic> forwards = [];
+
+        if (data is Map) {
+          forwards = data['data'] ?? [];
+        } else if (data is List) {
+          forwards = data;
+        }
 
         dynamic yourForward;
         try {
@@ -202,20 +235,19 @@ class InboxApi {
       }
       return 'unknown';
     } catch (e) {
-      print(
-          "⚠️ Error fetching forwards for request ${request['id']}: $e");
+      print("⚠️ Error fetching forwards for request ${request['id']}: $e");
       return 'unknown';
     }
   }
 
-  // 🔹 جلب الforwards للمعاملة وتحديد حالة المستخدم الحالي (الجديدة - تحل المشكلة)
+  // 🔹 جلب الforwards للمعاملة وتحديد حالة المستخدم الحالي (محدثة)
   Future<String> getYourForwardStatusForRequestUpdated(
       dynamic request, String? token, String? userName) async {
     try {
       if (token == null || userName == null) return 'unknown';
 
       final res = await http.get(
-        Uri.parse("$baseUrl/transaction/${request['id']}/forward"),
+        Uri.parse("$baseUrl/transaction/${request['id']}/forward?page=1&perPage=100"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -224,17 +256,18 @@ class InboxApi {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List<dynamic> forwards = data is List 
-            ? data 
-            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
+        List<dynamic> forwards = [];
+
+        if (data is Map) {
+          forwards = data['data'] ?? [];
+        } else if (data is List) {
+          forwards = data;
+        }
 
         if (forwards.isEmpty) {
           return 'not-assigned';
         }
 
-        // 🔹 Fix: Always look for the last time I was a RECEIVER.
-        // This ensures that if I approved and forwarded, I still see "Approved" (my action),
-        // not "Waiting" (the status of the forward I sent).
         final myReceipts = forwards.where((f) =>
           f['receiver']?['name'] == userName
         ).toList();
@@ -243,10 +276,12 @@ class InboxApi {
           return 'not-assigned';
         }
 
-        // Sort by ID to find the latest receipt
         myReceipts.sort((a, b) => (a['id'] ?? 0).compareTo(b['id'] ?? 0));
-        
-        return myReceipts.last['status'] ?? 'waiting';
+
+        final rawStatus = (myReceipts.last['status'] ?? 'waiting').toString().toLowerCase();
+        // تحويل needs_editing إلى needs_change لتتوافق مع الـ UI
+        if (rawStatus == 'needs_editing') return 'needs_change';
+        return rawStatus;
       }
       return 'unknown';
     } catch (e) {
@@ -264,7 +299,7 @@ class InboxApi {
       }
 
       final res = await http.get(
-        Uri.parse("$baseUrl/transaction/${request['id']}/forward"),
+        Uri.parse("$baseUrl/transaction/${request['id']}/forward?page=1&perPage=100"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -273,9 +308,13 @@ class InboxApi {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List<dynamic> forwards = data is List 
-            ? data 
-            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
+        List<dynamic> forwards = [];
+
+        if (data is Map) {
+          forwards = data['data'] ?? [];
+        } else if (data is List) {
+          forwards = data;
+        }
 
         dynamic yourForward;
         try {
@@ -294,20 +333,19 @@ class InboxApi {
       }
       return request['creator']?['name'] ?? 'Unknown';
     } catch (e) {
-      print(
-          "⚠️ Error fetching last sender for request ${request['id']}: $e");
+      print("⚠️ Error fetching last sender for request ${request['id']}: $e");
       return request['creator']?['name'] ?? 'Unknown';
     }
   }
 
-  // 🔹 جلب معلومات الforward الأخير الذي أرسلناه
+  // 🔹 جلب معلومات الforward الأخير الذي أرسلناه + الـ forwardId الخاص بنا كـ receiver
   Future<Map<String, dynamic>?> getLastForwardSentByYou(
       dynamic request, String? token, String? userName) async {
     try {
       if (token == null || userName == null) return null;
 
       final res = await http.get(
-        Uri.parse("$baseUrl/transaction/${request['id']}/forward"),
+        Uri.parse("$baseUrl/transaction/${request['id']}/forward?page=1&perPage=100"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -316,9 +354,13 @@ class InboxApi {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List<dynamic> forwards = data is List 
-            ? data 
-            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
+        List<dynamic> forwards = [];
+
+        if (data is Map) {
+          forwards = data['data'] ?? [];
+        } else if (data is List) {
+          forwards = data;
+        }
 
         dynamic myForward;
         try {
@@ -340,13 +382,66 @@ class InboxApi {
       }
       return null;
     } catch (e) {
-      print(
-          "⚠️ Error fetching my forwards for request ${request['id']}: $e");
+      print("⚠️ Error fetching my forwards for request ${request['id']}: $e");
       return null;
     }
   }
 
-  // 🔹 دالة جديدة: التحقق مما إذا كان يمكن إعادة التوجيه (حسب منطق Angular)
+  // 🔹 جلب الـ forwardId الخاص بالمستخدم كـ receiver (لاستخدامه في response)
+  Future<int?> getMyForwardIdAsReceiver(
+      String transactionId, String? token, String? userName) async {
+    if (token == null || userName == null) return null;
+
+    try {
+      final res = await http.get(
+        Uri.parse("$baseUrl/transaction/$transactionId/forward?page=1&perPage=100"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print("🔍 getMyForwardIdAsReceiver - Status: ${res.statusCode}");
+      print("🔍 getMyForwardIdAsReceiver - Body: ${res.body}");
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        List<dynamic> forwards = [];
+
+        if (data is Map) {
+          forwards = data['data'] ?? [];
+        } else if (data is List) {
+          forwards = data;
+        }
+
+        print("🔍 Found ${forwards.length} forwards, looking for receiver: $userName");
+
+        for (var f in forwards) {
+          print("🔍 Forward id=${f['id']}, receiver=${f['receiver']?['name']}, receiverId=${f['receiver']?['id']}, status=${f['status']}");
+        }
+
+        final myReceipts = forwards.where((f) =>
+          f['receiver']?['name'] == userName
+        ).toList();
+
+        if (myReceipts.isEmpty) {
+          print("❌ No forwards found where $userName is receiver");
+          return null;
+        }
+
+        // أحدث forward أنا receiver فيه
+        myReceipts.sort((a, b) => (a['id'] ?? 0).compareTo(b['id'] ?? 0));
+        final forwardId = myReceipts.last['id'];
+        print("✅ Found my forward ID: $forwardId");
+        return forwardId;
+      }
+    } catch (e) {
+      print("❌ Error getting my forward ID: $e");
+    }
+    return null;
+  }
+
+  // 🔹 التحقق مما إذا كان يمكن إعادة التوجيه
   Future<bool> checkIfCanForward(
       String transactionId,
       String? token,
@@ -356,7 +451,7 @@ class InboxApi {
 
     try {
       final res = await http.get(
-        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
+        Uri.parse("$baseUrl/transaction/$transactionId/forward?page=1&perPage=100"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -365,9 +460,13 @@ class InboxApi {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List<dynamic> forwards = data is List 
-            ? data 
-            : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
+        List<dynamic> forwards = [];
+
+        if (data is Map) {
+          forwards = data['data'] ?? [];
+        } else if (data is List) {
+          forwards = data;
+        }
 
         if (forwards.isEmpty) {
           return true;
@@ -397,7 +496,54 @@ class InboxApi {
     }
   }
 
-  // 🔹 جلب الطلبات المرسلة إليك فقط
+  // ✅ جلب طلبات الوارد (paginated) - الصفحة المحددة فقط + summary
+  Future<Map<String, dynamic>> fetchInboxRequestsPage(
+      String? token, {int page = 1, int perPage = 10}) async {
+    if (token == null) {
+      return {'data': [], 'pagination': null, 'summary': null};
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/transactions?page=$page&perPage=$perPage&query=inbox"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        List<dynamic> requests = [];
+        Map<String, dynamic>? pagination;
+        Map<String, dynamic>? summary;
+
+        if (data is Map) {
+          requests = data['data'] ?? [];
+          pagination = data['pagination'];
+          summary = data['summary'] != null
+              ? Map<String, dynamic>.from(data['summary'])
+              : null;
+        } else if (data is List) {
+          requests = data;
+        }
+
+        return {
+          'data': requests,
+          'pagination': pagination,
+          'summary': summary,
+        };
+      }
+
+      return {'data': [], 'pagination': null, 'summary': null};
+    } catch (e) {
+      print("❌ Network error in fetchInboxRequestsPage: $e");
+      return {'data': [], 'pagination': null, 'summary': null};
+    }
+  }
+
+  // ✅ (محفوظة للتوافق) جلب كل الطلبات
   Future<List<dynamic>> fetchInboxRequests(
       String userName, String? token) async {
     if (token == null) return [];
@@ -405,41 +551,23 @@ class InboxApi {
     try {
       List<dynamic> allRequests = [];
       int currentPage = 1;
-      int lastPage = 1;
+      bool hasMore = true;
 
-      do {
-        final Map<String, String> queryParams = {
-          "pageNumber": currentPage.toString(),
-          "pageSize": "10",
-          "receiverName": userName,
-        };
+      while (hasMore) {
+        final result = await fetchInboxRequestsPage(token, page: currentPage, perPage: 10);
+        final pageRequests = result['data'] as List<dynamic>;
+        final pagination = result['pagination'] as Map<String, dynamic>?;
 
-        final uri = Uri.parse("$baseUrl/transactions")
-            .replace(queryParameters: queryParams);
+        allRequests.addAll(pageRequests);
 
-        final response = await http.get(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-        );
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final List<dynamic> pageRequests = data is List 
-              ? data 
-              : (data["transactions"] ?? []);
-          allRequests.addAll(pageRequests);
-
-          lastPage = data is Map ? (data["page"]?["last"] ?? 1) : 1;
-          currentPage++;
-
-          if (pageRequests.isEmpty) break;
+        if (pagination != null && pagination['next'] != null) {
+          currentPage = pagination['next'];
         } else {
-          break;
+          hasMore = false;
         }
-      } while (currentPage <= lastPage);
+
+        if (pageRequests.isEmpty) break;
+      }
 
       return allRequests;
     } catch (e) {
@@ -448,61 +576,89 @@ class InboxApi {
     }
   }
 
-  // 🔹 تنفيذ الإجراءات (الموافقة، الرفض) - القديمة (محفوظة للتوافق)
-  Future<bool> performAction(
+  // ✅ الرد على forward (موافقة/رفض/طلب تعديل) - POST /transaction/{id}/forward/{forwardId}/response
+  Future<bool> respondToForward(
       String transactionId,
-      String action,
-      String? token,
-      String? userName,
-      ) async {
-    if (token == null || userName == null) return false;
+      int forwardId,
+      String status,
+      String? token, {
+        String? comment,
+      }) async {
+    if (token == null) return false;
 
     try {
-      final forwardsResponse = await http.get(
-        Uri.parse("$baseUrl/transactions/$transactionId/forwards"),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final Map<String, dynamic> body = {
+        'status': status,
+      };
 
-      if (forwardsResponse.statusCode != 200) return false;
-
-      final forwardsData = json.decode(forwardsResponse.body);
-      final List<dynamic> forwards =
-          forwardsData['transaction']?['forwards'] ?? [];
-
-      if (forwards.isEmpty) return false;
-
-      dynamic yourForward;
-      try {
-        yourForward = forwards.lastWhere(
-              (forward) => forward['receiver']?['name'] == userName,
-          orElse: () => null,
-        );
-      } catch (e) {
-        yourForward = null;
+      if (comment != null && comment.isNotEmpty) {
+        body['comment'] = comment;
       }
 
-      if (yourForward == null) return false;
+      final url = "$baseUrl/transaction/$transactionId/forward/$forwardId/response";
+      final encodedBody = jsonEncode(body);
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
 
-      final String forwardId = yourForward['id'].toString();
-      final Map<String, dynamic> body = {};
+      print("📤 respondToForward URL: $url");
+      print("📤 respondToForward Body: $encodedBody");
 
-      switch (action) {
-        case 'Approve':
-          body['status'] = 'approved';
-          break;
-        case 'Reject':
-          body['status'] = 'rejected';
-          break;
-        default:
-          return false;
+      // أولاً نجرب POST
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: encodedBody,
+      );
+
+      print("📤 respondToForward POST Response: ${response.statusCode} - ${response.body}");
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      }
+
+      // لو رجع 403 FORWARD_ALREADY_SEEN نجرب PATCH
+      if (response.statusCode == 403) {
+        print("🔄 POST returned 403, trying PATCH...");
+        final patchResponse = await http.patch(
+          Uri.parse(url),
+          headers: headers,
+          body: encodedBody,
+        );
+
+        print("📤 respondToForward PATCH Response: ${patchResponse.statusCode} - ${patchResponse.body}");
+        return patchResponse.statusCode >= 200 && patchResponse.statusCode < 300;
+      }
+
+      return false;
+    } catch (e) {
+      print("❌ Error in respondToForward: $e");
+      return false;
+    }
+  }
+
+  // ✅ تعديل الرد على forward - PATCH /transaction/{id}/forward/{forwardId}/response
+  Future<bool> updateForwardResponse(
+      String transactionId,
+      int forwardId,
+      String status,
+      String? token, {
+        String? comment,
+      }) async {
+    if (token == null) return false;
+
+    try {
+      final Map<String, dynamic> body = {
+        'status': status,
+      };
+
+      if (comment != null && comment.isNotEmpty) {
+        body['comment'] = comment;
       }
 
       final response = await http.patch(
-        Uri.parse(
-            "$baseUrl/transaction/$transactionId/forward/$forwardId"),
+        Uri.parse("$baseUrl/transaction/$transactionId/forward/$forwardId/response"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -510,14 +666,15 @@ class InboxApi {
         body: json.encode(body),
       );
 
+      print("📝 Update forward response: ${response.statusCode} - ${response.body}");
       return response.statusCode == 200;
     } catch (e) {
-      print("❌ Error in performAction: $e");
+      print("❌ Error in updateForwardResponse: $e");
       return false;
     }
   }
 
-  // 🔹 تنفيذ الإجراءات (الموافقة، الرفض، طلب التعديل) - الجديدة
+  // ✅ تنفيذ الإجراءات (يجد الـ forwardId تلقائياً ثم يستخدم POST /response)
   Future<bool> performActionUpdated(
       String transactionId,
       String action,
@@ -527,81 +684,97 @@ class InboxApi {
       }) async {
     if (token == null || userName == null) return false;
 
+    print("🎯 performActionUpdated - transactionId: $transactionId, action: $action, userName: $userName");
+
     try {
-      final forwardsResponse = await http.get(
-        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      // جلب الـ forwardId الخاص بي كـ receiver
+      final forwardId = await getMyForwardIdAsReceiver(transactionId, token, userName);
 
-      if (forwardsResponse.statusCode != 200) return false;
-
-      final data = json.decode(forwardsResponse.body);
-      final List<dynamic> forwards = data is List 
-          ? data 
-          : (data['transaction']?['forwards'] ?? data['forwards'] ?? []);
-
-      if (forwards.isEmpty) return false;
-
-      dynamic yourForward;
-      try {
-        final sortedForwards = List<dynamic>.from(forwards);
-        sortedForwards.sort((a, b) => (b['id'] ?? 0).compareTo(a['id'] ?? 0));
-
-        yourForward = sortedForwards.firstWhere(
-              (forward) => forward['receiver']?['name'] == userName,
-          orElse: () => null,
-        );
-      } catch (e) {
-        yourForward = null;
-      }
-
-      if (yourForward == null) {
+      if (forwardId == null) {
         print("❌ No forward found where user is receiver");
         return false;
       }
 
-      final String forwardId = yourForward['id'].toString();
-      final Map<String, dynamic> body = {};
-
+      // تحديد الحالة
+      String status;
       switch (action) {
         case 'Approve':
-          body['status'] = 'APPROVED';
+          status = 'APPROVED';
           break;
         case 'Reject':
-          body['status'] = 'REJECTED';
+          status = 'REJECTED';
           break;
         case 'Needs Change':
-          body['status'] = 'NEEDS_EDITING';
+          status = 'NEEDS_EDITING';
           break;
         default:
+          print("❌ Unknown action: $action");
           return false;
       }
 
-      if (comment != null && comment.isNotEmpty) {
-        body['comment'] = comment;
-      }
+      print("📤 Calling respondToForward - transactionId: $transactionId, forwardId: $forwardId, status: $status, comment: $comment");
 
-      final response = await http.patch(
-        Uri.parse("$baseUrl/transaction/$transactionId/forward/$forwardId"),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode(body),
+      return await respondToForward(
+        transactionId,
+        forwardId,
+        status,
+        token,
+        comment: comment,
       );
-
-      return response.statusCode == 200;
     } catch (e) {
       print("❌ Error in performActionUpdated: $e");
       return false;
     }
   }
 
+  // ✅ تعديل الرد (يجد الـ forwardId تلقائياً ثم يستخدم PATCH /response)
+  Future<bool> editMyResponse(
+      String transactionId,
+      String action,
+      String? token,
+      String? userName, {
+        String? comment,
+      }) async {
+    if (token == null || userName == null) return false;
+
+    try {
+      final forwardId = await getMyForwardIdAsReceiver(transactionId, token, userName);
+
+      if (forwardId == null) {
+        print("❌ No forward found where user is receiver for editing");
+        return false;
+      }
+
+      String status;
+      switch (action) {
+        case 'Approve':
+          status = 'APPROVED';
+          break;
+        case 'Reject':
+          status = 'REJECTED';
+          break;
+        case 'Needs Change':
+          status = 'NEEDS_EDITING';
+          break;
+        default:
+          return false;
+      }
+
+      return await updateForwardResponse(
+        transactionId,
+        forwardId,
+        status,
+        token,
+        comment: comment,
+      );
+    } catch (e) {
+      print("❌ Error in editMyResponse: $e");
+      return false;
+    }
+  }
+
   // 🔹 إرسال المعاملة لمستخدم آخر (Forward)
-  // ✅ الـ API الجديد يستخدم receiverId (رقم) بدلاً من receiverName (نص)
+  // POST /transaction/{id}/forward with body: {receiverId, comment}
   Future<bool> forwardTransaction(
       String transactionId,
       String receiverName,
@@ -615,23 +788,13 @@ class InboxApi {
       // إذا لم يتم تمرير receiverId، حاول حله من الاسم
       int? resolvedReceiverId = receiverId;
       if (resolvedReceiverId == null) {
-        final usersResponse = await http.get(
-          Uri.parse("$baseUrl/users"),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
+        final users = await fetchUsers(token);
+        final user = users.firstWhere(
+          (u) => u['name'] == receiverName,
+          orElse: () => null,
         );
-        if (usersResponse.statusCode == 200) {
-          final usersData = jsonDecode(usersResponse.body);
-          final List<dynamic> users = usersData is List ? usersData : (usersData["users"] ?? []);
-          final user = users.firstWhere(
-            (u) => u['name'] == receiverName,
-            orElse: () => null,
-          );
-          if (user != null) {
-            resolvedReceiverId = user['id'] is int ? user['id'] : int.tryParse(user['id'].toString());
-          }
+        if (user != null) {
+          resolvedReceiverId = user['id'] is int ? user['id'] : int.tryParse(user['id'].toString());
         }
       }
 
@@ -684,19 +847,18 @@ class InboxApi {
     }
   }
 
-  // 🔹 جلب المستخدمين
+  // 🔹 جلب المستخدمين (paginated) - GET /users?page=X&perPage=10
   Future<List<dynamic>> fetchUsers(String? token) async {
     if (token == null) return [];
 
     List<dynamic> allUsers = [];
     int currentPage = 1;
-    bool hasMorePages = true;
+    bool hasMore = true;
 
     try {
-      while (hasMorePages) {
+      while (hasMore) {
         final response = await http.get(
-          Uri.parse(
-              "$baseUrl/users?pageNumber=$currentPage&pageSize=100"),
+          Uri.parse("$baseUrl/users?page=$currentPage&perPage=50"),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
@@ -707,26 +869,27 @@ class InboxApi {
           final data = json.decode(response.body);
           List<dynamic> pageUsers = [];
 
-          if (data["users"] != null) {
-            pageUsers = data["users"];
-          } else if (data["data"] != null) {
-            pageUsers = data["data"];
+          if (data is Map) {
+            pageUsers = data['data'] ?? data['users'] ?? [];
           } else if (data is List) {
             pageUsers = data;
           }
 
-          if (pageUsers.isNotEmpty) {
-            allUsers.addAll(pageUsers);
-            currentPage++;
-            if (pageUsers.length < 100) hasMorePages = false;
+          allUsers.addAll(pageUsers);
+
+          // Check pagination
+          final pagination = data is Map ? data['pagination'] : null;
+          if (pagination != null && pagination['next'] != null) {
+            currentPage = pagination['next'];
           } else {
-            hasMorePages = false;
+            hasMore = false;
           }
         } else {
-          hasMorePages = false;
+          hasMore = false;
         }
       }
 
+      // إزالة المكررات
       final uniqueUsers = <dynamic>[];
       final seenIds = <dynamic>{};
 
@@ -745,7 +908,7 @@ class InboxApi {
     }
   }
 
-  // 🔹 تعديل طلب موجود (لزر Edit Request)
+  // 🔹 تعديل طلب موجود
   Future<bool> updateRequest(
       String requestId,
       Map<String, dynamic> updatedData,
@@ -768,8 +931,7 @@ class InboxApi {
         print("✅ Request $requestId updated successfully");
         return true;
       } else {
-        print(
-            "⚠️ Failed to update request: ${response.statusCode}");
+        print("⚠️ Failed to update request: ${response.statusCode}");
         return false;
       }
     } catch (e) {
