@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:college_project/l10n/app_localizations.dart';
 
 import '../../app_config.dart';
@@ -82,9 +82,12 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   List<Map<String, dynamic>> _previousDocuments = [];
   bool _isLoadingPreviousDocs = false;
 
-  // ✅ متغيرات للتعليقات
-  List<Map<String, dynamic>> _comments = [];
-  bool _isLoadingComments = false;
+  // ✅ متغيرات الـ Forwards
+  List<dynamic> _forwards = [];
+  bool _isLoadingForwards = false;
+  bool _isLoadingMoreForwards = false;
+  bool _hasMoreForwards = true;
+  int _currentForwardPage = 1;
 
   bool _isProcessing = false;
 
@@ -151,8 +154,8 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             _isLoading = false;
           });
 
-          // ✅ جلب التعليقات والمستندات بعد نجاح جلب الطلب
-          _fetchComments();
+          // ✅ جلب الـ Forwards والمستندات بعد نجاح جلب الطلب
+          _fetchForwards();
           if (transactionData["documents"] != null) {
             _fetchDocumentsDetails(transactionData["documents"]);
           }
@@ -214,40 +217,89 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     }
   }
 
-  // ✅ جلب التعليقات (مؤقت: Mock Data)
-  Future<void> _fetchComments() async {
-    setState(() => _isLoadingComments = true);
+  // ✅ جلب الـ Forwards - صفحة واحدة
+  Future<void> _fetchForwards() async {
+    setState(() {
+      _isLoadingForwards = true;
+      _forwards = [];
+      _currentForwardPage = 1;
+      _hasMoreForwards = true;
+    });
 
     try {
-      // 🟡 مؤقت: Mock Data لحين تجهيز API
-      await Future.delayed(Duration(milliseconds: 500));
+      final response = await http.get(
+        Uri.parse("$_baseUrl/transaction/${widget.requestId}/forward?page=1&perPage=10"),
+        headers: {
+          'accept': 'application/json',
+          'Authorization': 'Bearer $_userToken',
+        },
+      );
 
-      setState(() {
-        _comments = [
-          {
-            "id": 1,
-            "comment": "This request needs review from finance department.",
-            "commenterName": "Ahmed Hassan",
-            "createdAt": "2026-02-13T10:30:00.000Z"
-          },
-          {
-            "id": 2,
-            "comment": "Documents are missing, please upload the signed version.",
-            "commenterName": "Mohamed Ali",
-            "createdAt": "2026-02-13T11:45:00.000Z"
-          },
-          {
-            "id": 3,
-            "comment": "Approved by supervisor. Ready for final review.",
-            "commenterName": "Sara Ahmed",
-            "createdAt": "2026-02-13T14:20:00.000Z"
-          }
-        ];
-        _isLoadingComments = false;
-      });
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        List<dynamic> forwards = [];
+        Map<String, dynamic>? pagination;
+
+        if (responseData is Map) {
+          forwards = responseData['data'] ?? [];
+          pagination = responseData['pagination'];
+        } else if (responseData is List) {
+          forwards = responseData;
+        }
+
+        setState(() {
+          _forwards = forwards;
+          _currentForwardPage = pagination?['currentPage'] ?? 1;
+          _hasMoreForwards = pagination?['next'] != null;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoadingComments = false);
-      debugPrint('❌ Error fetching comments: $e');
+      debugPrint('❌ Error fetching forwards: $e');
+    } finally {
+      setState(() => _isLoadingForwards = false);
+    }
+  }
+
+  // ✅ تحميل المزيد من الـ Forwards
+  Future<void> _loadMoreForwards() async {
+    if (_isLoadingMoreForwards || !_hasMoreForwards) return;
+
+    setState(() => _isLoadingMoreForwards = true);
+
+    try {
+      final nextPage = _currentForwardPage + 1;
+      final response = await http.get(
+        Uri.parse("$_baseUrl/transaction/${widget.requestId}/forward?page=$nextPage&perPage=10"),
+        headers: {
+          'accept': 'application/json',
+          'Authorization': 'Bearer $_userToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        List<dynamic> forwards = [];
+        Map<String, dynamic>? pagination;
+
+        if (responseData is Map) {
+          forwards = responseData['data'] ?? [];
+          pagination = responseData['pagination'];
+        } else if (responseData is List) {
+          forwards = responseData;
+        }
+
+        if (mounted) {
+          setState(() {
+            _forwards.addAll(forwards);
+            _currentForwardPage = pagination?['currentPage'] ?? nextPage;
+            _hasMoreForwards = pagination?['next'] != null;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading more forwards: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingMoreForwards = false);
     }
   }
 
@@ -611,11 +663,21 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     final description = data["description"] ?? AppLocalizations.of(context)!.translate('not_available');
     final createdAt = _formatDate(data["createdAt"]);
     final fulfilled = data["fulfilled"] == true;
-    final status = fulfilled ? AppLocalizations.of(context)!.translate('status_fulfilled') : AppLocalizations.of(context)!.translate('pending');
-    final statusColor = fulfilled ? AppColors.accentGreen : AppColors.accentYellow;
+    final status = fulfilled 
+        ? AppLocalizations.of(context)!.translate('status_fulfilled') 
+        : AppLocalizations.of(context)!.translate('waiting');
+    
+    // 🔥 تغيير اللون إلى الأزرق للحالة Waiting
+    final statusColor = fulfilled ? AppColors.accentGreen : AppColors.accentBlue;
 
-    // ✅ تعديل: استخدام creatorName مباشرة
-    final creator = data["creatorName"] ?? AppLocalizations.of(context)!.translate('unknown');
+    // ✅ محاولة استخراج الاسم من كل المفاتيح الممكنة لضمان عدم ظهور Unknown
+    final creator = data["creatorName"] ?? 
+                    data["creator"]?["name"] ?? 
+                    data["userName"] ?? 
+                    data["name"] ?? 
+                    data["user"]?["name"] ?? 
+                    (data["creatorId"] != null ? "User #${data["creatorId"]}" : null) ??
+                    AppLocalizations.of(context)!.translate('unknown');
 
     final documents = data["documents"] as List<dynamic>? ?? [];
 
@@ -638,8 +700,8 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           ],
           _buildAdditionalInfoCard(data, isMobile),
           SizedBox(height: isMobile ? 16 : 20),
-          // ✅ إضافة قسم التعليقات
-          _buildCommentsSection(isMobile),
+          // ✅ قسم الـ Forwards
+          _buildForwardsSection(isMobile),
         ],
       ),
     );
@@ -1093,6 +1155,14 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   }
 
   Widget _buildAdditionalInfoCard(Map<String, dynamic> data, bool isMobile) {
+    final creator = data["creatorName"] ?? 
+                    data["creator"]?["name"] ?? 
+                    data["userName"] ?? 
+                    data["name"] ?? 
+                    data["user"]?["name"] ?? 
+                    (data["creatorId"] != null ? "User #${data["creatorId"]}" : null) ??
+                    AppLocalizations.of(context)!.translate('unknown');
+                    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -1117,16 +1187,17 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             _buildInfoRow(AppLocalizations.of(context)!.translate('created_at'), _formatDate(data["createdAt"]), isMobile),
             if (data["updatedAt"] != null)
               _buildInfoRow(AppLocalizations.of(context)!.translate('updated_at'), _formatDate(data["updatedAt"]), isMobile),
-            if (data["creatorName"] != null)
-              _buildInfoRow(AppLocalizations.of(context)!.translate('role_label'), data["creatorName"] ?? AppLocalizations.of(context)!.translate('not_available'), isMobile),
+
+            if (creator != AppLocalizations.of(context)!.translate('unknown'))
+              _buildInfoRow(AppLocalizations.of(context)!.translate('created_by_label'), creator, isMobile),
           ],
         ),
       ),
     );
   }
 
-  // ✅ قسم التعليقات - يعرض فقط اسم المعلق، نص التعليق، التاريخ
-  Widget _buildCommentsSection(bool isMobile) {
+  // ✅ قسم الـ Forwards - بسيط ومباشر
+  Widget _buildForwardsSection(bool isMobile) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -1142,121 +1213,344 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             Row(
               children: [
                 Icon(
-                  Icons.comment_rounded,
+                  Icons.forward_rounded,
                   color: AppColors.primary,
                   size: isMobile ? 18 : 20,
                 ),
                 SizedBox(width: isMobile ? 6 : 8),
                 Text(
-                  '${AppLocalizations.of(context)!.translate('comments_label')} (${_comments.length})',
+                  AppLocalizations.of(context)!.translate('forwards_label') ?? 'Forwards',
                   style: TextStyle(
                     fontSize: isMobile ? 16 : 18,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
                   ),
                 ),
+                if (_forwards.isNotEmpty) ...[
+                  SizedBox(width: 6),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${_forwards.length}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
-            // قائمة التعليقات
-            _isLoadingComments
+            // المحتوى
+            _isLoadingForwards
                 ? Center(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.primary,
-                ),
-              ),
-            )
-                : _comments.isEmpty
-                ? Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.chat_bubble_outline_rounded,
-                      size: 32,
-                      color: AppColors.textMuted,
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      AppLocalizations.of(context)!.translate('no_comments_yet'),
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: isMobile ? 13 : 14,
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
                       ),
                     ),
-                  ],
-                ),
-              ),
-            )
-                : ListView.separated(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: _comments.length,
-              separatorBuilder: (context, index) => Divider(
-                height: 24,
-                thickness: 1,
-                color: AppColors.borderColor,
-              ),
-              itemBuilder: (context, index) {
-                final comment = _comments[index];
-                return _buildCommentItem(comment, isMobile);
-              },
-            ),
+                  )
+                : _forwards.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.swap_horiz_rounded,
+                                size: 32,
+                                color: AppColors.textMuted,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                AppLocalizations.of(context)!.translate('no_forwards_yet') ?? 'No forwards yet',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: isMobile ? 13 : 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: _forwards.length,
+                            separatorBuilder: (context, index) => Divider(
+                              height: 24,
+                              thickness: 1,
+                              color: AppColors.borderColor,
+                            ),
+                            itemBuilder: (context, index) {
+                              return _buildForwardItem(_forwards[index], isMobile);
+                            },
+                          ),
+                          // مؤشر تحميل المزيد
+                          if (_isLoadingMoreForwards)
+                            Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          // زر تحميل المزيد
+                          if (_hasMoreForwards && !_isLoadingMoreForwards)
+                            TextButton.icon(
+                              onPressed: _loadMoreForwards,
+                              icon: Icon(Icons.expand_more_rounded, color: AppColors.primary),
+                              label: Text(
+                                AppLocalizations.of(context)!.translate('load_more') ?? 'Load More',
+                                style: TextStyle(color: AppColors.primary),
+                              ),
+                            ),
+                        ],
+                      ),
           ],
         ),
       ),
     );
   }
 
-  // ✅ عنصر التعليق الواحد - اسم المعلق، نص التعليق، التاريخ فقط
-  Widget _buildCommentItem(Map<String, dynamic> comment, bool isMobile) {
-    final commenterName = comment["commenterName"] ?? AppLocalizations.of(context)!.translate('unknown');
-    final commentText = comment["comment"] ?? "";
-    final createdAt = _formatDateOnly(comment["createdAt"]);
+  // ✅ عنصر Forward واحد - بسيط
+  Widget _buildForwardItem(dynamic forward, bool isMobile) {
+    final senderName = forward['sender']?['name'] ?? '?';
+    final receiverName = forward['receiver']?['name'] ?? '?';
+    final status = (forward['status'] ?? 'WAITING').toString().toUpperCase();
+    final senderComment = forward['senderComment'];
+    final receiverComment = forward['receiverComment'];
+    final senderSeen = forward['senderSeen'] == true;
+    final receiverSeen = forward['receiverSeen'] == true;
+    final forwardedAt = _formatDateOnly(forward['forwardedAt']);
+
+    // ألوان الحالة
+    Color statusColor;
+    String statusText;
+    IconData statusIcon;
+    switch (status) {
+      case 'APPROVED':
+        statusColor = AppColors.accentGreen;
+        statusText = AppLocalizations.of(context)!.translate('status_approved');
+        statusIcon = Icons.check_circle_rounded;
+        break;
+      case 'REJECTED':
+        statusColor = AppColors.accentRed;
+        statusText = AppLocalizations.of(context)!.translate('status_rejected');
+        statusIcon = Icons.cancel_rounded;
+        break;
+      case 'NEEDS_EDITING':
+        statusColor = AppColors.accentYellow;
+        statusText = AppLocalizations.of(context)!.translate('status_needs_editing');
+        statusIcon = Icons.edit_note_rounded;
+        break;
+      default:
+        statusColor = AppColors.accentBlue; // 🔥 التأكد من أن الانتظار لونه أزرق
+        statusText = AppLocalizations.of(context)!.translate('status_waiting');
+        statusIcon = Icons.hourglass_empty_rounded;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // اسم المعلق والتاريخ
+        // المرسل ➔ المستقبل + التاريخ (محمي من القلب في العربية)
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              child: Text(
-                commenterName,
-                style: TextStyle(
-                  fontSize: isMobile ? 14 : 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
+              child: Directionality(
+                textDirection: TextDirection.ltr, // 🔥 إجبار الترتيب من اليسار لليمين للمسار المنطقي
+                child: Row(
+                  children: [
+                    Icon(Icons.person_rounded, size: isMobile ? 14 : 16, color: AppColors.primary),
+                    SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        senderName,
+                        style: TextStyle(
+                          fontSize: isMobile ? 13 : 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(
+                        Icons.arrow_forward_rounded, 
+                        size: 14, 
+                        color: AppColors.primary.withOpacity(0.5)
+                      ),
+                    ),
+                    Flexible(
+                      child: Text(
+                        receiverName,
+                        style: TextStyle(
+                          fontSize: isMobile ? 13 : 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             SizedBox(width: 8),
             Text(
-              createdAt,
+              forwardedAt,
               style: TextStyle(
-                fontSize: isMobile ? 11 : 12,
+                fontSize: isMobile ? 10 : 11,
                 color: AppColors.textMuted,
                 fontStyle: FontStyle.italic,
               ),
             ),
           ],
         ),
-        SizedBox(height: 6),
-        // نص التعليق
+        SizedBox(height: 8),
+
+        // الحالة + Seen
+        Row(
+          children: [
+            // Status badge
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: statusColor.withOpacity(0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(statusIcon, size: 12, color: statusColor),
+                  SizedBox(width: 4),
+                  Text(
+                    statusText,
+                    style: TextStyle(
+                      fontSize: isMobile ? 10 : 11,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: 8),
+            // Sender seen
+            _buildSeenBadge(
+              label: AppLocalizations.of(context)!.translate('sender') ?? 'Sender',
+              seen: senderSeen,
+              color: AppColors.accentBlue,
+              isMobile: isMobile,
+            ),
+            SizedBox(width: 6),
+            // Receiver seen
+            _buildSeenBadge(
+              label: AppLocalizations.of(context)!.translate('receiver') ?? 'Receiver',
+              seen: receiverSeen,
+              color: AppColors.accentGreen,
+              isMobile: isMobile,
+            ),
+          ],
+        ),
+
+        // تعليق المرسل
+        if (senderComment != null && senderComment.toString().isNotEmpty) ...[
+          SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(isMobile ? 8 : 10),
+            decoration: BoxDecoration(
+              color: AppColors.accentBlue.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.accentBlue.withOpacity(0.15)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.chat_bubble_outline, size: 12, color: AppColors.accentBlue),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    senderComment.toString(),
+                    style: TextStyle(
+                      fontSize: isMobile ? 12 : 13,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // تعليق المستقبل
+        if (receiverComment != null && receiverComment.toString().isNotEmpty) ...[
+          SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(isMobile ? 8 : 10),
+            decoration: BoxDecoration(
+              color: AppColors.accentGreen.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.accentGreen.withOpacity(0.15)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.reply_rounded, size: 12, color: AppColors.accentGreen),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    receiverComment.toString(),
+                    style: TextStyle(
+                      fontSize: isMobile ? 12 : 13,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // ✅ Seen badge بسيط
+  Widget _buildSeenBadge({required String label, required bool seen, required Color color, required bool isMobile}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          seen ? Icons.done_all_rounded : Icons.done_rounded,
+          size: isMobile ? 12 : 14,
+          color: seen ? color : AppColors.textMuted,
+        ),
+        SizedBox(width: 2),
         Text(
-          commentText,
+          label,
           style: TextStyle(
-            fontSize: isMobile ? 13 : 14,
-            color: AppColors.textPrimary,
-            height: 1.4,
+            fontSize: isMobile ? 9 : 10,
+            color: seen ? color : AppColors.textMuted,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
