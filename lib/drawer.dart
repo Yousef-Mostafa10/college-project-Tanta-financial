@@ -1,5 +1,6 @@
 import 'package:college_project/request/creatrequest.dart';
 import 'package:college_project/request/Myrequest/myrequest.dart';
+import 'package:college_project/Archive/archive_page.dart';
 import 'package:college_project/users/Adduser.dart';
 import 'package:college_project/users/viewUser/viewuser.dart';
 import 'package:flutter/material.dart';
@@ -205,6 +206,32 @@ class _CustomDrawerState extends State<CustomDrawer> {
               },
             ),
 
+            _buildMenuItem(
+              icon: Icons.archive_rounded,
+              title: AppLocalizations.of(context)!.translate('archive'),
+              color: AppColors.accentBlue,
+              isMobile: isMobile,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ArchivePage()),
+                );
+              },
+            ),
+
+            _buildMenuItem(
+              icon: Icons.notifications_active_rounded,
+              title: AppLocalizations.of(context)!.translate('inbox_title'),
+              color: AppColors.accentPurple,
+              isMobile: isMobile,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const InboxPage()),
+                );
+              },
+            ),
+
             Divider(
               height: isMobile ? 16 : 20,
               color: AppColors.primary.withOpacity(0.1),
@@ -214,20 +241,6 @@ class _CustomDrawerState extends State<CustomDrawer> {
             ),
 
             _buildSectionHeader(AppLocalizations.of(context)!.translate('general'), Icons.settings_rounded, isMobile),
-
-            _buildMenuItem(
-              icon: Icons.notifications_active_rounded,
-              title: AppLocalizations.of(context)!.translate('notifications'),
-              color: AppColors.accentPurple,
-              badgeCount: 3,
-              isMobile: isMobile,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const InboxPage()),
-                );
-              },
-            ),
 
             // إعدادات اللغة (Language Settings)
             Container(
