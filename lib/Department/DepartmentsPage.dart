@@ -25,16 +25,35 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   bool isLoading = true;
   String? errorMessage;
 
+  // Pagination
+  int _currentPage = 1;
+  bool _hasMorePages = true;
+  bool _isLoadingMore = false;
+  int _totalDepartments = 0;
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     fetchAllDepartments();
     searchController.addListener(_searchDepartments);
+
+    // Scroll listener للتحميل التدريجي
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
+          !_isLoadingMore &&
+          _hasMorePages &&
+          searchController.text.isEmpty) {
+        _loadMoreDepartments();
+      }
+    });
   }
 
   @override
   void dispose() {
     searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -50,28 +69,43 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
     };
   }
 
-  // 📥 Fetch all departments
+  // 📥 Fetch departments with pagination
   Future<void> fetchAllDepartments() async {
     setState(() {
       isLoading = true;
       errorMessage = null;
+      _currentPage = 1;
+      _hasMorePages = true;
+      allDepartments = [];
     });
 
     try {
       final headers = await _getAuthHeaders();
       final response = await _dio.get(
-        '/departments',
+        '/departments?page=$_currentPage&perPage=10',
         options: Options(headers: headers),
       );
 
       if (response.statusCode == 200) {
-        List<dynamic> data = response.data;
+        final responseData = response.data;
+        List<dynamic> data = responseData['data'] ?? [];
+        final pagination = responseData['pagination'];
+
         setState(() {
           allDepartments = data.map((dept) => {
             'name': dept['name'] ?? '',
             'managerId': dept['managerId'],
           }).toList();
           filteredDepartments = allDepartments;
+          _totalDepartments = pagination?['total'] ?? allDepartments.length;
+
+          if (pagination != null && pagination['next'] != null) {
+            _currentPage = pagination['next'];
+            _hasMorePages = true;
+          } else {
+            _hasMorePages = false;
+          }
+
           isLoading = false;
         });
       }
@@ -81,6 +115,53 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         errorMessage = 'Failed to load departments';
       });
       print('Error fetching departments: $e');
+    }
+  }
+
+  // 📥 Load more departments (الصفحة التالية)
+  Future<void> _loadMoreDepartments() async {
+    if (_isLoadingMore || !_hasMorePages) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await _dio.get(
+        '/departments?page=$_currentPage&perPage=10',
+        options: Options(headers: headers),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = response.data;
+        List<dynamic> data = responseData['data'] ?? [];
+        final pagination = responseData['pagination'];
+
+        setState(() {
+          final newDepartments = data.map((dept) => {
+            'name': dept['name'] ?? '',
+            'managerId': dept['managerId'],
+          }).toList();
+          allDepartments.addAll(newDepartments);
+          _totalDepartments = pagination?['total'] ?? allDepartments.length;
+
+          // لو مفيش بحث، حدّث القائمة المفلترة كلها
+          if (searchController.text.isEmpty) {
+            filteredDepartments = List.from(allDepartments);
+          }
+
+          if (pagination != null && pagination['next'] != null) {
+            _currentPage = pagination['next'];
+            _hasMorePages = true;
+          } else {
+            _hasMorePages = false;
+          }
+
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isLoadingMore = false);
+      print('Error loading more departments: $e');
     }
   }
 
@@ -173,14 +254,20 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   // ✏️ Update department
   Future<void> updateDepartment(String oldName, String newName, int? managerId) async {
     try {
-      // إرسال الاسم الجديد دائماً
-      final Map<String, dynamic> data = {
-        'name': newName,
-      };
+      final Map<String, dynamic> data = {};
+
+      // إرسال الاسم بس لو اتغير
+      if (newName != oldName) {
+        data['name'] = newName;
+      }
       
-      // إضافة managerId فقط إذا تم تحديده
+      // إضافة managerId (حتى لو null علشان يشيل الـ manager)
       if (managerId != null) {
         data['managerId'] = managerId;
+      }
+
+      if (data.isEmpty) {
+        return; // مفيش تغييرات
       }
       
       final headers = await _getAuthHeaders();
@@ -297,205 +384,497 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   // 🎨 Show add department dialog
   void _showAddDepartmentDialog() {
     TextEditingController nameController = TextEditingController();
-    TextEditingController managerIdController = TextEditingController();
+    int? selectedManagerId;
+    String? selectedManagerName;
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          width: 400,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Add New Department',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Department Name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  prefixIcon: const Icon(Icons.business, color: AppColors.primary),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: managerIdController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Manager ID (Optional)',
-                  hintText: 'Enter manager user ID',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  prefixIcon: const Icon(Icons.person, color: AppColors.primary),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (nameController.text.isNotEmpty) {
-                          int? managerId;
-                          if (managerIdController.text.isNotEmpty) {
-                            managerId = int.tryParse(managerIdController.text);
-                          }
-                          addDepartment(
-                            nameController.text,
-                            managerId,
-                          );
-                          Navigator.pop(context);
+              child: Container(
+                width: 400,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Add New Department',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Department Name',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: const Icon(Icons.business, color: AppColors.primary),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Manager Picker Field
+                    GestureDetector(
+                      onTap: () async {
+                        final result = await _showUserPickerDialog();
+                        if (result != null) {
+                          setDialogState(() {
+                            selectedManagerId = result['id'];
+                            selectedManagerName = result['name'];
+                          });
                         }
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Manager (Optional)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          prefixIcon: const Icon(Icons.person, color: AppColors.primary),
+                          suffixIcon: selectedManagerId != null
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    setDialogState(() {
+                                      selectedManagerId = null;
+                                      selectedManagerName = null;
+                                    });
+                                  },
+                                )
+                              : const Icon(Icons.arrow_drop_down),
+                        ),
+                        child: Text(
+                          selectedManagerId != null
+                              ? '$selectedManagerName  (ID: $selectedManagerId)'
+                              : 'Tap to select manager',
+                          style: TextStyle(
+                            color: selectedManagerId != null
+                                ? AppColors.textPrimary
+                                : AppColors.textMuted,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                      child: const Text('Add' , style: TextStyle(color: Colors.black)),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (nameController.text.isNotEmpty) {
+                                addDepartment(
+                                  nameController.text,
+                                  selectedManagerId,
+                                );
+                                Navigator.pop(context);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text('Add', style: TextStyle(color: Colors.black)),
+                          ),
                         ),
-                        side: const BorderSide(color: AppColors.textMuted),
-                      ),
-                      child: const Text('Cancel'),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              side: const BorderSide(color: AppColors.textMuted),
+                            ),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
   // 🎨 Show edit department dialog
   void _showEditDepartmentDialog(Map<String, dynamic> department) {
     TextEditingController nameController = TextEditingController(text: department['name']);
-    TextEditingController managerIdController = TextEditingController(
-      text: department['managerId'] != null ? department['managerId'].toString() : ''
-    );
+    int? selectedManagerId = department['managerId'];
+    String? selectedManagerName;
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          width: 400,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Edit Department',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Department Name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  prefixIcon: const Icon(Icons.business, color: AppColors.primary),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: managerIdController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Manager ID (Optional)',
-                  hintText: 'Enter manager user ID',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  prefixIcon: const Icon(Icons.person, color: AppColors.primary),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        int? managerId;
-                        if (managerIdController.text.isNotEmpty) {
-                          managerId = int.tryParse(managerIdController.text);
+              child: Container(
+                width: 400,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Edit Department',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Department Name',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: const Icon(Icons.business, color: AppColors.primary),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Manager Picker Field
+                    GestureDetector(
+                      onTap: () async {
+                        final result = await _showUserPickerDialog();
+                        if (result != null) {
+                          setDialogState(() {
+                            selectedManagerId = result['id'];
+                            selectedManagerName = result['name'];
+                          });
                         }
-                        updateDepartment(
-                          department['name'],
-                          nameController.text,
-                          managerId,
-                        );
-                        Navigator.pop(context);
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Manager (Optional)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          prefixIcon: const Icon(Icons.person, color: AppColors.primary),
+                          suffixIcon: selectedManagerId != null
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    setDialogState(() {
+                                      selectedManagerId = null;
+                                      selectedManagerName = null;
+                                    });
+                                  },
+                                )
+                              : const Icon(Icons.arrow_drop_down),
+                        ),
+                        child: Text(
+                          selectedManagerId != null
+                              ? '${selectedManagerName ?? 'User'}  (ID: $selectedManagerId)'
+                              : 'Tap to select manager',
+                          style: TextStyle(
+                            color: selectedManagerId != null
+                                ? AppColors.textPrimary
+                                : AppColors.textMuted,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                      child: const Text('Save Changes'),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              updateDepartment(
+                                department['name'],
+                                nameController.text,
+                                selectedManagerId,
+                              );
+                              Navigator.pop(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text('Save Changes'),
+                          ),
                         ),
-                        side: const BorderSide(color: AppColors.textMuted),
-                      ),
-                      child: const Text('Cancel'),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              side: const BorderSide(color: AppColors.textMuted),
+                            ),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
+
+  // 👤 User Picker Dialog - قائمة بسيطة لاختيار رئيس القسم
+  Future<Map<String, dynamic>?> _showUserPickerDialog() async {
+    List<Map<String, dynamic>> users = [];
+    List<Map<String, dynamic>> filteredUsers = [];
+    bool isLoadingUsers = true;
+    bool isLoadingMoreUsers = false;
+    bool hasMoreUsers = true;
+    int usersPage = 1;
+    String currentSearchQuery = '';
+    TextEditingController searchCtrl = TextEditingController();
+
+    // دالة لجلب صفحة من المستخدمين
+    Future<void> fetchUsersPage(int page, void Function(void Function()) setPickerState) async {
+      try {
+        final headers = await _getAuthHeaders();
+        final response = await _dio.get(
+          '/users?page=$page&perPage=10',
+          options: Options(headers: headers),
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = response.data;
+          List<dynamic> data = [];
+          Map<String, dynamic>? pagination;
+
+          if (responseData is Map) {
+            data = responseData['data'] ?? [];
+            pagination = responseData['pagination'];
+          } else if (responseData is List) {
+            data = responseData;
+          }
+
+          final newUsers = data.map<Map<String, dynamic>>((u) => {
+            'id': u['id'],
+            'name': u['name'] ?? 'Unknown',
+          }).toList();
+
+          setPickerState(() {
+            users.addAll(newUsers);
+            usersPage = pagination?['currentPage'] ?? page;
+            hasMoreUsers = pagination?['next'] != null;
+            isLoadingUsers = false;
+            isLoadingMoreUsers = false;
+            // تطبيق الفلتر الحالي
+            if (currentSearchQuery.isEmpty) {
+              filteredUsers = List.from(users);
+            } else {
+              final q = currentSearchQuery.toLowerCase();
+              filteredUsers = users.where((u) {
+                return u['name'].toString().toLowerCase().contains(q) ||
+                    u['id'].toString().contains(q);
+              }).toList();
+            }
+          });
+        } else {
+          setPickerState(() {
+            isLoadingUsers = false;
+            isLoadingMoreUsers = false;
+            hasMoreUsers = false;
+          });
+        }
+      } catch (e) {
+        setPickerState(() {
+          isLoadingUsers = false;
+          isLoadingMoreUsers = false;
+          hasMoreUsers = false;
+        });
+      }
+    }
+
+    return await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setPickerState) {
+            // جلب المستخدمين أول مرة
+            if (isLoadingUsers && users.isEmpty) {
+              fetchUsersPage(1, setPickerState);
+            }
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: 400,
+                height: 500,
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        const Icon(Icons.person_search, color: AppColors.primary),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Select Manager',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Search
+                    TextField(
+                      controller: searchCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'Search by name or ID...',
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        isDense: true,
+                      ),
+                      onChanged: (query) {
+                        setPickerState(() {
+                          currentSearchQuery = query;
+                          if (query.isEmpty) {
+                            filteredUsers = List.from(users);
+                          } else {
+                            final q = query.toLowerCase();
+                            filteredUsers = users.where((u) {
+                              return u['name'].toString().toLowerCase().contains(q) ||
+                                     u['id'].toString().contains(q);
+                            }).toList();
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    // List
+                    Expanded(
+                      child: isLoadingUsers
+                          ? const Center(
+                              child: CircularProgressIndicator(color: AppColors.primary),
+                            )
+                          : filteredUsers.isEmpty
+                              ? const Center(
+                                  child: Text('No users found', style: TextStyle(color: AppColors.textMuted)),
+                                )
+                              : NotificationListener<ScrollNotification>(
+                                  onNotification: (scrollInfo) {
+                                    if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 100 &&
+                                        !isLoadingMoreUsers && hasMoreUsers && currentSearchQuery.isEmpty) {
+                                      isLoadingMoreUsers = true;
+                                      fetchUsersPage(usersPage + 1, setPickerState);
+                                    }
+                                    return false;
+                                  },
+                                  child: ListView.builder(
+                                    itemCount: filteredUsers.length + (hasMoreUsers && currentSearchQuery.isEmpty ? 1 : 0),
+                                    itemBuilder: (context, index) {
+                                      // عنصر تحميل المزيد
+                                      if (index >= filteredUsers.length) {
+                                        return Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Center(
+                                            child: isLoadingMoreUsers
+                                                ? const SizedBox(
+                                                    width: 24,
+                                                    height: 24,
+                                                    child: CircularProgressIndicator(
+                                                      color: AppColors.primary,
+                                                      strokeWidth: 2,
+                                                    ),
+                                                  )
+                                                : const Text(
+                                                    'Scroll for more...',
+                                                    style: TextStyle(
+                                                      color: AppColors.textMuted,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                          ),
+                                        );
+                                      }
+
+                                      final user = filteredUsers[index];
+                                      return ListTile(
+                                        dense: true,
+                                        leading: CircleAvatar(
+                                          radius: 16,
+                                          backgroundColor: AppColors.primary.withOpacity(0.1),
+                                          child: Text(
+                                            '${user['id']}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                        ),
+                                        title: Text(
+                                          user['name'],
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                        subtitle: Text(
+                                          'ID: ${user['id']}',
+                                          style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                        ),
+                                        onTap: () => Navigator.pop(context, user),
+                                      );
+                                    },
+                                  ),
+                                ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
 
   // 🎨 Confirm delete
   void _confirmDelete(Map<String, dynamic> department) {
@@ -656,7 +1035,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                       const Icon(Icons.corporate_fare, size: 16, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Text(
-                        'Total Departments: ${allDepartments.length}',
+                        'Total Departments: $_totalDepartments',
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w500,
@@ -728,6 +1107,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
               ),
             )
                 : GridView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(24),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 4,
@@ -735,8 +1115,20 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                 crossAxisSpacing: 20,
                 mainAxisSpacing: 20,
               ),
-              itemCount: filteredDepartments.length,
+              itemCount: filteredDepartments.length + (_hasMorePages && searchController.text.isEmpty ? 1 : 0),
               itemBuilder: (context, index) {
+                // عنصر اللودينج في الآخر
+                if (index == filteredDepartments.length) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  );
+                }
                 final dept = filteredDepartments[index];
                 return DepartmentCard(
                   department: dept,
