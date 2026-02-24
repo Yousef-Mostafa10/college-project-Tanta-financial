@@ -61,6 +61,10 @@ class _AddUserPageState extends State<AddUserPage> {
   String _selectedRole = 'USER'; // القيمة الافتراضية
   String? _selectedDepartment; // القسم المختار
   List<String> _departments = []; // قائمة الأقسام فقط
+  int _departmentPage = 1;
+  bool _hasMoreDepartments = true;
+  bool _isLoadingMoreDepartments = false;
+  final ScrollController _departmentScrollController = ScrollController();
 
   final String _apiUrl = AppConfig.baseUrl;
 
@@ -71,16 +75,30 @@ class _AddUserPageState extends State<AddUserPage> {
     _fetchDepartments();
   }
 
-  // ✅ دالة لتحميل الأقسام من الـ API
-  Future<void> _fetchDepartments() async {
+  // ✅ دالة لتحميل الأقسام من الـ API مع Pagination
+  Future<void> _fetchDepartments({bool loadMore = false}) async {
+    if (_isLoadingMoreDepartments) return;
+    if (loadMore && !_hasMoreDepartments) return;
+
+    if (!loadMore) {
+      _departmentPage = 1;
+      _departments = [];
+      _hasMoreDepartments = true;
+    }
+
+    setState(() => _isLoadingMoreDepartments = true);
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
 
-      if (token == null || token.isEmpty) return;
+      if (token == null || token.isEmpty) {
+        setState(() => _isLoadingMoreDepartments = false);
+        return;
+      }
 
       final response = await http.get(
-        Uri.parse('$_apiUrl/departments'),
+        Uri.parse('$_apiUrl/departments?page=$_departmentPage&perPage=10'),
         headers: {
           "Authorization": "Bearer $token",
           "accept": "application/json",
@@ -92,20 +110,42 @@ class _AddUserPageState extends State<AddUserPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data is List) {
-          setState(() {
-            _departments = data.map((dept) => dept['name'].toString()).toList();
-            // إذا كانت هناك أقسام، اختيار الأول كقيمة افتراضية
-            if (_departments.isNotEmpty && _selectedDepartment == null) {
-              _selectedDepartment = _departments.first;
-            }
-          });
+        List<dynamic> departmentsList = [];
+
+        if (data is Map) {
+          departmentsList = data['data'] ?? [];
+        } else if (data is List) {
+          departmentsList = data;
         }
+
+        // قراءة بيانات الـ pagination
+        final pagination = data is Map ? data['pagination'] : null;
+
+        setState(() {
+          final newDepts = departmentsList.map((dept) => dept['name'].toString()).toList();
+          _departments.addAll(newDepts);
+
+          // استخدام pagination.next لمعرفة لو فيه صفحة تانية
+          if (pagination != null && pagination['next'] != null) {
+            _departmentPage = pagination['next'];
+            _hasMoreDepartments = true;
+          } else {
+            _hasMoreDepartments = false;
+          }
+
+          // اختيار أول قسم كقيمة افتراضية
+          if (_departments.isNotEmpty && _selectedDepartment == null) {
+            _selectedDepartment = _departments.first;
+          }
+          _isLoadingMoreDepartments = false;
+        });
       } else {
         debugPrint("Failed to fetch departments: ${response.statusCode}");
+        setState(() => _isLoadingMoreDepartments = false);
       }
     } catch (e) {
       debugPrint("Error fetching departments: $e");
+      setState(() => _isLoadingMoreDepartments = false);
     }
   }
 
@@ -378,13 +418,158 @@ class _AddUserPageState extends State<AddUserPage> {
     );
   }
 
+  // ✅ فتح Bottom Sheet لاختيار القسم مع دعم التحميل التدريجي
+  void _showDepartmentBottomSheet(bool isMobile) {
+    // إعادة تحميل من الصفحة الأولى عند فتح القائمة
+    _fetchDepartments();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: AppColors.cardBg,
+      builder: (BuildContext sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setStateSheet) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.6,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // العنوان
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.translate('select_department') ?? 'Select Department',
+                        style: TextStyle(
+                          fontSize: isMobile ? 18 : 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 1, thickness: 1),
+                  const SizedBox(height: 12),
+
+                  // قائمة الأقسام مع Scroll Listener
+                  Expanded(
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (ScrollNotification scrollInfo) {
+                        if (scrollInfo.metrics.pixels >=
+                                scrollInfo.metrics.maxScrollExtent - 100 &&
+                            !_isLoadingMoreDepartments &&
+                            _hasMoreDepartments) {
+                          _fetchDepartments(loadMore: true).then((_) {
+                            setStateSheet(() {});
+                          });
+                        }
+                        return false;
+                      },
+                      child: _departments.isEmpty && _isLoadingMoreDepartments
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
+                              ),
+                            )
+                          : _departments.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    AppLocalizations.of(context)!.translate('no_departments_found') ?? 'No departments found',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  controller: _departmentScrollController,
+                                  itemCount: _departments.length + (_hasMoreDepartments ? 1 : 0),
+                                  itemBuilder: (context, index) {
+                                    // عنصر اللودينج في الآخر
+                                    if (index == _departments.length) {
+                                      return const Padding(
+                                        padding: EdgeInsets.all(16),
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    final dept = _departments[index];
+                                    final isSelected = dept == _selectedDepartment;
+
+                                    return ListTile(
+                                      leading: Icon(
+                                        Icons.business,
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : AppColors.textSecondary,
+                                        size: isMobile ? 20 : 24,
+                                      ),
+                                      title: Text(
+                                        dept,
+                                        style: TextStyle(
+                                          fontSize: isMobile ? 14 : 16,
+                                          fontWeight: isSelected
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          color: isSelected
+                                              ? AppColors.primary
+                                              : AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      trailing: isSelected
+                                          ? Icon(
+                                              Icons.check_circle,
+                                              color: AppColors.primary,
+                                              size: isMobile ? 20 : 24,
+                                            )
+                                          : null,
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedDepartment = dept;
+                                        });
+                                        Navigator.pop(context);
+                                      },
+                                    );
+                                  },
+                                ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // ✅ تصميم حقل اختيار القسم
   Widget _buildDepartmentSelector(bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 8),
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             AppLocalizations.of(context)!.translate('department') ?? 'Department',
             style: TextStyle(
@@ -394,80 +579,57 @@ class _AddUserPageState extends State<AddUserPage> {
             ),
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: DropdownButtonFormField<String>(
-            value: _selectedDepartment,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
-                borderSide: BorderSide(color: AppColors.borderColor),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
-                borderSide: BorderSide(color: AppColors.borderColor),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
-                borderSide: BorderSide(
-                  color: AppColors.focusBorderColor,
-                  width: 1.5,
+        GestureDetector(
+          onTap: () => _showDepartmentBottomSheet(isMobile),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 20,
+              vertical: isMobile ? 14 : 16,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg,
+              borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+              border: Border.all(color: AppColors.borderColor),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-              ),
-              filled: true,
-              fillColor: AppColors.cardBg,
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: isMobile ? 16 : 20,
-                vertical: isMobile ? 14 : 16,
-              ),
-              prefixIcon: Icon(
-                Icons.business,
-                color: AppColors.primary,
-                size: isMobile ? 20 : 24,
-              ),
+              ],
             ),
-            hint: Text(
-              AppLocalizations.of(context)!.translate('select_department') ?? 'Select Department',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: isMobile ? 14 : 16,
-              ),
-            ),
-            items: _departments.map((department) {
-              return DropdownMenuItem<String>(
-                value: department,
-                child: Text(
-                  department,
-                  style: TextStyle(
-                    fontSize: isMobile ? 14 : 16,
-                    color: AppColors.textPrimary,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.business,
+                  color: AppColors.primary,
+                  size: isMobile ? 20 : 24,
+                ),
+                SizedBox(width: isMobile ? 12 : 16),
+                Expanded(
+                  child: Text(
+                    _selectedDepartment ??
+                        (AppLocalizations.of(context)!.translate('select_department') ?? 'Select Department'),
+                    style: TextStyle(
+                      fontSize: isMobile ? 14 : 16,
+                      color: _selectedDepartment != null
+                          ? AppColors.textPrimary
+                          : AppColors.textMuted,
+                    ),
                   ),
                 ),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedDepartment = value;
-              });
-            },
-            validator: (value) {
-              // ✅ القسم اختياري
-              return null;
-            },
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.textSecondary,
+                  size: isMobile ? 22 : 26,
+                ),
+              ],
+            ),
           ),
         ),
-        if (_departments.isEmpty)
+        if (_departments.isEmpty && !_isLoadingMoreDepartments)
           Padding(
-            padding: EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: 8),
             child: Text(
               AppLocalizations.of(context)!.translate('no_departments_found') ?? 'No departments found',
               style: TextStyle(
@@ -742,6 +904,7 @@ class _AddUserPageState extends State<AddUserPage> {
   void dispose() {
     _nameController.dispose();
     _passwordController.dispose();
+    _departmentScrollController.dispose();
     super.dispose();
   }
 }
