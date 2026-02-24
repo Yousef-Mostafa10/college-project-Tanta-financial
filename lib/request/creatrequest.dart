@@ -53,18 +53,23 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   List<TransactionType> _requestTypesData = [];
   List<String> _requestTypes = ['Request Type'];
 
-  // ✅ تعديل: تخزين بيانات المستخدمين كاملة
+  // ✅ تعديل: تخزين بيانات المستخدمين بنظام الصفحات
   List<Map<String, dynamic>> _usersData = [];
-  List<String> _availableUserNames = ['Select User'];
   List<Map<String, dynamic>> _filteredUsersData = [];
+  bool _isLoadingUsers = true;
+  bool _isLoadingMoreUsers = false;
+  bool _usersHasMore = true;
+  int _usersCurrentPage = 1;
 
   // ✅ الملفات السابقة للمستخدم
   List<Map<String, dynamic>> _previousDocuments = [];
   bool _isLoadingPreviousDocs = false;
+  bool _isLoadingMoreDocs = false;
+  bool _hasMoreDocs = true;
+  int _docsCurrentPage = 1;
   List<Map<String, dynamic>> _selectedPreviousDocuments = [];
 
   bool _isLoadingTypes = true;
-  bool _isLoadingUsers = true;
   bool _isSubmitting = false;
 
   List<int> _uploadedDocumentIds = [];
@@ -111,30 +116,46 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
   // ✅ جلب الملفات التي رفعها المستخدم سابقاً
   Future<void> _fetchPreviousDocuments() async {
-    setState(() => _isLoadingPreviousDocs = true);
+    setState(() {
+      _isLoadingPreviousDocs = true;
+      _previousDocuments = [];
+      _docsCurrentPage = 1;
+      _hasMoreDocs = true;
+    });
 
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token') ?? '';
 
       final response = await http.get(
-        Uri.parse('$_documentApiUrl/documents/uploaded'),
+        Uri.parse('$_documentApiUrl/documents/uploaded?page=1&perPage=10'),
         headers: {"Authorization": "Bearer $token"},
       );
 
       if (mounted) {
         if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          if (data is List) {
-            setState(() {
-              _previousDocuments = List<Map<String, dynamic>>.from(data);
-              _isLoadingPreviousDocs = false;
-            });
+          final responseData = json.decode(response.body);
+          List<dynamic> docs = [];
+          Map<String, dynamic>? pagination;
+
+          if (responseData is Map) {
+            docs = responseData['data'] ?? [];
+            pagination = responseData['pagination'];
+          } else if (responseData is List) {
+            docs = responseData;
           }
+
+          setState(() {
+            _previousDocuments = List<Map<String, dynamic>>.from(docs);
+            _docsCurrentPage = pagination?['currentPage'] ?? 1;
+            _hasMoreDocs = pagination?['next'] != null;
+            _isLoadingPreviousDocs = false;
+          });
         } else {
           setState(() {
             _previousDocuments = [];
             _isLoadingPreviousDocs = false;
+            _hasMoreDocs = false;
           });
         }
       }
@@ -143,7 +164,55 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         setState(() {
           _previousDocuments = [];
           _isLoadingPreviousDocs = false;
+          _hasMoreDocs = false;
         });
+      }
+    }
+  }
+
+  Future<void> _loadMorePreviousDocuments({void Function(void Function())? setStateSheet}) async {
+    if (_isLoadingMoreDocs || !_hasMoreDocs) return;
+
+    setState(() => _isLoadingMoreDocs = true);
+    setStateSheet?.call(() {});
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final nextPage = _docsCurrentPage + 1;
+
+      final response = await http.get(
+        Uri.parse('$_documentApiUrl/documents/uploaded?page=$nextPage&perPage=10'),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (mounted && response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        List<dynamic> docs = [];
+        Map<String, dynamic>? pagination;
+
+        if (responseData is Map) {
+          docs = responseData['data'] ?? [];
+          pagination = responseData['pagination'];
+        } else if (responseData is List) {
+          docs = responseData;
+        }
+
+        setState(() {
+          _previousDocuments.addAll(List<Map<String, dynamic>>.from(docs));
+          _docsCurrentPage = pagination?['currentPage'] ?? nextPage;
+          _hasMoreDocs = pagination?['next'] != null;
+          _isLoadingMoreDocs = false;
+        });
+        setStateSheet?.call(() {});
+      } else {
+        setState(() => _isLoadingMoreDocs = false);
+        setStateSheet?.call(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMoreDocs = false);
+        setStateSheet?.call(() {});
       }
     }
   }
@@ -153,41 +222,52 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token') ?? '';
 
-      final response = await http.get(
-        Uri.parse('$_documentApiUrl/transactions/types'),
-        headers: {"Authorization": "Bearer $token"},
-      );
+      List<TransactionType> allTypes = [];
+      int page = 1;
+      bool hasMore = true;
+
+      while (hasMore) {
+        final response = await http.get(
+          Uri.parse('$_documentApiUrl/transactions/types?page=$page&perPage=10'),
+          headers: {"Authorization": "Bearer $token"},
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          List<dynamic> typesList = [];
+          Map<String, dynamic>? pagination;
+
+          if (responseData is Map) {
+            typesList = responseData['data'] ?? responseData['transactionTypes'] ?? [];
+            pagination = responseData['pagination'];
+          } else if (responseData is List) {
+            typesList = responseData;
+          }
+
+          for (var item in typesList) {
+            allTypes.add(TransactionType.fromJson(item));
+          }
+
+          if (pagination != null && pagination['next'] != null) {
+            page = pagination['next'];
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
 
       if (mounted) {
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          List<dynamic> typesList = [];
-          if (data is List) {
-            typesList = data;
-          } else if (data is Map && data["transactionTypes"] != null) {
-            typesList = data["transactionTypes"];
+        setState(() {
+          _requestTypesData = allTypes;
+          final typeNames = allTypes.map((t) => t.name).toSet().toList();
+          _requestTypes = ['Request Type', ...typeNames];
+          if (_selectedRequestType == 'Request Type' && _requestTypes.length > 1) {
+            _selectedRequestType = _requestTypes[1];
           }
-
-          final List<TransactionType> types = [];
-          for (var item in typesList) {
-            types.add(TransactionType.fromJson(item));
-          }
-
-          setState(() {
-            _requestTypesData = types;
-            // ✅ إزالة الأسماء المكررة باستخدام Set
-            final typeNames = types.map((t) => t.name).toSet().toList();
-            _requestTypes = ['Request Type', ...typeNames];
-            if (_selectedRequestType == 'Request Type' && _requestTypes.length > 1) {
-              _selectedRequestType = _requestTypes[1];
-            }
-            _isLoadingTypes = false;
-          });
-        } else {
-          setState(() {
-            _isLoadingTypes = false;
-          });
-        }
+          _isLoadingTypes = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -198,32 +278,44 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     }
   }
 
+    // ✅ جلب أول صفحة من المستخدمين
   Future<void> fetchUsers() async {
+    setState(() {
+      _isLoadingUsers = true;
+      _usersData = [];
+      _usersCurrentPage = 1;
+      _usersHasMore = true;
+    });
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token') ?? '';
 
       final response = await http.get(
-        Uri.parse('$_documentApiUrl/users'),
+        Uri.parse('$_documentApiUrl/users?page=1&perPage=10'),
         headers: {"Authorization": "Bearer $token"},
       );
 
       if (mounted) {
         if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          if (data is List) {
-            setState(() {
-              _usersData = List<Map<String, dynamic>>.from(data);
-              _availableUserNames = ['Select User', ..._usersData.map((u) => u['name'] as String).toList()];
-              _filteredUsersData = List.from(_usersData);
-              _selectedReceiver = _availableUserNames.first;
-              _isLoadingUsers = false;
-            });
-          } else {
-            setState(() {
-              _isLoadingUsers = false;
-            });
+          final responseData = json.decode(response.body);
+          List<dynamic> users = [];
+          Map<String, dynamic>? pagination;
+
+          if (responseData is Map) {
+            users = responseData['data'] ?? [];
+            pagination = responseData['pagination'];
+          } else if (responseData is List) {
+            users = responseData;
           }
+
+          setState(() {
+            _usersData = List<Map<String, dynamic>>.from(users);
+            _filteredUsersData = List.from(_usersData);
+            _usersCurrentPage = pagination?['currentPage'] ?? 1;
+            _usersHasMore = pagination?['next'] != null;
+            _isLoadingUsers = false;
+          });
         } else {
           setState(() {
             _isLoadingUsers = false;
@@ -239,17 +331,66 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     }
   }
 
-  void _filterUsers(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredUsersData = List.from(_usersData);
+  // ✅ جلب المزيد من المستخدمين (عند السكرول)
+  Future<void> _loadMoreUsers({void Function(void Function())? setStateDialog}) async {
+    if (_isLoadingMoreUsers || !_usersHasMore) return;
+
+    setState(() => _isLoadingMoreUsers = true);
+    setStateDialog?.call(() {});
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final nextPage = _usersCurrentPage + 1;
+
+      final response = await http.get(
+        Uri.parse('$_documentApiUrl/users?page=$nextPage&perPage=10'),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (mounted && response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        List<dynamic> users = [];
+        Map<String, dynamic>? pagination;
+
+        if (responseData is Map) {
+          users = responseData['data'] ?? [];
+          pagination = responseData['pagination'];
+        } else if (responseData is List) {
+          users = responseData;
+        }
+
+        final newUsers = List<Map<String, dynamic>>.from(users);
+        setState(() {
+          _usersData.addAll(newUsers);
+          _usersCurrentPage = pagination?['currentPage'] ?? nextPage;
+          _usersHasMore = pagination?['next'] != null;
+          _isLoadingMoreUsers = false;
+          _filterUsers(_userSearchController.text);
+        });
+        setStateDialog?.call(() {});
       } else {
-        _filteredUsersData = _usersData
-            .where((user) =>
-            user['name'].toLowerCase().contains(query.toLowerCase()))
-            .toList();
+        setState(() => _isLoadingMoreUsers = false);
+        setStateDialog?.call(() {});
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMoreUsers = false);
+        setStateDialog?.call(() {});
+      }
+    }
+  }
+
+  void _filterUsers(String query) {
+    if (query.isEmpty) {
+      _filteredUsersData = List.from(_usersData);
+    } else {
+      _filteredUsersData = _usersData
+          .where((user) =>
+          user['name'].toString().toLowerCase().contains(query.toLowerCase()) ||
+          user['id'].toString().contains(query))
+          .toList();
+    }
   }
 
   Future<void> _createNewRequestType(String name) async {
@@ -474,7 +615,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 maxHeight: MediaQuery.of(context).size.height * 0.7,
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -574,7 +714,8 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   ),
                   SizedBox(height: 12),
 
-                  _isLoadingPreviousDocs
+                  Expanded(
+                    child: _isLoadingPreviousDocs
                       ? Container(
                     height: 200,
                     child: Center(
@@ -606,56 +747,86 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                       ),
                     ),
                   )
-                      : Container(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.35,
-                    ),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: _previousDocuments.length,
-                      separatorBuilder: (context, index) => Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final doc = _previousDocuments[index];
-                        final isSelected = _selectedPreviousDocuments.any((d) => d['id'] == doc['id']);
-
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: CreateRequestColors.primary.withOpacity(0.1),
-                            child: Icon(
-                              Icons.description_rounded,
-                              color: CreateRequestColors.primary,
-                              size: 20,
-                            ),
-                          ),
-                          title: Text(
-                            doc['title'] ?? 'Untitled',
-                            style: TextStyle(
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? CreateRequestColors.primary : CreateRequestColors.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: isSelected
-                              ? Icon(
-                            Icons.check_circle_rounded,
-                            color: CreateRequestColors.accentGreen,
-                          )
-                              : Icon(
-                            Icons.add_circle_outline_rounded,
-                            color: CreateRequestColors.primary,
-                          ),
-                          onTap: () {
-                            if (isSelected) {
-                              _removePreviousDocument(doc);
-                            } else {
-                              _addPreviousDocument(doc);
-                            }
-                            setStateSheet(() {});
-                            setState(() {});
-                          },
-                        );
+                      : NotificationListener<ScrollNotification>(
+                      onNotification: (scrollInfo) {
+                        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 100 &&
+                            !_isLoadingMoreDocs && _hasMoreDocs) {
+                          _loadMorePreviousDocuments(setStateSheet: setStateSheet);
+                        }
+                        return false;
                       },
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: _previousDocuments.length + (_hasMoreDocs ? 1 : 0),
+                        separatorBuilder: (context, index) => Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          // عنصر تحميل المزيد
+                          if (index >= _previousDocuments.length) {
+                            return Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Center(
+                                child: _isLoadingMoreDocs
+                                    ? SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          color: CreateRequestColors.primary,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        'Scroll for more...',
+                                        style: TextStyle(
+                                          color: CreateRequestColors.textMuted,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                              ),
+                            );
+                          }
+
+                          final doc = _previousDocuments[index];
+                          final isSelected = _selectedPreviousDocuments.any((d) => d['id'] == doc['id']);
+
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: CreateRequestColors.primary.withOpacity(0.1),
+                              child: Icon(
+                                Icons.description_rounded,
+                                color: CreateRequestColors.primary,
+                                size: 20,
+                              ),
+                            ),
+                            title: Text(
+                              doc['title'] ?? 'Untitled',
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? CreateRequestColors.primary : CreateRequestColors.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: isSelected
+                                ? Icon(
+                              Icons.check_circle_rounded,
+                              color: CreateRequestColors.accentGreen,
+                            )
+                                : Icon(
+                              Icons.add_circle_outline_rounded,
+                              color: CreateRequestColors.primary,
+                            ),
+                            onTap: () {
+                              if (isSelected) {
+                                _removePreviousDocument(doc);
+                              } else {
+                                _addPreviousDocument(doc);
+                              }
+                              setStateSheet(() {});
+                              setState(() {});
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ),
 
@@ -839,9 +1010,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     }
   }
 
-  void _showUserSelectionDialog() {
-    if (_isLoadingUsers) return;
-
+    void _showUserSelectionDialog() {
     showDialog(
       context: context,
       builder: (context) {
@@ -875,6 +1044,11 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                             color: CreateRequestColors.primary,
                           ),
                         ),
+                        Spacer(),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(context),
+                        ),
                       ],
                     ),
                     SizedBox(height: 16),
@@ -886,6 +1060,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                       onChanged: (value) {
                         setStateDialog(() {
@@ -895,68 +1070,108 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     ),
                     SizedBox(height: 16),
                     Expanded(
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: _filteredUsersData.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index == 0) {
-                            return ListTile(
-                              leading: Icon(
-                                Icons.clear_all_rounded,
-                                color: CreateRequestColors.textMuted,
-                              ),
-                              title: Text(
-                                'Clear Selection',
-                                style: TextStyle(
-                                  color: CreateRequestColors.textMuted,
-                                ),
-                              ),
-                              onTap: () {
-                                setState(() => _selectedReceiver = 'Select User');
-                                Navigator.pop(context);
+                      child: _isLoadingUsers
+                          ? Center(child: CircularProgressIndicator(color: CreateRequestColors.primary))
+                          : NotificationListener<ScrollNotification>(
+                              onNotification: (scrollInfo) {
+                                if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 100 &&
+                                    !_isLoadingMoreUsers && _usersHasMore && _userSearchController.text.isEmpty) {
+                                  _loadMoreUsers(setStateDialog: setStateDialog);
+                                }
+                                return false;
                               },
-                            );
-                          }
-                          final user = _filteredUsersData[index - 1];
-                          final isSelected = user['name'] == _selectedReceiver;
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: isSelected
-                                  ? CreateRequestColors.primary.withOpacity(0.2)
-                                  : Colors.transparent,
-                              child: Icon(
-                                Icons.person_rounded,
-                                color: isSelected
-                                    ? CreateRequestColors.primary
-                                    : CreateRequestColors.textSecondary,
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: _filteredUsersData.length + 1 + (_usersHasMore && _userSearchController.text.isEmpty ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (index == 0) {
+                                    return ListTile(
+                                      leading: Icon(
+                                        Icons.clear_all_rounded,
+                                        color: CreateRequestColors.textMuted,
+                                      ),
+                                      title: Text(
+                                        'Clear Selection',
+                                        style: TextStyle(
+                                          color: CreateRequestColors.textMuted,
+                                        ),
+                                      ),
+                                      onTap: () {
+                                        setState(() => _selectedReceiver = 'Select User');
+                                        Navigator.pop(context);
+                                      },
+                                    );
+                                  }
+
+                                  if (index > _filteredUsersData.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Center(
+                                        child: _isLoadingMoreUsers
+                                            ? SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child: CircularProgressIndicator(
+                                                  color: CreateRequestColors.primary,
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : Text(
+                                                'Scroll for more...',
+                                                style: TextStyle(
+                                                  color: CreateRequestColors.textMuted,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                      ),
+                                    );
+                                  }
+
+                                  final user = _filteredUsersData[index - 1];
+                                  final isSelected = user['name'] == _selectedReceiver;
+                                  return ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: isSelected
+                                          ? CreateRequestColors.primary.withOpacity(0.2)
+                                          : CreateRequestColors.primary.withOpacity(0.1),
+                                      child: Icon(
+                                        Icons.person_rounded,
+                                        color: isSelected
+                                            ? CreateRequestColors.primary
+                                            : CreateRequestColors.textSecondary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      user['name'],
+                                      style: TextStyle(
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected
+                                            ? CreateRequestColors.primary
+                                            : CreateRequestColors.textPrimary,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      'ID: ${user['id']}',
+                                      style: TextStyle(fontSize: 11, color: CreateRequestColors.textMuted),
+                                    ),
+                                    trailing: isSelected
+                                        ? Icon(
+                                      Icons.check_circle_rounded,
+                                      color: CreateRequestColors.primary,
+                                    )
+                                        : null,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedReceiver = user['name'];
+                                      });
+                                      Navigator.pop(context);
+                                    },
+                                  );
+                                },
                               ),
                             ),
-                            title: Text(
-                              user['name'],
-                              style: TextStyle(
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: isSelected
-                                    ? CreateRequestColors.primary
-                                    : CreateRequestColors.textPrimary,
-                              ),
-                            ),
-                            trailing: isSelected
-                                ? Icon(
-                              Icons.check_circle_rounded,
-                              color: CreateRequestColors.primary,
-                            )
-                                : null,
-                            onTap: () {
-                              setState(() {
-                                _selectedReceiver = user['name'];
-                              });
-                              Navigator.pop(context);
-                              _userSearchController.clear();
-                              _filterUsers('');
-                            },
-                          );
-                        },
-                      ),
                     ),
                   ],
                 ),
