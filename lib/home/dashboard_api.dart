@@ -13,45 +13,54 @@ class DashboardAPI {
     return prefs.getString('token');
   }
 
-  // جلب أنواع المعاملات
+  // جلب أنواع المعاملات مع Pagination
   Future<List<String>> fetchTypes() async {
     final token = await _getToken();
     if (token == null) throw Exception("No token found");
 
     try {
-      final response = await http.get(
-        Uri.parse("$_baseUrl/transactions/types"),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      List<String> allTypes = [];
+      int page = 1;
+      bool hasMore = true;
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      while (hasMore) {
+        final response = await http.get(
+          Uri.parse("$_baseUrl/transactions/types?page=$page&perPage=10"),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
 
-        List<dynamic> typesList = [];
-        if (data is List) {
-          typesList = data;
-        } else if (data is Map && data["transactionTypes"] != null) {
-          typesList = data["transactionTypes"];
+        if (response.statusCode == 200) {
+          final responseData = jsonDecode(response.body);
+          List<dynamic> typesList = [];
+          Map<String, dynamic>? pagination;
+
+          if (responseData is Map) {
+            typesList = responseData['data'] ?? responseData['transactionTypes'] ?? [];
+            pagination = responseData['pagination'];
+          } else if (responseData is List) {
+            typesList = responseData;
+          }
+
+          allTypes.addAll(
+            typesList
+                .where((item) => item["name"] != null)
+                .map<String>((item) => item["name"] as String),
+          );
+
+          if (pagination != null && pagination['next'] != null) {
+            page = pagination['next'];
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
         }
-
-        return typesList
-            .where((item) => item["name"] != null)
-            .map<String>((item) => item["name"] as String)
-            .toList();
-      } else {
-        // Fallback: جلب الأنواع من المعاملات
-        final transactions = await fetchAllRequests();
-        final types = transactions
-            .map((t) => t["typeName"]?.toString() ?? t["type"]?["name"] ?? "")
-            .where((type) => type.isNotEmpty)
-            .toSet()
-            .toList()
-            .cast<String>(); // ✅ تحويل إلى List<String>
-        return types;
       }
+
+      return allTypes.toSet().toList(); // إزالة المكررات
     } catch (e) {
       debugPrint("⚠️ Error fetching types: $e");
       return [];
@@ -94,16 +103,20 @@ class DashboardAPI {
     }
   }
 
-  // ✅ جلب كل الطلبات
-  Future<List<dynamic>> fetchAllRequests({
+  // ✅ جلب الطلبات مع Pagination
+  Future<Map<String, dynamic>> fetchAllRequests({
+    int page = 1,
+    int perPage = 10,
     String? priority,
     String? typeName,
   }) async {
     final token = await _getToken();
     if (token == null) throw Exception("No token found");
 
-    // API يعيد مصفوفة مباشرة - لا Pagination من السيرفر
     final queryParams = {
+      'page': page.toString(),
+      'perPage': perPage.toString(),
+      'query': 'all',
       if (priority != null && priority != 'All')
         "priority": priority.toLowerCase(),
       if (typeName != null && typeName != 'All Types')
@@ -122,12 +135,30 @@ class DashboardAPI {
     );
 
     if (response.statusCode == 200) {
-      final List<dynamic> transactions = jsonDecode(response.body);
+      final responseData = jsonDecode(response.body);
 
-      // جلب آخر حالة لكل معاملة
+      List<dynamic> transactions = [];
+      Map<String, dynamic>? pagination;
+      Map<String, dynamic>? summary;
+
+      if (responseData is Map) {
+        transactions = responseData['data'] ?? [];
+        pagination = responseData['pagination'];
+        summary = responseData['summary'];
+      } else if (responseData is List) {
+        transactions = responseData;
+      }
+
+      // استخدام الحالة الموجودة في بيانات المعاملة مباشرة (أسرع وأدق)
       for (var transaction in transactions) {
-        final lastStatus = await _getLastForwardStatus(transaction["id"].toString());
-        transaction["lastForwardStatus"] = lastStatus ?? "waiting";
+        String status = (transaction["lastForwardStatus"] ?? "waiting").toString().toLowerCase();
+
+        // إذا كانت المعاملة مكتملة، تظهر حالة Fulfilled للأهمية
+        if (transaction["fulfilled"] == true) {
+          status = "fulfilled";
+        }
+
+        transaction["lastForwardStatus"] = status;
 
         // تحويل البيانات للشكل المطلوب للتوافق
         transaction["type"] = {
@@ -147,7 +178,11 @@ class DashboardAPI {
             transaction["createdAt"] ?? DateTime.now().toIso8601String();
       }
 
-      return transactions;
+      return {
+        'data': transactions,
+        'pagination': pagination,
+        'summary': summary,
+      };
     } else if (response.statusCode == 401) {
       throw Exception("Unauthorized - Token may be expired");
     } else {
