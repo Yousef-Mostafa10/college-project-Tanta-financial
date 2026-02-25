@@ -264,6 +264,103 @@ class MyRequestsApi {
     }
   }
 
+  // 🔹 جلب المستخدمين (paginated)
+  Future<List<dynamic>> fetchUsers() async {
+    if (userToken == null) return [];
+
+    List<dynamic> allUsers = [];
+    int currentPage = 1;
+    bool hasMore = true;
+
+    try {
+      while (hasMore) {
+        final response = await http.get(
+          Uri.parse("$baseUrl/users?page=$currentPage&perPage=50"),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $userToken',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          List<dynamic> pageUsers = [];
+
+          if (data is Map) {
+            pageUsers = data['data'] ?? data['users'] ?? [];
+          } else if (data is List) {
+            pageUsers = data;
+          }
+
+          allUsers.addAll(pageUsers);
+
+          final pagination = data is Map ? data['pagination'] : null;
+          if (pagination != null && pagination['next'] != null) {
+            currentPage = pagination['next'];
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+
+      final uniqueUsers = <dynamic>[];
+      final seenIds = <dynamic>{};
+
+      for (var user in allUsers) {
+        final userId = user["id"] ?? user["_id"] ?? user["name"];
+        if (!seenIds.contains(userId)) {
+          seenIds.add(userId);
+          uniqueUsers.add(user);
+        }
+      }
+
+      return uniqueUsers;
+    } catch (e) {
+      print("❌ Error in fetchUsers: $e");
+      return [];
+    }
+  }
+
+  // 🔹 إرسال المعاملة لمستخدم آخر (Forward)
+  Future<bool> forwardTransaction(String transactionId, String receiverName, {String? comment}) async {
+    if (userToken == null) return false;
+
+    try {
+      final users = await fetchUsers();
+      final user = users.firstWhere(
+        (u) => u['name'] == receiverName,
+        orElse: () => null,
+      );
+
+      if (user == null) {
+        print("❌ Could not resolve receiver for: $receiverName");
+        return false;
+      }
+
+      final receiverId = user['id'] is int ? user['id'] : int.tryParse(user['id'].toString());
+      if (receiverId == null) return false;
+
+      final response = await http.post(
+        Uri.parse("$baseUrl/transaction/$transactionId/forward"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $userToken',
+        },
+        body: json.encode({
+          "receiverId": receiverId,
+          "comment": comment ?? "Forwarded via Mobile App"
+        }),
+      );
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print("❌ Error in forwardTransaction: $e");
+      return false;
+    }
+  }
+
   // 🔹 جلب معلومات المستخدم
   static Future<Map<String, String?>> getUserInfo() async {
     try {
