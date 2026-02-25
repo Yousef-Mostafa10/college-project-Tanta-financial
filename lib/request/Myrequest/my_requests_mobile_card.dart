@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'my_requests_colors.dart';
 import '../Ditalis_Request/ditalis_request.dart';
 import '../editerequest.dart';
+import '../RequestTracking/request_tracking.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import 'my_requests_api.dart';
 
 Widget buildMobileRequestCard({
   required String id,
@@ -16,9 +18,7 @@ Widget buildMobileRequestCard({
   required int documentsCount,
   required Function(String) onDelete,
   required BuildContext context,
-  Map<String, dynamic>? lastForwardSentTo,
-  VoidCallback? onCancelForward,
-  VoidCallback? onForward,
+  required MyRequestsApi api, // Added api here
 }) {
   Color getPriorityColor(String priority) {
     switch (priority.toLowerCase()) {
@@ -113,85 +113,27 @@ Widget buildMobileRequestCard({
                 ),
               ],
             ),
+            
+            // 🆕 إضافة مستطيل التوجيه هنا
+            ForwardInfoWidget(transactionId: id, api: api),
+            
             const SizedBox(height: 6),
-
-            // معلومات التوجيه (إذا وجد)
-            if (lastForwardSentTo != null) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: MyRequestsColors.bodyBg,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: MyRequestsColors.statBorder),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.send_rounded, size: 14, color: MyRequestsColors.primary),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        "${AppLocalizations.of(context)!.translate('forwarded_to_prefix')} ${lastForwardSentTo['receiverName']}",
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: MyRequestsColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    if (onCancelForward != null)
-                      PopupMenuButton<String>(
-                        icon: Icon(Icons.more_vert_rounded, size: 16, color: MyRequestsColors.textSecondary),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onSelected: (value) {
-                          if (value == 'cancel') onCancelForward();
-                        },
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            value: 'cancel',
-                            child: Text(
-                              AppLocalizations.of(context)!.translate('cancel_forward'),
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
 
             // النوع والأولوية والمستندات
             Row(
               children: [
                 _buildMobileChip(type, Icons.category_outlined, MyRequestsColors.primary),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 _buildMobileChip(displayPriority, priorityIcon, priorityColor),
-                const SizedBox(width: 6),
-                // 📎 أيقونة المستندات
+                const SizedBox(width: 4),
                 _buildMobileChip(
                   '$documentsCount',
                   Icons.attach_file_rounded,
                   documentsCount > 0 ? MyRequestsColors.accentBlue : MyRequestsColors.textMuted,
                 ),
                 const Spacer(),
-                if (onForward != null) ...[
-                  _buildMobileActionButton(
-                    onPressed: onForward!,
-                    text: AppLocalizations.of(context)!.translate('forward') ?? 'Forward',
-                    icon: Icons.forward_to_inbox_rounded,
-                    color: MyRequestsColors.primary,
-                  ),
-                  const SizedBox(width: 8),
-                ],
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert_rounded, size: 16, color: MyRequestsColors.textSecondary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  icon: Icon(Icons.more_vert_rounded, size: 18, color: MyRequestsColors.textSecondary),
                   onSelected: (value) {
                     if (value == "details") {
                       Navigator.push(
@@ -209,6 +151,13 @@ Widget buildMobileRequestCard({
                       );
                     } else if (value == "delete") {
                       onDelete(id);
+                    } else if (value == "track") {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TransactionTrackingPage(transactionId: id),
+                        ),
+                      );
                     }
                   },
                   itemBuilder: (context) => [
@@ -217,28 +166,39 @@ Widget buildMobileRequestCard({
                       child: Row(
                         children: [
                           Icon(Icons.remove_red_eye_outlined, size: 16, color: MyRequestsColors.primary),
-                          SizedBox(width: 8),
-                          Text(AppLocalizations.of(context)!.translate('view_details'), style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
+                          const SizedBox(width: 8),
+                          Text(AppLocalizations.of(context)!.translate('view_details'), style: const TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
                         ],
-                      ),
+                    ),
                     ),
                     PopupMenuItem(
                       value: "edit",
                       child: Row(
                         children: [
                           Icon(Icons.edit_outlined, size: 16, color: MyRequestsColors.primary),
-                          SizedBox(width: 8),
-                          Text(AppLocalizations.of(context)!.translate('edit_request'), style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
+                          const SizedBox(width: 8),
+                          Text(AppLocalizations.of(context)!.translate('edit_request'), style: const TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
                         ],
                       ),
                     ),
+                    PopupMenuItem(
+                      value: "track",
+                      child: Row(
+                        children: [
+                          Icon(Icons.track_changes_outlined, size: 16, color: MyRequestsColors.primary),
+                          const SizedBox(width: 8),
+                          Text(AppLocalizations.of(context)!.translate('track_request'), style: const TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
                     PopupMenuItem(
                       value: "delete",
                       child: Row(
                         children: [
                           Icon(Icons.delete_outlined, size: 16, color: MyRequestsColors.accentRed),
-                          SizedBox(width: 8),
-                          Text(AppLocalizations.of(context)!.translate('delete_button'), style: TextStyle(fontSize: 12, color: MyRequestsColors.accentRed)),
+                          const SizedBox(width: 8),
+                          Text(AppLocalizations.of(context)!.translate('delete_button'), style: const TextStyle(fontSize: 12, color: MyRequestsColors.accentRed)),
                         ],
                       ),
                     ),
@@ -253,11 +213,140 @@ Widget buildMobileRequestCard({
   );
 }
 
+class ForwardInfoWidget extends StatefulWidget {
+  final String transactionId;
+  final MyRequestsApi api;
+
+  const ForwardInfoWidget({Key? key, required this.transactionId, required this.api}) : super(key: key);
+
+  @override
+  State<ForwardInfoWidget> createState() => _ForwardInfoWidgetState();
+}
+
+class _ForwardInfoWidgetState extends State<ForwardInfoWidget> {
+  String? receiverName;
+  String? forwardId;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchInfo();
+  }
+
+  Future<void> _fetchInfo() async {
+    final data = await widget.api.fetchLastForwardData(widget.transactionId);
+    if (mounted) {
+      setState(() {
+        receiverName = data?['receiverName'];
+        forwardId = data?['forwardId'];
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _onCancel() async {
+    if (forwardId == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(AppLocalizations.of(context)!.translate('cancel_forward_confirm_title') ?? 'Confirm Cancel'),
+        content: Text(AppLocalizations.of(context)!.translate('cancel_forward_confirm_content') ?? 'Are you sure you want to cancel this forward?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppLocalizations.of(context)!.translate('no') ?? 'No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(AppLocalizations.of(context)!.translate('yes') ?? 'Yes', style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final success = await widget.api.cancelForward(widget.transactionId, forwardId!);
+      if (success) {
+        if (mounted) {
+          setState(() {
+            receiverName = null;
+            forwardId = null;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context)!.translate('forward_cancelled_success') ?? 'Forward cancelled successfully'), backgroundColor: Colors.green),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context)!.translate('forward_cancelled_failed') ?? 'Failed to cancel forward'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) return const SizedBox.shrink();
+    if (receiverName == null) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      decoration: BoxDecoration(
+        color: MyRequestsColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MyRequestsColors.primary.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.send_rounded, size: 12, color: MyRequestsColors.primary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              "${AppLocalizations.of(context)!.translate('forwarded_to_prefix') ?? 'Forwarded to:'} $receiverName",
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: MyRequestsColors.textPrimary,
+              ),
+            ),
+          ),
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert_rounded, size: 16, color: MyRequestsColors.textSecondary),
+            padding: EdgeInsets.zero,
+            onSelected: (value) {
+              if (value == 'cancel') _onCancel();
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'cancel',
+                child: Row(
+                  children: [
+                    const Icon(Icons.cancel_outlined, size: 16, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text(AppLocalizations.of(context)!.translate('cancel_button') ?? 'Cancel', style: const TextStyle(fontSize: 12, color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 Widget _buildMobileActionButton({
   required VoidCallback onPressed,
   required String text,
   required IconData icon,
   required Color color,
+  bool isOutlined = false,
 }) {
   return TextButton.icon(
     onPressed: onPressed,
@@ -272,7 +361,8 @@ Widget _buildMobileActionButton({
     ),
     style: TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      backgroundColor: color.withOpacity(0.08),
+      backgroundColor: isOutlined ? Colors.transparent : color.withOpacity(0.08),
+      side: isOutlined ? BorderSide(color: color, width: 1) : null,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
       ),

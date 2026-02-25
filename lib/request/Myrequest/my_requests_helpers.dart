@@ -14,7 +14,8 @@ class MyRequestsHelpers {
       String dateString = dateValue.toString();
       if (dateString.contains('T')) {
         final date = DateTime.parse(dateString);
-        return DateFormat('MMM dd, yyyy - HH:mm').format(date);
+        final locale = Localizations.localeOf(context).languageCode;
+        return DateFormat('MMM dd, yyyy - HH:mm', locale).format(date);
       }
 
       return dateString;
@@ -34,6 +35,8 @@ class MyRequestsHelpers {
       case "waiting":
         return "hourglass_empty_rounded";
       case "needs change":
+      case "needs_editing":
+      case "needs-editing":
         return "edit_note_rounded";
       case "fulfilled":
         return "task_alt_rounded";
@@ -52,6 +55,8 @@ class MyRequestsHelpers {
       case "waiting":
         return "hourglass_empty_rounded";
       case "needs change":
+      case "needs_editing":
+      case "needs-editing":
         return "edit_note_rounded";
       case "fulfilled":
         return "task_alt_rounded";
@@ -72,6 +77,8 @@ class MyRequestsHelpers {
       case "waiting":
         return Color(0xFF1E88E5);
       case "needs change":
+      case "needs_editing":
+      case "needs-editing":
         return Color(0xFFFF9800);
       case "fulfilled":
         return Color(0xFF9C27B0);
@@ -99,6 +106,8 @@ class MyRequestsHelpers {
       case "waiting":
         return 0xFF1E88E5;
       case "needs change":
+      case "needs_editing":
+      case "needs-editing":
         return 0xFFFF9800;
       case "fulfilled":
         return 0xFF9C27B0;
