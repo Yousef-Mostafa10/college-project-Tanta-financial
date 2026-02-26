@@ -90,6 +90,8 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   int _currentForwardPage = 1;
 
   bool _isProcessing = false;
+  int? _currentUserId;
+  String? _userRole;
 
   @override
   void initState() {
@@ -101,8 +103,12 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
+      final userId = prefs.getInt('user_id');
+      final userRole = prefs.getString('user_role');
       setState(() {
         _userToken = token;
+        _currentUserId = userId;
+        _userRole = userRole;
       });
       await _fetchRequestData();
     } catch (e) {
@@ -540,6 +546,112 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     }
   }
 
+  // ✅ دالة لتمييز المعاملة كمكتملة (Fulfilled)
+  Future<void> _markAsFulfilled() async {
+    if (_userToken == null || _isProcessing) return;
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final response = await http.patch(
+        Uri.parse("$_baseUrl/transactions/${widget.requestId}"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_userToken',
+        },
+        body: jsonEncode({"fulfilled": true}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.translate('request_updated_success_details') ?? "Successfully updated"),
+              backgroundColor: AppColors.accentGreen,
+            ),
+          );
+          // إعادة جلب البيانات لتحديث واجهة المستخدم
+          _fetchRequestData();
+        }
+      } else {
+        throw Exception("Status code: ${response.statusCode}");
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("${AppLocalizations.of(context)!.translate('failed_update_request_status')}: $e"),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Widget _buildFulfilledButton(bool isMobile) {
+    if (_isLoading || _requestData == null) return const SizedBox.shrink();
+    
+    final data = _requestData!;
+    final fulfilled = data["fulfilled"] == true;
+    final dynamic rawCreatorId = data["creatorId"] ?? data["creator"]?["id"];
+    final int? creatorId = rawCreatorId is int ? rawCreatorId : (rawCreatorId != null ? int.tryParse(rawCreatorId.toString()) : null);
+    
+    final bool isAdmin = _userRole?.toUpperCase() == 'ADMIN';
+    final bool isCreator = _currentUserId != null && creatorId != null && _currentUserId == creatorId;
+
+    // يظهر الزر فقط للأدمن أو صاحب الطلب إذا لم تكن مكتملة بعد
+    if (!(isAdmin || isCreator) || fulfilled) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(top: isMobile ? 20 : 24),
+      child: Container(
+        width: double.infinity,
+        height: isMobile ? 50 : 56,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [Color(0xFF2E7D32), AppColors.accentGreen],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accentGreen.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ElevatedButton.icon(
+          onPressed: _isProcessing ? null : _markAsFulfilled,
+          icon: _isProcessing 
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : const Icon(Icons.check_circle_outline, color: Colors.white, size: 22),
+          label: Text(
+            AppLocalizations.of(context)!.translate('status_fulfilled') ?? "Fulfilled",
+            style: TextStyle(
+              fontSize: isMobile ? 16 : 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
@@ -702,6 +814,9 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           SizedBox(height: isMobile ? 16 : 20),
           // ✅ قسم الـ Forwards
           _buildForwardsSection(isMobile),
+          // ✅ زر Mark as Fulfilled في النهاية
+          _buildFulfilledButton(isMobile),
+          const SizedBox(height: 40), // مساحة إضافية في النهاية
         ],
       ),
     );
