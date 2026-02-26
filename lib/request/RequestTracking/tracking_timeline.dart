@@ -23,7 +23,7 @@ Widget buildTrackingTimeline({
         return buildTimelineStep(
           context: context,
           forward: forward,
-          stepNumber: forwards.length - index,
+          stepNumber: index + 1,
           isFirst: isFirst,
           isLast: isLast,
           totalSteps: forwards.length,

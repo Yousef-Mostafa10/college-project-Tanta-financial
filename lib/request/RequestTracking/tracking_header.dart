@@ -110,7 +110,7 @@ Widget buildTransactionHeader({
                         ),
                       ),
                       Text(
-                        AppLocalizations.of(context)!.translate('status_${forwards.last['status'].toString().toLowerCase()}'),
+                        AppLocalizations.of(context)!.translate('status_${forwards.last['status'].toString().toLowerCase().replaceAll('-', '_')}'),
                         style: TextStyle(
                           fontSize: isMobile ? 14 : 16,
                           fontWeight: FontWeight.bold,

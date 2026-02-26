@@ -148,7 +148,7 @@ Widget buildTimelineStep({
                           Icon(statusIcon, size: isMobile ? 14 : 16, color: statusColor),
                           SizedBox(width: isMobile ? 4 : 6),
                           Text(
-                            AppLocalizations.of(context)!.translate('status_${forward['status'].toString().toLowerCase()}'),
+                            AppLocalizations.of(context)!.translate('status_${forward['status'].toString().toLowerCase().replaceAll('-', '_')}'),
                             style: TextStyle(
                               fontSize: isMobile ? 10 : 12,
                               fontWeight: FontWeight.bold,

@@ -34,7 +34,7 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
 
   // الفلاتر
   String _selectedStatus = "All";
-  final List<String> _statusFilters = ["All", "WAITING", "APPROVED", "REJECTED", "NEEDS_EDITING"];
+  final List<String> _statusFilters = ["All", "WAITING", "APPROVED", "REJECTED", "NEEDS-EDITING"];
 
   late TrackingApi _api;
 
