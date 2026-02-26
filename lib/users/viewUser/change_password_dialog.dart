@@ -121,11 +121,11 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
 
   Future<void> _savePassword() async {
     if (_passwordController.text.isEmpty) {
-      UsersHelpers.showErrorMessage(context, 'Password cannot be empty');
+      UsersHelpers.showErrorMessage(context, AppLocalizations.of(context)!.translate('password_empty_error'));
       return;
     }
     if (_passwordController.text != _confirmPasswordController.text) {
-      UsersHelpers.showErrorMessage(context, "Passwords don't match");
+      UsersHelpers.showErrorMessage(context, AppLocalizations.of(context)!.translate('passwords_dont_match'));
       return;
     }
     if (_passwordController.text.length < 6) {
@@ -145,7 +145,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
       if (mounted) {
         UsersHelpers.showSuccessMessage(
           context,
-          AppLocalizations.of(context)!.translate('password_changed_success') ?? 'Password changed',
+          AppLocalizations.of(context)!.translate('password_changed_success'),
         );
         Navigator.pop(context);
       }

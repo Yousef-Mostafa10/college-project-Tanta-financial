@@ -203,7 +203,7 @@ class _AddUserPageState extends State<AddUserPage> {
       } else if (response.statusCode == 401) {
         _showErrorMessage(AppLocalizations.of(context)!.translate('unauthorized_error'));
       } else {
-        _showErrorMessage("Error: ${response.statusCode} - ${response.body}");
+        _showErrorMessage(AppLocalizations.of(context)!.translate('unknown_error') ?? "Error: ${response.statusCode}");
       }
     } catch (e) {
       debugPrint("Error: $e");
@@ -420,9 +420,6 @@ class _AddUserPageState extends State<AddUserPage> {
 
   // ✅ فتح Bottom Sheet لاختيار القسم مع دعم التحميل التدريجي
   void _showDepartmentBottomSheet(bool isMobile) {
-    // إعادة تحميل من الصفحة الأولى عند فتح القائمة
-    _fetchDepartments();
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -431,8 +428,15 @@ class _AddUserPageState extends State<AddUserPage> {
       ),
       backgroundColor: AppColors.cardBg,
       builder: (BuildContext sheetContext) {
+        bool isInitialLoadCalled = false;
         return StatefulBuilder(
           builder: (context, setStateSheet) {
+            if (!isInitialLoadCalled) {
+              isInitialLoadCalled = true;
+              Future.microtask(() => _fetchDepartments().then((_) {
+                if (context.mounted) setStateSheet(() {});
+              }));
+            }
             return Container(
               padding: const EdgeInsets.all(20),
               constraints: BoxConstraints(
