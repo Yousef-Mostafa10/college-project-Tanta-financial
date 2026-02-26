@@ -15,6 +15,7 @@ class InboxMobileCard extends StatelessWidget {
   final VoidCallback onEditRequest;
   final VoidCallback? onEditResponse;
   final bool hasForwarded;
+  final bool isForwardChecking;
 
   const InboxMobileCard({
     Key? key,
@@ -28,6 +29,7 @@ class InboxMobileCard extends StatelessWidget {
     required this.onNeedChange,
     required this.onEditRequest,
     this.onEditResponse,
+    this.isForwardChecking = false,
   }) : super(key: key);
 
   Widget _buildMobileChip(BuildContext context, String text, IconData icon, Color color) {
@@ -327,7 +329,30 @@ class InboxMobileCard extends StatelessWidget {
               const SizedBox(height: 8),
 
               // أزرار الإجراءات
-              if (isUpdating) ...[
+              if (isForwardChecking) ...[
+                // 🔹 حالة: جاري التحقق من حالة الـ forward
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(InboxColors.primary.withOpacity(0.6)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '...',
+                        style: TextStyle(fontSize: 11, color: InboxColors.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (isUpdating) ...[
                 Center(
                   child: Column(
                     children: [

@@ -15,6 +15,7 @@ class InboxDesktopCard extends StatelessWidget {
   final VoidCallback onEditRequest;
   final VoidCallback? onEditResponse;
   final bool hasForwarded;
+  final bool isForwardChecking;
 
   const InboxDesktopCard({
     Key? key,
@@ -28,6 +29,7 @@ class InboxDesktopCard extends StatelessWidget {
     required this.onNeedChange,
     required this.onEditRequest,
     this.onEditResponse,
+    this.isForwardChecking = false,
   }) : super(key: key);
 
   Widget _buildDesktopChip(BuildContext context, String text, IconData icon, Color color) {
@@ -326,7 +328,30 @@ class InboxDesktopCard extends StatelessWidget {
               const SizedBox(height: 16),
 
               // 4️⃣ أزرار الإجراءات
-              if (isUpdating) ...[
+              if (isForwardChecking) ...[
+                // 🔹 حالة: جاري التحقق من حالة الـ forward
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(InboxColors.primary.withOpacity(0.6)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '...',
+                        style: TextStyle(fontSize: 13, color: InboxColors.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (isUpdating) ...[
                 Center(
                   child: Column(
                     children: [

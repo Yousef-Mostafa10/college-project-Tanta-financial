@@ -195,7 +195,10 @@ class _InboxPageState extends State<InboxPage> {
                                    request['creatorName'] ?? 
                                    request['creator']?['name'] ?? 'Unknown';
                                    
-        request['hasForwarded'] = request['isForwardedByMe'] ?? false;
+        // نبدأ بـ false ونحسبها بدقة من الـ forward API
+        request['hasForwarded'] = false;
+        request['lastForwardSentTo'] = null;
+        request['isForwardChecking'] = true; // علامة: لسه بيتحقق من الـ forward
 
         // توحيد هيكل النوع (Fix n/a issue)
         request['type'] = {
@@ -211,6 +214,9 @@ class _InboxPageState extends State<InboxPage> {
         _isLoading = false;
         _isRefreshing = false;
       });
+
+      // ✅ التحقق الدقيق من حالة الـ forward لكل طلب بشكل متوازي
+      _loadForwardStatusForAllRequests(updatedRequests);
 
       print('✅ fetchInboxRequests completed - ${_requests.length} requests (total: $_totalRequests)');
 
@@ -276,7 +282,9 @@ class _InboxPageState extends State<InboxPage> {
         request['lastSenderName'] = request['lastForwardSenderName'] ?? 
                                    request['creatorName'] ?? 
                                    request['creator']?['name'] ?? 'Unknown';
-        request['hasForwarded'] = request['isForwardedByMe'] ?? false;
+        request['hasForwarded'] = false;
+        request['lastForwardSentTo'] = null;
+        request['isForwardChecking'] = true; // علامة: لسه بيتحقق من الـ forward
         
         // توحيد هيكل النوع (Fix n/a issue)
         request['type'] = {
@@ -293,6 +301,9 @@ class _InboxPageState extends State<InboxPage> {
           _hasMorePages = pagination?['next'] != null;
           _applyFilters();
         });
+
+        // ✅ التحقق من حالة الـ forward للطلبات الجديدة بشكل متوازي
+        _loadForwardStatusForAllRequests(updatedRequests);
       }
     } catch (e) {
       print('❌ Error loading more: $e');
@@ -306,6 +317,79 @@ class _InboxPageState extends State<InboxPage> {
       _filteredRequests = _requests;
     });
     print('🔍 Filtered requests set - Showing ${_filteredRequests.length} requests');
+  }
+
+  // ✅ جلب حالة الـ forward لكل الطلبات بشكل متوازي من الـ forward API
+  // هذا يضمن دقة بيانات hasForwarded و lastForwardSentTo بغض النظر عن isForwardedByMe
+  void _loadForwardStatusForAllRequests(List<dynamic> requests) {
+    // نشغل كل request بشكل مستقل بدون await عشان نكون متوازيين
+    for (final req in requests) {
+      final requestId = req['id'].toString();
+      _loadForwardStatusForRequest(requestId);
+    }
+  }
+
+  Future<void> _loadForwardStatusForRequest(String requestId) async {
+    try {
+      // ✅ المنطق الصحيح:
+      // نشوف آخر تفاعل ليا في الـ forward list (sender أو receiver)
+      // لو آخر تفاعل كنت فيه receiver → المفروض تظهر أزرار الموافقة/الرفض (hasForwarded = false)
+      // لو آخر تفاعل كنت فيه sender → أنا بعتها لحد (hasForwarded = true)
+      // checkIfCanForward بيعمل بالظبط ده:
+      //   ترجع true  → أنا الـ receiver الحالي → يظهر الأزرار
+      //   ترجع false → أنا آخر sender → يظهر مستطيل الاسم
+      final canForward = await _apiService.checkIfCanForward(
+        requestId,
+        _userToken,
+        _userName,
+      );
+
+      if (!mounted) return;
+
+      // لو مش قادر يعمل forward (أنا آخر sender) → نجيب اسم المستقبل
+      Map<String, dynamic>? lastForward;
+      if (!canForward) {
+        lastForward = await _apiService.getLastForwardSentByYou(
+          {'id': requestId},
+          _userToken,
+          _userName,
+        );
+      }
+
+      if (!mounted) return;
+
+      final index = _requests.indexWhere((r) => r['id'].toString() == requestId);
+      if (index == -1) return;
+
+      setState(() {
+        final updatedRequest = Map<String, dynamic>.from(_requests[index]);
+        if (!canForward && lastForward != null) {
+          // أنا آخر sender → اعرض مستطيل "Forwarded to: اسم"
+          updatedRequest['hasForwarded'] = true;
+          updatedRequest['lastForwardSentTo'] = lastForward;
+        } else {
+          // أنا الـ receiver الحالي (حتى لو كنت sender قبل كده)
+          // → اعرض أزرار الموافقة/الرفض كأنك شايفها أول مرة
+          updatedRequest['hasForwarded'] = false;
+          updatedRequest['lastForwardSentTo'] = null;
+        }
+        updatedRequest['isForwardChecking'] = false;
+        _requests[index] = updatedRequest;
+        _applyFilters();
+      });
+    } catch (e) {
+      print('⚠️ Error loading forward status for request $requestId: $e');
+      // في حالة الخطأ، خلي الكارد يظهر طبيعي مش متجمد
+      final index = _requests.indexWhere((r) => r['id'].toString() == requestId);
+      if (index != -1 && mounted) {
+        setState(() {
+          final updatedRequest = Map<String, dynamic>.from(_requests[index]);
+          updatedRequest['isForwardChecking'] = false;
+          _requests[index] = updatedRequest;
+          _applyFilters();
+        });
+      }
+    }
   }
 
   void _onSearchChanged(String value) {
@@ -1499,6 +1583,7 @@ class _InboxPageState extends State<InboxPage> {
 
             final req = _filteredRequests[index];
             final hasForwarded = req['hasForwarded'] ?? false;
+            final isForwardChecking = req['isForwardChecking'] ?? false;
             final lastForwardSentTo = req['lastForwardSentTo'];
             final isUpdating = req['isUpdating'] == true;
 
@@ -1519,6 +1604,7 @@ class _InboxPageState extends State<InboxPage> {
                 onEditRequest: () => _navigateToEditRequest(req),
                 onEditResponse: () => _showEditResponseDialog(req),
                 hasForwarded: hasForwarded,
+                isForwardChecking: isForwardChecking,
               ),
             );
           },
@@ -1807,6 +1893,7 @@ class _InboxPageState extends State<InboxPage> {
     return Column(
       children: _filteredRequests.map((req) {
         final hasForwarded = req['hasForwarded'] ?? false;
+        final isForwardChecking = req['isForwardChecking'] ?? false;
         final lastForwardSentTo = req['lastForwardSentTo'];
         final isUpdating = req['isUpdating'] == true;
 
@@ -1827,6 +1914,7 @@ class _InboxPageState extends State<InboxPage> {
             onEditRequest: () => _navigateToEditRequest(req),
             onEditResponse: () => _showEditResponseDialog(req),
             hasForwarded: hasForwarded,
+            isForwardChecking: isForwardChecking,
           ),
         );
       }).toList(),
