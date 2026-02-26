@@ -181,7 +181,28 @@ class _MyRequestDesktopCardState extends State<MyRequestDesktopCard> {
                 ],
               ),
               
-              if (!isLoading && receiverName != null)
+              if (isLoading)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(MyRequestsColors.primary.withOpacity(0.5)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '...',
+                        style: TextStyle(fontSize: 12, color: MyRequestsColors.textMuted),
+                      ),
+                    ],
+                  ),
+                )
+              else if (receiverName != null)
                 ForwardInfoWidget(
                   transactionId: widget.id,
                   api: widget.api,

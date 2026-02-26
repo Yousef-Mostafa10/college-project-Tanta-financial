@@ -185,7 +185,28 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
                 ],
               ),
               
-              if (!isLoading && receiverName != null)
+              if (isLoading)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(MyRequestsColors.primary.withOpacity(0.5)),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '...',
+                        style: TextStyle(fontSize: 10, color: MyRequestsColors.textMuted),
+                      ),
+                    ],
+                  ),
+                )
+              else if (receiverName != null)
                 ForwardInfoWidget(
                   transactionId: widget.id,
                   api: widget.api,

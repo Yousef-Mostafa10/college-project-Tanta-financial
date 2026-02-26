@@ -155,12 +155,14 @@ class MyRequestsApi {
     try {
       if (userToken == null) return null;
 
+      // جمع كل forwards من كل الصفحات
+      List<dynamic> allForwards = [];
       int page = 1;
       bool hasMore = true;
 
       while (hasMore) {
         final response = await http.get(
-          Uri.parse("$baseUrl/transaction/$transactionId/forward?page=$page&perPage=10"),
+          Uri.parse("$baseUrl/transaction/$transactionId/forward?page=$page&perPage=100"),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $userToken',
@@ -179,34 +181,7 @@ class MyRequestsApi {
             forwards = responseData;
           }
 
-          // البحث عن آخر تحويل كنت أنت فيه المرسل
-          for (var forward in forwards) {
-            final sender = forward['sender'];
-            String? senderName;
-            
-            if (sender is Map) {
-              senderName = sender['name'];
-            } else if (sender is String) {
-              senderName = sender;
-            }
-
-            if (senderName != null && (senderName == userName)) {
-              final receiver = forward['receiver'];
-              String? receiverName;
-              if (receiver is Map) {
-                receiverName = receiver['name'];
-              } else if (receiver is String) {
-                receiverName = receiver;
-              }
-
-              if (receiverName != null) {
-                return {
-                  'receiverName': receiverName,
-                  'forwardId': forward['id'].toString(),
-                };
-              }
-            }
-          }
+          allForwards.addAll(forwards);
 
           if (pagination != null && pagination['next'] != null) {
             page = pagination['next'];
@@ -216,6 +191,43 @@ class MyRequestsApi {
         } else {
           hasMore = false;
         }
+      }
+
+      // فلترة: فقط الـ forwards اللي أنا كنت فيها sender
+      final myForwardsAsSender = allForwards.where((forward) {
+        final sender = forward['sender'];
+        String? senderName;
+        if (sender is Map) {
+          senderName = sender['name'];
+        } else if (sender is String) {
+          senderName = sender;
+        }
+        return senderName != null && senderName == userName;
+      }).toList();
+
+      if (myForwardsAsSender.isEmpty) return null;
+
+      // ترتيب تنازلي بالـ id عشان نأخذ الأحدث
+      myForwardsAsSender.sort((a, b) {
+        final idA = (a['id'] ?? 0) is int ? (a['id'] ?? 0) : int.tryParse(a['id'].toString()) ?? 0;
+        final idB = (b['id'] ?? 0) is int ? (b['id'] ?? 0) : int.tryParse(b['id'].toString()) ?? 0;
+        return idB.compareTo(idA);
+      });
+
+      final latestForward = myForwardsAsSender.first;
+      final receiver = latestForward['receiver'];
+      String? receiverName;
+      if (receiver is Map) {
+        receiverName = receiver['name'];
+      } else if (receiver is String) {
+        receiverName = receiver;
+      }
+
+      if (receiverName != null) {
+        return {
+          'receiverName': receiverName,
+          'forwardId': latestForward['id'].toString(),
+        };
       }
     } catch (e) {
       print("⚠️ Error fetching last receiver: $e");
