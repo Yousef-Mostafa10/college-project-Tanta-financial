@@ -916,34 +916,52 @@ class _InboxPageState extends State<InboxPage> {
       Map<String, dynamic> request,
       ) async {
     try {
-      final users = await _apiService.fetchUsers(_userToken);
-
-      if (users.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context)!.translate('no_users_available')),
-              backgroundColor: InboxColors.accentRed,
-            ),
-          );
-        }
-        return;
-      }
-
       if (!mounted) return;
 
       String? selectedUser;
-    String forwardComment = '';
-    List<String> userNames = users.map<String>((user) => user["name"]?.toString() ?? "Unknown").toList(); List<String> filteredUsers = List.from(userNames);
-    TextEditingController searchController = TextEditingController();
+      String forwardComment = '';
 
-      void filterUsers(String query) {
-        if (query.isEmpty) {
-          filteredUsers = List.from(userNames);
-        } else {
-          filteredUsers = userNames
-              .where((user) => user.toLowerCase().contains(query.toLowerCase()))
-              .toList();
+      List<dynamic> users = [];
+      bool isLoadingUsers = true;
+      bool isLoadingMoreUsers = false;
+      bool hasMoreUsers = true;
+      int usersPage = 1;
+      String currentSearchQuery = '';
+      TextEditingController searchController = TextEditingController();
+      Timer? searchDebounce;
+      bool initialLoadCalled = false;
+
+      Future<void> fetchUsersPage(
+        int page,
+        void Function(void Function()) setDialogState, {
+        String searchQuery = '',
+        bool reset = false,
+      }) async {
+        try {
+          final result = await _apiService.fetchUsersPaginated(
+            _userToken,
+            page: page,
+            perPage: 10,
+            name: searchQuery,
+          );
+          
+          setDialogState(() {
+            if (reset) {
+              users = result['users'];
+            } else {
+              users.addAll(result['users']);
+            }
+            usersPage = page;
+            hasMoreUsers = result['next'] != null;
+            isLoadingUsers = false;
+            isLoadingMoreUsers = false;
+          });
+        } catch (e) {
+          setDialogState(() {
+            isLoadingUsers = false;
+            isLoadingMoreUsers = false;
+            hasMoreUsers = false;
+          });
         }
       }
 
@@ -952,13 +970,18 @@ class _InboxPageState extends State<InboxPage> {
         builder: (context) {
           return StatefulBuilder(
             builder: (context, setStateDialog) {
+              if (!initialLoadCalled) {
+                initialLoadCalled = true;
+                fetchUsersPage(1, setStateDialog, reset: true);
+              }
+
               return Dialog(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Container(
                   width: MediaQuery.of(context).size.width * 0.9,
-                  constraints: BoxConstraints(maxHeight: 500),
+                  constraints: BoxConstraints(maxHeight: 600),
                   padding: EdgeInsets.all(20),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -991,66 +1014,130 @@ class _InboxPageState extends State<InboxPage> {
                         decoration: InputDecoration(
                           hintText: AppLocalizations.of(context)!.translate('search_users'),
                           prefixIcon: Icon(Icons.search_rounded, color: CreateRequestColors.primary),
+                          suffixIcon: isLoadingUsers && users.isNotEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 1.5,
+                                      color: CreateRequestColors.primary,
+                                    ),
+                                  ),
+                                )
+                              : null,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
                         onChanged: (value) {
-                          setStateDialog(() {
-                            filterUsers(value);
+                          searchDebounce?.cancel();
+                          searchDebounce = Timer(const Duration(milliseconds: 400), () {
+                            currentSearchQuery = value.trim();
+                            setStateDialog(() {
+                              isLoadingUsers = true;
+                              hasMoreUsers = false;
+                            });
+                            fetchUsersPage(
+                              1,
+                              setStateDialog,
+                              searchQuery: currentSearchQuery,
+                              reset: true,
+                            );
                           });
                         },
                       ),
                       SizedBox(height: 16),
 
-                      // عدد النتائج
-                      Text(
-                        '${filteredUsers.length} ${AppLocalizations.of(context)!.translate('users_count_label')}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: CreateRequestColors.textSecondary,
-                        ),
-                      ),
-                      SizedBox(height: 8),
+                      if (!isLoadingUsers && users.isEmpty)
+                         Text(
+                           AppLocalizations.of(context)!.translate('no_users_found'),
+                           style: TextStyle(color: CreateRequestColors.textSecondary),
+                         ),
 
                       // قائمة المستخدمين
                       Expanded(
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: filteredUsers.length,
-                          itemBuilder: (context, index) {
-                            final user = filteredUsers[index];
-                            final isSelected = user == selectedUser;
+                        child: isLoadingUsers && users.isEmpty
+                            ? Center(child: CircularProgressIndicator(color: CreateRequestColors.primary))
+                            : NotificationListener<ScrollNotification>(
+                                onNotification: (scrollInfo) {
+                                  if (scrollInfo.metrics.pixels >=
+                                          scrollInfo.metrics.maxScrollExtent - 100 &&
+                                      !isLoadingMoreUsers &&
+                                      hasMoreUsers) {
+                                    setStateDialog(() => isLoadingMoreUsers = true);
+                                    fetchUsersPage(
+                                      usersPage + 1,
+                                      setStateDialog,
+                                      searchQuery: currentSearchQuery,
+                                      reset: false,
+                                    );
+                                  }
+                                  return false;
+                                },
+                                child: ListView.builder(
+                                  shrinkWrap: true,
+                                  itemCount: users.length + (hasMoreUsers ? 1 : 0),
+                                  itemBuilder: (context, index) {
+                                    if (index >= users.length) {
+                                      return Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Center(
+                                          child: isLoadingMoreUsers
+                                              ? const SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                  child: CircularProgressIndicator(
+                                                    color: CreateRequestColors.primary,
+                                                    strokeWidth: 2,
+                                                  ),
+                                                )
+                                              : Text(
+                                                  AppLocalizations.of(context)!.translate('scroll_for_more'),
+                                                  style: TextStyle(
+                                                    color: CreateRequestColors.textSecondary,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                        ),
+                                      );
+                                    }
 
-                            return ListTile(
-                              leading: Icon(
-                                Icons.person_rounded,
-                                color: isSelected
-                                    ? CreateRequestColors.primary
-                                    : CreateRequestColors.textSecondary,
-                              ),
-                              title: Text(
-                                user,
-                                style: TextStyle(
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  color: isSelected
-                                      ? CreateRequestColors.primary
-                                      : CreateRequestColors.textPrimary,
+                                    final user = users[index];
+                                    final userName = user['name']?.toString() ?? "Unknown";
+                                    final isSelected = userName == selectedUser;
+
+                                    return ListTile(
+                                      leading: Icon(
+                                        Icons.person_rounded,
+                                        color: isSelected
+                                            ? CreateRequestColors.primary
+                                            : CreateRequestColors.textSecondary,
+                                      ),
+                                      title: Text(
+                                        userName,
+                                        style: TextStyle(
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                          color: isSelected
+                                              ? CreateRequestColors.primary
+                                              : CreateRequestColors.textPrimary,
+                                        ),
+                                      ),
+                                      trailing: isSelected
+                                          ? Icon(
+                                              Icons.check_rounded,
+                                              color: CreateRequestColors.primary,
+                                            )
+                                          : null,
+                                      onTap: () {
+                                        setStateDialog(() => selectedUser = userName);
+                                      },
+                                    );
+                                  },
                                 ),
                               ),
-                              trailing: isSelected
-                                  ? Icon(
-                                Icons.check_rounded,
-                                color: CreateRequestColors.primary,
-                              )
-                                  : null,
-                              onTap: () {
-                                setStateDialog(() => selectedUser = user);
-                              },
-                            );
-                          },
-                        ),
                       ),
 
                       SizedBox(height: 16),
@@ -1078,6 +1165,7 @@ class _InboxPageState extends State<InboxPage> {
                           Expanded(
                             child: OutlinedButton(
                               onPressed: () {
+                                searchDebounce?.cancel();
                                 searchController.clear();
                                 Navigator.pop(context);
                               },
@@ -1094,15 +1182,16 @@ class _InboxPageState extends State<InboxPage> {
                               onPressed: selectedUser == null
                                   ? null
                                   : () {
-                                Navigator.pop(context);
-                                searchController.clear();
-                                _performForwardAction(
-                                  transactionId,
-                                  selectedUser!,
-                                  request,
-                                  comment: forwardComment.isNotEmpty ? forwardComment : null,
-                                );
-                              },
+                                      searchDebounce?.cancel();
+                                      Navigator.pop(context);
+                                      searchController.clear();
+                                      _performForwardAction(
+                                        transactionId,
+                                        selectedUser!,
+                                        request,
+                                        comment: forwardComment.isNotEmpty ? forwardComment : null,
+                                      );
+                                    },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: CreateRequestColors.primary,
                               ),

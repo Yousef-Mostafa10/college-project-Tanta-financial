@@ -941,8 +941,52 @@ class InboxApi {
 
       return uniqueUsers;
     } catch (e) {
-      print("❌ Error in fetchUsers: $e");
+      print("❌ Error fetching users: $e");
       return [];
+    }
+  }
+
+  // 🔹 جلب المستخدمين بصفحة محددة مع البحث
+  Future<Map<String, dynamic>> fetchUsersPaginated(String? token, {int page = 1, int perPage = 10, String name = ''}) async {
+    if (token == null) return {'users': [], 'next': null};
+
+    try {
+      String url = "$baseUrl/users?page=$page&perPage=$perPage";
+      if (name.isNotEmpty) {
+        url += "&name=${Uri.encodeComponent(name)}";
+      }
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        List<dynamic> users = [];
+
+        if (data is Map) {
+          users = data['data'] ?? data['users'] ?? [];
+        } else if (data is List) {
+          users = data;
+        }
+
+        final pagination = data is Map ? data['pagination'] : null;
+        int? next = pagination != null ? pagination['next'] : null;
+
+        return {
+          'users': users,
+          'next': next,
+        };
+      } else {
+        return {'users': [], 'next': null};
+      }
+    } catch (e) {
+      print("❌ Error fetching users paginated: $e");
+      return {'users': [], 'next': null};
     }
   }
 
