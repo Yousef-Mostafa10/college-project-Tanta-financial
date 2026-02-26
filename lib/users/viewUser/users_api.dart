@@ -12,21 +12,42 @@ class UsersApiService {
     return prefs.getString('token');
   }
 
-  // ✅ جلب المستخدمين مع Pagination
-  Future<Map<String, dynamic>> fetchUsersPaginated({int page = 1, int perPage = 10}) async {
+  // ✅ جلب المستخدمين مع Pagination والبحث والفلاتر
+  Future<Map<String, dynamic>> fetchUsersPaginated({
+    int page = 1,
+    int perPage = 10,
+    String? name,
+    String? role,
+    String? department,
+    bool? active,
+  }) async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('no_token_error');
     }
 
-    final url = Uri.parse("$baseUrl/users?page=$page&perPage=$perPage");
+    String urlString = "$baseUrl/users?page=$page&perPage=$perPage";
+    if (name != null && name.isNotEmpty) {
+      urlString += "&name=${Uri.encodeComponent(name)}";
+    }
+    if (role != null && role != 'all') {
+      urlString += "&role=${role.toUpperCase()}";
+    }
+    if (department != null && department != 'all') {
+      urlString += "&departmentName=${Uri.encodeComponent(department)}";
+    }
+    if (active != null) {
+      urlString += "&active=$active";
+    }
+
+    final url = Uri.parse(urlString);
 
     final response = await http.get(
       url,
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
-        "accept": "application/json",
+        "Accept": "application/json",
       },
     );
 
@@ -58,8 +79,24 @@ class UsersApiService {
 
   // ✅ جلب جميع المستخدمين (للتوافق مع الكود القديم)
   Future<List<User>> fetchUsers() async {
-    final result = await fetchUsersPaginated(page: 1, perPage: 10);
-    return result['users'] as List<User>;
+    List<User> allUsers = [];
+    int page = 1;
+    bool hasMore = true;
+
+    while (hasMore) {
+      final result = await fetchUsersPaginated(page: page, perPage: 50);
+      final List<User> fetchedUsers = result['users'] as List<User>;
+      final pagination = result['pagination'] as Map<String, dynamic>?;
+
+      allUsers.addAll(fetchedUsers);
+
+      if (pagination != null && pagination['next'] != null) {
+        page = pagination['next'];
+      } else {
+        hasMore = false;
+      }
+    }
+    return allUsers;
   }
 
   // ✅ حل User ID من الاسم
@@ -83,11 +120,11 @@ class UsersApiService {
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
-        "accept": "application/json",
+        "Accept": "application/json",
       },
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       final data = jsonDecode(response.body);
       return User.fromJson(data);
     } else if (response.statusCode == 401) {
@@ -150,12 +187,12 @@ class UsersApiService {
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
-        "accept": "application/json",
+        "Accept": "application/json",
       },
       body: jsonEncode(updateData),
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       final data = jsonDecode(response.body);
       return User.fromJson(data);
     } else if (response.statusCode == 403) {
@@ -193,52 +230,64 @@ class UsersApiService {
   }
 
   // ✅ جلب قائمة الأقسام مع Pagination
-  Future<List<String>> fetchDepartments() async {
+  Future<Map<String, dynamic>> fetchDepartmentsPaginated({int page = 1, int perPage = 10}) async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('no_token_error');
     }
 
-    // جلب كل الأقسام (بعدد كبير للدروب داون)
+    final url = Uri.parse("$baseUrl/departments?page=$page&perPage=$perPage");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      List<dynamic> data = [];
+      Map<String, dynamic>? pagination;
+
+      if (responseData is Map) {
+        data = responseData['data'] ?? [];
+        pagination = responseData['pagination'];
+      } else if (responseData is List) {
+        data = responseData;
+      }
+
+      final List<String> departments = data.map((dept) => dept['name'].toString()).toList();
+      
+      return {
+        'departments': departments,
+        'pagination': pagination,
+      };
+    } else {
+      throw Exception('error_code: ${response.statusCode}');
+    }
+  }
+
+  // ✅ جلب كل الأقسام (للتوافق)
+  Future<List<String>> fetchDepartments() async {
     List<String> allDepartments = [];
     int page = 1;
     bool hasMore = true;
 
     while (hasMore) {
-      final url = Uri.parse("$baseUrl/departments?page=$page&perPage=50");
+      final result = await fetchDepartmentsPaginated(page: page, perPage: 50);
+      final List<String> depts = result['departments'] as List<String>;
+      final pagination = result['pagination'] as Map<String, dynamic>?;
 
-      final response = await http.get(
-        url,
-        headers: {
-          "Authorization": "Bearer $token",
-          "accept": "application/json",
-        },
-      );
+      allDepartments.addAll(depts);
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        List<dynamic> data = [];
-        Map<String, dynamic>? pagination;
-
-        if (responseData is Map) {
-          data = responseData['data'] ?? [];
-          pagination = responseData['pagination'];
-        } else if (responseData is List) {
-          data = responseData;
-        }
-
-        allDepartments.addAll(data.map((dept) => dept['name'].toString()));
-
-        if (pagination != null && pagination['next'] != null) {
-          page = pagination['next'];
-        } else {
-          hasMore = false;
-        }
+      if (pagination != null && pagination['next'] != null) {
+        page = pagination['next'];
       } else {
-        throw Exception('error_code: ${response.statusCode}');
+        hasMore = false;
       }
     }
-
     return allDepartments;
   }
 
@@ -254,13 +303,12 @@ class UsersApiService {
     final response = await http.delete(
       url,
       headers: {
-        "Content-Type": "application/json",
         "Authorization": "Bearer $token",
-        "accept": "application/json",
+        "Accept": "application/json",
       },
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
     } else if (response.statusCode == 403) {
       throw Exception('permission_error');
@@ -310,7 +358,7 @@ class UsersApiService {
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
-        "accept": "application/json",
+        "Accept": "application/json",
       },
       body: jsonEncode(userData),
     );
@@ -368,7 +416,7 @@ class UsersApiService {
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
-        "accept": "application/json",
+        "Accept": "application/json",
       },
     );
 

@@ -172,7 +172,8 @@ class UserCard extends StatelessWidget {
               ),
               SizedBox(width: 4),
               Text(
-                'Last login: ${UsersHelpers.formatDate(user.lastLogin, context)}',
+                AppLocalizations.of(context)!.translate('last_login_label')
+                    .replaceAll('{date}', UsersHelpers.formatDate(user.lastLogin, context)),
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: isMobile ? 11 : 12,
@@ -215,7 +216,7 @@ class UserCard extends StatelessWidget {
               value: 'files',
               child: _buildPopupItem(
                   Icons.folder_shared_rounded,
-                  AppLocalizations.of(context)!.translate('view_files') ?? 'View Files',
+                  AppLocalizations.of(context)!.translate('view_files'),
                   AppColors.accentBlue
               ),
             ),
@@ -223,7 +224,7 @@ class UserCard extends StatelessWidget {
               value: 'edit',
               child: _buildPopupItem(
                   Icons.edit_rounded,
-                  AppLocalizations.of(context)!.translate('edit_user') ?? 'Edit Profile',
+                  AppLocalizations.of(context)!.translate('edit_user'),
                   AppColors.accentBlue
               ),
             ),
@@ -231,7 +232,7 @@ class UserCard extends StatelessWidget {
               value: 'delete',
               child: _buildPopupItem(
                   Icons.delete_outline_rounded,
-                  AppLocalizations.of(context)!.translate('delete') ?? 'Delete User',
+                  AppLocalizations.of(context)!.translate('delete'),
                   AppColors.accentRed
               ),
             ),
@@ -247,12 +248,12 @@ class UserCard extends StatelessWidget {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          AppLocalizations.of(context)!.translate('delete_user') ?? 'Delete User',
-          style: TextStyle(color: AppColors.accentRed, fontWeight: FontWeight.bold),
+          AppLocalizations.of(context)!.translate('delete_user'),
+          style: const TextStyle(color: AppColors.accentRed, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          "${AppLocalizations.of(context)!.translate('delete_confirmation') ?? 'Are you sure you want to delete'} ${user.name}?",
-          style: TextStyle(color: AppColors.textPrimary),
+          "${AppLocalizations.of(context)!.translate('delete_confirmation')} ${user.name}?",
+          style: const TextStyle(color: AppColors.textPrimary),
         ),
         actions: [
           TextButton(
@@ -265,7 +266,7 @@ class UserCard extends StatelessWidget {
               try {
                 await apiService.deleteUserById(user.id!);
                 if (onUpdate != null) onUpdate!();
-                UsersHelpers.showSuccessMessage(context, 'User deleted successfully');
+                UsersHelpers.showSuccessMessage(context, AppLocalizations.of(context)!.translate('user_deleted_success'));
               } catch (e) {
                 UsersHelpers.showErrorMessage(context, e.toString());
               }

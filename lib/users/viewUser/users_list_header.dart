@@ -40,7 +40,7 @@ class UsersListHeader extends StatelessWidget {
                 ? (selectedFilter == 'admin'
                 ? AppLocalizations.of(context)!.translate('administrator')
                 : AppLocalizations.of(context)!.translate('regular_user'))
-                : AppLocalizations.of(context)!.translate('users_management').toLowerCase()}',
+                : AppLocalizations.of(context)!.translate('users_management')}',
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: isMobile ? 12 : 14,

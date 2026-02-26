@@ -104,7 +104,7 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
             // ✅ القسم
             if (_userData!.departmentName != null)
               _buildProfileDetail(
-                AppLocalizations.of(context)!.translate('department_name') ?? 'Department',
+                AppLocalizations.of(context)!.translate('department_name'),
                 _userData!.departmentName!,
                 Icons.business_rounded,
               ),
@@ -129,7 +129,7 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
 
             // ✅ آخر تسجيل دخول (بدل updated_at)
             _buildProfileDetail(
-              AppLocalizations.of(context)!.translate('last_login') ?? 'Last Login',
+              AppLocalizations.of(context)!.translate('last_login'),
               UsersHelpers.formatDate(_userData!.lastLogin, context),
               Icons.access_time_rounded,
             ),

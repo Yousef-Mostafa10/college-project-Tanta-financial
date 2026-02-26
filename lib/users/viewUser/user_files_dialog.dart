@@ -62,7 +62,7 @@ class _UserFilesDialogState extends State<UserFilesDialog> {
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              '${AppLocalizations.of(context)!.translate('uploaded_files') ?? 'Uploaded Files'}',
+              AppLocalizations.of(context)!.translate('uploaded_files'),
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary,
@@ -86,7 +86,7 @@ class _UserFilesDialogState extends State<UserFilesDialog> {
                         Icon(Icons.folder_open_rounded, size: 48, color: AppColors.textMuted),
                         SizedBox(height: 10),
                         Text(
-                          AppLocalizations.of(context)!.translate('no_files_found') ?? 'No files uploaded',
+                          AppLocalizations.of(context)!.translate('no_files_found'),
                           style: TextStyle(color: AppColors.textSecondary),
                         ),
                       ],
@@ -122,7 +122,7 @@ class _UserFilesDialogState extends State<UserFilesDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(AppLocalizations.of(context)!.translate('close') ?? 'Close'),
+          child: Text(AppLocalizations.of(context)!.translate('close')),
         ),
       ],
     );

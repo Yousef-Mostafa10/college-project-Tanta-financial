@@ -8,6 +8,7 @@ import 'user_card.dart';
 import 'users_empty_state.dart';
 import 'users_list_header.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import 'dart:async';
 
 class ViewUsersPage extends StatefulWidget {
   const ViewUsersPage({super.key});
@@ -21,7 +22,10 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
   final List<User> _users = [];
   bool _isLoading = false;
   String _searchQuery = '';
-  String _selectedFilter = 'all';
+  String _selectedRole = 'all';
+  String _selectedDepartment = 'all';
+  bool? _selectedActive;
+  List<String> _departments = [];
 
   // Pagination
   int _currentPage = 1;
@@ -29,28 +33,46 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
   bool _isLoadingMore = false;
   int _totalUsers = 0;
   final ScrollController _scrollController = ScrollController();
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    _loadUsers();
+    _loadInitialData();
 
     // Scroll listener للتحميل التدريجي
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
               _scrollController.position.maxScrollExtent - 300 &&
           !_isLoadingMore &&
-          _hasMorePages &&
-          _searchQuery.isEmpty &&
-          _selectedFilter == 'all') {
+          _hasMorePages) {
         _loadMoreUsers();
       }
     });
   }
 
+  Future<void> _loadInitialData() async {
+    await Future.wait([
+      _loadUsers(),
+      _fetchDepartments(),
+    ]);
+  }
+
+  Future<void> _fetchDepartments() async {
+    try {
+      final depts = await _apiService.fetchDepartments();
+      setState(() {
+        _departments = depts;
+      });
+    } catch (e) {
+      debugPrint("Error fetching departments: $e");
+    }
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -63,7 +85,14 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
     });
 
     try {
-      final result = await _apiService.fetchUsersPaginated(page: 1, perPage: 10);
+      final result = await _apiService.fetchUsersPaginated(
+        page: 1,
+        perPage: 10,
+        name: _searchQuery,
+        role: _selectedRole,
+        department: _selectedDepartment,
+        active: _selectedActive,
+      );
       final List<User> fetchedUsers = result['users'] as List<User>;
       final pagination = result['pagination'] as Map<String, dynamic>?;
 
@@ -92,7 +121,14 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
     setState(() => _isLoadingMore = true);
 
     try {
-      final result = await _apiService.fetchUsersPaginated(page: _currentPage, perPage: 10);
+      final result = await _apiService.fetchUsersPaginated(
+        page: _currentPage,
+        perPage: 10,
+        name: _searchQuery,
+        role: _selectedRole,
+        department: _selectedDepartment,
+        active: _selectedActive,
+      );
       final List<User> fetchedUsers = result['users'] as List<User>;
       final pagination = result['pagination'] as Map<String, dynamic>?;
 
@@ -114,23 +150,54 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
     }
   }
 
-  List<User> get _filteredUsers {
-    List<User> filtered = _users;
-
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered
-          .where((u) => u.name.toLowerCase().contains(_searchQuery.toLowerCase()))
-          .toList();
-    }
-
-    if (_selectedFilter != 'all') {
-      filtered = filtered
-          .where((u) => u.role.toLowerCase() == _selectedFilter)
-          .toList();
-    }
-
-    return filtered;
+  void _onSearchQueryChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() => _searchQuery = query);
+        _loadUsers();
+      }
+    });
   }
+
+  void _onRoleChanged(String role) {
+    setState(() => _selectedRole = role);
+    _loadUsers();
+  }
+
+  void _onDepartmentChanged(String dept) {
+    setState(() => _selectedDepartment = dept);
+    _loadUsers();
+  }
+
+  void _onActiveChanged(bool? active) {
+    setState(() => _selectedActive = active);
+    _loadUsers();
+  }
+
+  // Row selection filters (old logic)
+  void _onFilterChanged(String filter) {
+     _onRoleChanged(filter);
+  }
+
+
+  // List<User> get _filteredUsers {
+  //   List<User> filtered = _users;
+
+  //   if (_searchQuery.isNotEmpty) {
+  //     filtered = filtered
+  //         .where((u) => u.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+  //         .toList();
+  //   }
+
+  //   if (_selectedFilter != 'all') {
+  //     filtered = filtered
+  //         .where((u) => u.role.toLowerCase() == _selectedFilter)
+  //         .toList();
+  //   }
+
+  //   return filtered;
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -156,9 +223,15 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
         children: [
           UsersSearchFilter(
             searchQuery: _searchQuery,
-            selectedFilter: _selectedFilter,
-            onSearchChanged: (value) => setState(() => _searchQuery = value),
-            onFilterChanged: (value) => setState(() => _selectedFilter = value),
+            selectedRole: _selectedRole,
+            selectedDepartment: _selectedDepartment,
+            selectedActive: _selectedActive,
+            departments: _departments,
+            apiService: _apiService,
+            onSearchChanged: _onSearchQueryChanged,
+            onRoleChanged: _onRoleChanged,
+            onDepartmentChanged: _onDepartmentChanged,
+            onActiveChanged: _onActiveChanged,
             isMobile: isMobile,
           ),
           Expanded(
@@ -168,19 +241,19 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
             )
-                : _filteredUsers.isEmpty
+                : _users.isEmpty
                 ? UsersEmptyState(
-              selectedFilter: _selectedFilter,
+              selectedFilter: _selectedRole,
               hasUsers: _users.isNotEmpty,
               isMobile: isMobile,
             )
                 : Column(
               children: [
                 UsersListHeader(
-                  filteredUsersCount: _searchQuery.isEmpty && _selectedFilter == 'all'
+                  filteredUsersCount: _searchQuery.isEmpty && _selectedRole == 'all' && _selectedDepartment == 'all' && _selectedActive == null
                       ? _totalUsers
-                      : _filteredUsers.length,
-                  selectedFilter: _selectedFilter,
+                      : _users.length,
+                  selectedFilter: _selectedRole,
                   hasMore: _hasMorePages,
                   searchQuery: _searchQuery,
                   isMobile: isMobile,
@@ -189,10 +262,10 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: EdgeInsets.all(isMobile ? 12 : 16),
-                    itemCount: _filteredUsers.length + (_hasMorePages && _searchQuery.isEmpty && _selectedFilter == 'all' ? 1 : 0),
+                    itemCount: _users.length + (_hasMorePages ? 1 : 0),
                     itemBuilder: (context, index) {
                       // عنصر اللودينج في الآخر
-                      if (index == _filteredUsers.length) {
+                      if (index == _users.length) {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 16),
                           child: Center(
@@ -206,7 +279,7 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
                           ),
                         );
                       }
-                      final user = _filteredUsers[index];
+                      final user = _users[index];
                       return UserCard(
                         user: user,
                         apiService: _apiService,
