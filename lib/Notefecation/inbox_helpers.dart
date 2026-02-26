@@ -1,6 +1,7 @@
 
 
 import 'package:flutter/material.dart';
+import 'package:college_project/l10n/app_localizations.dart' show AppLocalizations;
 import './inbox_colors.dart';
 
 class InboxHelpers {
@@ -26,11 +27,16 @@ class InboxHelpers {
       case "rejected":
         return Icons.cancel_rounded;
       case "waiting":
+      case "pending":
         return Icons.hourglass_empty_rounded;
       case "fulfilled":
         return Icons.task_alt_rounded;
       case "needs_change":
-        return Icons.task_alt_rounded;
+      case "needs change":
+      case "needs_editing":
+      case "needs-editing":
+        return Icons.edit_note_rounded;
+      case "not_assigned":
       case "not-assigned":
         return Icons.person_outline;
       case "all":
@@ -53,7 +59,12 @@ class InboxHelpers {
         return InboxColors.statusRejected;
       case 'needs_change':
       case 'needs change':
+      case 'needs_editing':
+      case 'needs-editing':
         return Colors.orange;
+      case 'waiting':
+      case 'pending':
+        return InboxColors.statusWaiting;
       default:
         return InboxColors.statusWaiting;
     }
@@ -72,7 +83,12 @@ class InboxHelpers {
         return Icons.cancel_rounded;
       case 'needs_change':
       case 'needs change':
+      case 'needs_editing':
+      case 'needs-editing':
         return Icons.edit_note_rounded;
+      case 'waiting':
+      case 'pending':
+        return Icons.hourglass_empty_rounded;
       default:
         return Icons.hourglass_empty_rounded;
     }
@@ -151,27 +167,31 @@ class InboxHelpers {
   }
 
   // 🔹 دالة لتحويل حالة forward إلى نص مقروء (محدثة)
-  static String getStatusText(Map<String, dynamic> request) {
+  static String getStatusText(BuildContext context, Map<String, dynamic> request) {
     final fulfilled = request["fulfilled"] == true;
-    if (fulfilled) return "Fulfilled";
+    if (fulfilled) return AppLocalizations.of(context)!.translate("fulfilled");
 
     final status = (request["yourCurrentStatus"] ??
         request["yourForwardStatus"] ?? 'not-assigned').toString();
 
     switch (status.toLowerCase()) {
       case 'approved':
-        return "Approved";
+        return AppLocalizations.of(context)!.translate("approved");
       case 'rejected':
-        return "Rejected";
+        return AppLocalizations.of(context)!.translate("rejected");
       case 'needs_change':
       case 'needs change':
-        return "Needs Change";
+      case 'needs_editing':
+      case 'needs-editing':
+        return AppLocalizations.of(context)!.translate("needs_change");
       case 'not-assigned':
-        return "Not Assigned";
+      case 'not_assigned':
+        return AppLocalizations.of(context)!.translate("not_assigned");
       case 'waiting':
-        return "Waiting";
+      case 'pending':
+        return AppLocalizations.of(context)!.translate("waiting");
       default:
-        return "Waiting";
+        return AppLocalizations.of(context)!.translate("waiting");
     }
   }
 

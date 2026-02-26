@@ -112,7 +112,7 @@ class InboxDesktopFilters extends StatelessWidget {
                         context: context,
                         value: selectedPriority,
                         items: priorities,
-                        label: "Priority",
+                        label: AppLocalizations.of(context)!.translate('priority'),
                         icon: Icons.flag_outlined,
                         onChanged: (value) => onPriorityChanged(value!),
                       ),
@@ -123,7 +123,7 @@ class InboxDesktopFilters extends StatelessWidget {
                         context: context,
                         value: selectedType,
                         items: typeNames,
-                        label: "Type",
+                        label: AppLocalizations.of(context)!.translate('type'),
                         icon: Icons.category_outlined,
                         onChanged: (value) => onTypeChanged(value!),
                       ),
@@ -134,7 +134,7 @@ class InboxDesktopFilters extends StatelessWidget {
                         context: context,
                         value: selectedStatus,
                         items: statuses,
-                        label: "Status",
+                        label: AppLocalizations.of(context)!.translate('status'),
                         icon: Icons.hourglass_top_outlined,
                         onChanged: (value) => onStatusChanged(value!),
                       ),
@@ -180,16 +180,16 @@ class InboxDesktopFilters extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    _getStatusIcon(label, item),
+                    _getStatusIcon(context, label, item),
                     size: 18,
-                    color: _getStatusColor(label, item),
+                    color: _getStatusColor(context, label, item),
                   ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       AppLocalizations.of(context)!.translate(item.toLowerCase().replaceAll(' ', '_')),
                       style: TextStyle(
-                        color: _getStatusTextColor(label, item),
+                        color: _getStatusTextColor(context, label, item),
                         fontWeight: _getStatusFontWeight(label, item),
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -206,10 +206,10 @@ class InboxDesktopFilters extends StatelessWidget {
     );
   }
 
-  IconData _getStatusIcon(String label, String item) {
-    if (label == "Status") {
+  IconData _getStatusIcon(BuildContext context, String label, String item) {
+    if (label == AppLocalizations.of(context)!.translate('status')) {
       return _getStatusFilterIcon(item);
-    } else if (label == "Priority") {
+    } else if (label == AppLocalizations.of(context)!.translate('priority')) {
       return Icons.flag_outlined;
     } else {
       return Icons.category_outlined;
@@ -238,8 +238,8 @@ class InboxDesktopFilters extends StatelessWidget {
     }
   }
 
-  Color _getStatusColor(String label, String item) {
-    if (label == "Status") {
+  Color _getStatusColor(BuildContext context, String label, String item) {
+    if (label == AppLocalizations.of(context)!.translate('status')) {
       switch (item.toLowerCase()) {
         case 'all':
           return InboxColors.primary;
@@ -263,12 +263,12 @@ class InboxDesktopFilters extends StatelessWidget {
     }
   }
 
-  Color _getStatusTextColor(String label, String item) {
+  Color _getStatusTextColor(BuildContext context, String label, String item) {
     if (item == 'All Types' || item == 'All' || item == 'All Priorities') {
       return InboxColors.primary;
     }
 
-    if (label == "Status") {
+    if (label == AppLocalizations.of(context)!.translate('status')) {
       switch (item.toLowerCase()) {
         case 'approved':
           return InboxColors.statusApproved;

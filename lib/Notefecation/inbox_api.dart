@@ -496,16 +496,54 @@ class InboxApi {
     }
   }
 
-  // ✅ جلب طلبات الوارد (paginated) - الصفحة المحددة فقط + summary
+  // ✅ جلب طلبات الوارد (paginated) - مع دعم الفلترة من السيرفر
   Future<Map<String, dynamic>> fetchInboxRequestsPage(
-      String? token, {int page = 1, int perPage = 10}) async {
+    String? token, {
+    int page = 1,
+    int perPage = 10,
+    String? priority,
+    String? typeName,
+    String? search,
+    String? status,
+  }) async {
     if (token == null) {
       return {'data': [], 'pagination': null, 'summary': null};
     }
 
     try {
+      final queryParams = {
+        'page': page.toString(),
+        'perPage': perPage.toString(),
+        'query': 'inbox',
+      };
+
+      if (priority != null && priority != 'All') {
+        queryParams["priority"] = priority.toUpperCase();
+      }
+      if (typeName != null && typeName != 'All Types') {
+        queryParams["typeName"] = typeName;
+      }
+      if (search != null && search.isNotEmpty) {
+        if (RegExp(r'^\d+$').hasMatch(search)) {
+          queryParams["creatorId"] = search;
+        } else {
+          queryParams["title"] = search;
+        }
+      }
+      if (status != null && status != 'All') {
+        if (status == 'Fulfilled') {
+          queryParams["fulfilled"] = "true";
+        } else {
+          String serverStatus = status.toUpperCase();
+          if (serverStatus == "NEEDS CHANGE") serverStatus = "NEEDS_EDITING";
+          queryParams["lastForwardStatus"] = serverStatus;
+        }
+      }
+
+      final uri = Uri.parse("$baseUrl/transactions").replace(queryParameters: queryParams);
+
       final response = await http.get(
-        Uri.parse("$baseUrl/transactions?page=$page&perPage=$perPage&query=inbox"),
+        uri,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

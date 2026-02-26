@@ -43,7 +43,7 @@ class InboxMobileFilters extends StatelessWidget {
   }) {
     // تحديد لون النص حسب الحالة
     Color getTextColor() {
-      if (label == "Status") {
+      if (label == AppLocalizations.of(context)!.translate('status')) {
         switch (value.toLowerCase()) {
           case 'waiting':
             return InboxColors.statusWaiting;
@@ -64,7 +64,7 @@ class InboxMobileFilters extends StatelessWidget {
 
     // تحديد أيقونة حسب الحالة
     IconData getStatusIcon() {
-      if (label == "Status") {
+      if (label == AppLocalizations.of(context)!.translate('status')) {
         switch (value.toLowerCase()) {
           case 'waiting':
             return Icons.hourglass_empty_rounded;
@@ -85,7 +85,7 @@ class InboxMobileFilters extends StatelessWidget {
 
     // تحديد لون الأيقونة
     Color getIconColor() {
-      if (label == "Status") {
+      if (label == AppLocalizations.of(context)!.translate('status')) {
         return getTextColor();
       }
       return InboxColors.primary;
@@ -186,7 +186,7 @@ class InboxMobileFilters extends StatelessWidget {
               Expanded(
                 child: _buildMobileFilterChip(
                   context: context,
-                  label: "Priority",
+                  label: AppLocalizations.of(context)!.translate('priority'),
                   value: selectedPriority,
                   icon: Icons.flag_outlined,
                   onTap: () {
@@ -205,7 +205,7 @@ class InboxMobileFilters extends StatelessWidget {
               Expanded(
                 child: _buildMobileFilterChip(
                   context: context,
-                  label: "Type",
+                  label: AppLocalizations.of(context)!.translate('type'),
                   value: selectedType,
                   icon: Icons.category_outlined,
                   onTap: () {
@@ -224,7 +224,7 @@ class InboxMobileFilters extends StatelessWidget {
               Expanded(
                 child: _buildMobileFilterChip(
                   context: context,
-                  label: "Status",
+                  label: AppLocalizations.of(context)!.translate('status'),
                   value: selectedStatus,
                   icon: Icons.hourglass_top_outlined,
                   onTap: () {

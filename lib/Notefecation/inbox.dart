@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../l10n/app_localizations.dart';
+import 'package:college_project/l10n/app_localizations.dart';
 import '../request/Ditalis_Request/ditalis_request.dart';
 import '../request/creatrequest.dart';
 import '../request/editerequest.dart';
@@ -142,7 +142,15 @@ class _InboxPageState extends State<InboxPage> {
     });
 
     try {
-      final result = await _apiService.fetchInboxRequestsPage(_userToken, page: 1, perPage: 10);
+      final result = await _apiService.fetchInboxRequestsPage(
+        _userToken,
+        page: 1,
+        perPage: 10,
+        priority: _selectedPriority != 'All' ? _selectedPriority : null,
+        typeName: _selectedType != 'All Types' ? _selectedType : null,
+        search: _searchController.text.trim(),
+        status: _selectedStatus != 'All' ? _selectedStatus : null,
+      );
       final pageRequests = result['data'] as List<dynamic>;
       final pagination = result['pagination'] as Map<String, dynamic>?;
       final summary = result['summary'] as Map<String, dynamic>?;
@@ -235,7 +243,15 @@ class _InboxPageState extends State<InboxPage> {
 
     try {
       final nextPage = _currentPage + 1;
-      final result = await _apiService.fetchInboxRequestsPage(_userToken, page: nextPage, perPage: 10);
+      final result = await _apiService.fetchInboxRequestsPage(
+        _userToken,
+        page: nextPage,
+        perPage: 10,
+        priority: _selectedPriority != 'All' ? _selectedPriority : null,
+        typeName: _selectedType != 'All Types' ? _selectedType : null,
+        search: _searchController.text.trim(),
+        status: _selectedStatus != 'All' ? _selectedStatus : null,
+      );
       final pageRequests = result['data'] as List<dynamic>;
       final pagination = result['pagination'] as Map<String, dynamic>?;
 
@@ -286,26 +302,17 @@ class _InboxPageState extends State<InboxPage> {
   }
 
   void _applyFilters() {
-    final filtered = InboxHelpers.applyFilters(
-      allRequests: _requests,
-      selectedType: _selectedType,
-      selectedPriority: _selectedPriority,
-      selectedStatus: _selectedStatus,
-      searchTerm: _searchController.text.toLowerCase(),
-    );
-
     setState(() {
-      _filteredRequests = filtered;
+      _filteredRequests = _requests;
     });
-
-    print('🔍 Filters applied - Showing ${_filteredRequests.length} of ${_requests.length} requests');
+    print('🔍 Filtered requests set - Showing ${_filteredRequests.length} requests');
   }
 
   void _onSearchChanged(String value) {
     // استخدام debounce لمنع تحديث الفلاتر مع كل حرف
     _searchTimer?.cancel();
-    _searchTimer = Timer(const Duration(milliseconds: 300), () {
-      _applyFilters();
+    _searchTimer = Timer(const Duration(milliseconds: 500), () {
+      _fetchInboxRequests();
     });
   }
 
@@ -517,10 +524,10 @@ class _InboxPageState extends State<InboxPage> {
             children: [
               Text(
                 action == 'Approve'
-                    ? 'Add a comment for approval (optional):'
+                    ? AppLocalizations.of(context)!.translate('approve_comment_hint') ?? 'Add a comment for approval (optional):'
                     : action == 'Reject'
-                        ? (AppLocalizations.of(context)!.translate('reject_reason_hint'))
-                        : (AppLocalizations.of(context)!.translate('specify_changes_hint')),
+                        ? AppLocalizations.of(context)!.translate('reject_reason_hint')
+                        : AppLocalizations.of(context)!.translate('specify_changes_hint'),
                 style: TextStyle(
                   fontSize: 14,
                   color: InboxColors.textSecondary,
@@ -968,7 +975,7 @@ class _InboxPageState extends State<InboxPage> {
                       TextField(
                         maxLines: 2,
                         decoration: InputDecoration(
-                          hintText: AppLocalizations.of(context)!.translate('enter_comments') ?? 'Add a comment (optional)',
+                          hintText: AppLocalizations.of(context)!.translate('enter_comments'),
                           prefixIcon: Icon(Icons.comment_rounded, color: CreateRequestColors.primary),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -1257,7 +1264,7 @@ class _InboxPageState extends State<InboxPage> {
       _selectedStatus = 'All';
       _searchController.clear();
     });
-    _applyFilters();
+    _fetchInboxRequests();
   }
 
   void _viewDetails(String requestId) {
@@ -1430,15 +1437,15 @@ class _InboxPageState extends State<InboxPage> {
           searchController: _searchController,
           onPriorityChanged: (value) {
             setState(() => _selectedPriority = value);
-            _applyFilters();
+            _fetchInboxRequests();
           },
           onTypeChanged: (value) {
             setState(() => _selectedType = value);
-            _applyFilters();
+            _fetchInboxRequests();
           },
           onStatusChanged: (value) {
             setState(() => _selectedStatus = value);
-            _applyFilters();
+            _fetchInboxRequests();
           },
           onSearchChanged: _onSearchChanged,
           onShowMobileFilterDialog: _showMobileFilterDialog,
@@ -1482,7 +1489,7 @@ class _InboxPageState extends State<InboxPage> {
                           onPressed: _loadMoreRequests,
                           icon: Icon(Icons.expand_more, color: InboxColors.primary),
                           label: Text(
-                            AppLocalizations.of(context)!.translate('load_more') ?? 'Load More',
+                            AppLocalizations.of(context)!.translate('load_more'),
                             style: TextStyle(color: InboxColors.primary),
                           ),
                         ),
@@ -1545,7 +1552,7 @@ class _InboxPageState extends State<InboxPage> {
                 children: [
                   Icon(Icons.edit_rounded, color: InboxColors.primary),
                   SizedBox(width: 8),
-                  Text(AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response'),
+                  Text(AppLocalizations.of(context)!.translate('edit_response')),
                 ],
               ),
               content: Column(
@@ -1553,7 +1560,7 @@ class _InboxPageState extends State<InboxPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    AppLocalizations.of(context)!.translate('select_new_status') ?? 'Select new status:',
+                    AppLocalizations.of(context)!.translate('select_new_status'),
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   SizedBox(height: 12),
@@ -1588,7 +1595,7 @@ class _InboxPageState extends State<InboxPage> {
                   TextField(
                     maxLines: 3,
                     decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)!.translate('enter_comments') ?? 'Enter comment (optional)',
+                      hintText: AppLocalizations.of(context)!.translate('enter_comments'),
                       border: OutlineInputBorder(),
                     ),
                     onChanged: (value) => comment = value,
@@ -1609,7 +1616,7 @@ class _InboxPageState extends State<InboxPage> {
                     backgroundColor: InboxColors.primary,
                   ),
                   child: Text(
-                    AppLocalizations.of(context)!.translate('update_response') ?? 'Update',
+                    AppLocalizations.of(context)!.translate('update_response'),
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
@@ -1746,15 +1753,15 @@ class _InboxPageState extends State<InboxPage> {
                 searchController: _searchController,
                 onPriorityChanged: (value) {
                   setState(() => _selectedPriority = value);
-                  _applyFilters();
+                  _fetchInboxRequests();
                 },
                 onTypeChanged: (value) {
                   setState(() => _selectedType = value);
-                  _applyFilters();
+                  _fetchInboxRequests();
                 },
                 onStatusChanged: (value) {
                   setState(() => _selectedStatus = value);
-                  _applyFilters();
+                  _fetchInboxRequests();
                 },
                 onSearchChanged: _onSearchChanged,
               ),

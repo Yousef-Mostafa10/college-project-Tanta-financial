@@ -116,7 +116,7 @@ class InboxMobileCard extends StatelessWidget {
     final priority = request["priority"] ?? AppLocalizations.of(context)!.translate('n_a');
     final senderName = request["lastSenderName"] ?? request["creator"]?["name"] ?? AppLocalizations.of(context)!.translate('unknown');
     final createdAt = request["createdAt"];
-    final formattedDate = InboxFormatters.formatDate(createdAt);
+    final formattedDate = InboxFormatters.formatDate(context, createdAt);
     final forwardStatus = (request['yourCurrentStatus'] ?? 'not-assigned').toString().toLowerCase();
     final isPending = forwardStatus == 'waiting' || forwardStatus == 'not-assigned' || forwardStatus == 'pending';
     final isApproved = forwardStatus == 'approved';
