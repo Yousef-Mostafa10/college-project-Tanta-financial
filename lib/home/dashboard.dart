@@ -6,12 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../Auth/login.dart';
 import '../Notefecation/inbox.dart';
-import '../drawer.dart' hide AppColors; // إخفاء AppColors من drawer
-import '../request/Ditalis_Request/ditalis_request.dart' hide AppColors; // إخفاء AppColors من ditalis_request
-import '../request/RequestTracking/request_tracking.dart' hide AppColors; // إخفاء AppColors من request_tracking
-import '../request/editerequest.dart' hide AppColors; // إخفاء AppColors من editerequest
+import '../drawer.dart' hide AppColors;
+import '../request/Ditalis_Request/ditalis_request.dart' hide AppColors;
+import '../request/RequestTracking/request_tracking.dart' hide AppColors;
+import '../request/editerequest.dart' hide AppColors;
 import 'dashboard_api.dart';
-import 'dashboard_colors.dart'; // ✅ استخدام AppColors من هنا
+import 'dashboard_colors.dart';
 import 'dashboard_helpers.dart';
 import 'stats_widget.dart';
 import 'filters_widget.dart';
@@ -19,7 +19,6 @@ import 'header_widget.dart';
 import 'empty_state.dart';
 import 'desktop_request_card.dart';
 import 'mobile_request_card.dart';
-import 'pagination_widget.dart';
 
 class AdministrativeDashboardPage extends StatefulWidget {
   const AdministrativeDashboardPage({super.key});
@@ -33,15 +32,18 @@ class _AdministrativeDashboardPageState
     extends State<AdministrativeDashboardPage> {
   final DashboardAPI _api = DashboardAPI();
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   List<dynamic> requests = [];
   List<dynamic> filteredRequests = [];
   List<dynamic> paginatedRequests = [];
   bool isLoading = false;
-  bool isRefreshing = false; // loading خفيف للفلاتر وتغيير الصفحات
+  bool isRefreshing = false;
+  bool _isLoadingMore = false;
+  bool _hasMorePages = true;
   Timer? _searchDebounce;
 
-  // ✅ Pagination
+  // ✅ Pagination (للـ API)
   int currentPage = 1;
   int itemsPerPage = 10;
   int totalPages = 1;
@@ -67,6 +69,23 @@ class _AdministrativeDashboardPageState
     super.initState();
     fetchTypes();
     fetchRequests(fullLoad: true);
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> fetchTypes() async {
@@ -170,17 +189,20 @@ class _AdministrativeDashboardPageState
       final pagination = result['pagination'] as Map<String, dynamic>?;
       final summary = result['summary'] as Map<String, dynamic>?;
 
-      // تحديث الإحصائيات من الـ summary
       _updateStatsFromSummary(summary);
 
       setState(() {
-        requests = fetchedTransactions;
-        filteredRequests = fetchedTransactions;
-        paginatedRequests = fetchedTransactions;
+        // لو page = 1 (refresh أو فلتر جديد) → امسح القديم
+        if (page == 1) {
+          requests = fetchedTransactions;
+          filteredRequests = fetchedTransactions;
+          paginatedRequests = fetchedTransactions;
+        }
         currentPage = pagination?['currentPage'] ?? page;
         totalPages = pagination?['lastPage'] ?? 1;
         if (totalPages == 0) totalPages = 1;
         total = pagination?['total'] ?? fetchedTransactions.length;
+        _hasMorePages = pagination?['next'] != null;
       });
 
       debugPrint("✅ Loaded page $currentPage/$totalPages - ${fetchedTransactions.length} items");
@@ -196,28 +218,58 @@ class _AdministrativeDashboardPageState
     });
   }
 
-  // البحث مع Debounce لتقليل ضغط الـ API
+  // ✅ Infinite scroll: تحميل الصفحة الي بعدها
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMorePages) return;
+
+    setState(() => _isLoadingMore = true);
+    try {
+      final nextPage = currentPage + 1;
+      final result = await _api.fetchAllRequests(
+        page: nextPage,
+        perPage: itemsPerPage,
+        priority: selectedPriority != 'All' ? selectedPriority : null,
+        typeName: selectedType != 'All Types' ? selectedType : null,
+        status: selectedStatus != 'All' ? selectedStatus : null,
+        search: _searchController.text.trim(),
+      );
+
+      final List<dynamic> fetchedTransactions = result['data'] ?? [];
+      final pagination = result['pagination'] as Map<String, dynamic>?;
+
+      if (mounted) {
+        setState(() {
+          requests.addAll(fetchedTransactions);
+          filteredRequests.addAll(fetchedTransactions);
+          paginatedRequests.addAll(fetchedTransactions);
+          currentPage = pagination?['currentPage'] ?? nextPage;
+          totalPages = pagination?['lastPage'] ?? totalPages;
+          _hasMorePages = pagination?['next'] != null;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading more: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingMore = false);
+    }
+  }
+
+  // البحث مع Debounce
   void _onSearchChanged(String value) {
     if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 500), () {
-      fetchRequests(page: 1);
+      fetchRequests(page: 1, fullLoad: true);
     });
   }
 
   void _applyFilters(List<dynamic> allRequests) {
-    // لما الفلاتر تتغير، نجيب الداتا من السيرفر تاني
-    fetchRequests(page: 1);
+    fetchRequests(page: 1, fullLoad: true);
   }
 
   void _updatePaginatedRequests() {
-    // الداتا جاية من السيرفر مـ paginated أصلاً
     setState(() {
       paginatedRequests = filteredRequests;
     });
-  }
-
-  void _goToPage(int page) {
-    fetchRequests(page: page);
   }
 
   void _handleTokenExpired() {
@@ -335,39 +387,48 @@ class _AdministrativeDashboardPageState
   }
 
   Widget _buildDesktopBodyWithScroll() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            StatsWidget(
-              total: total,
-              approved: approved,
-              rejected: rejected,
-              waiting: waiting,
-              needsChange: needsChange,
-              fulfilled: fulfilled,
-              isMobile: false,
-            ),
-            const SizedBox(height: 16),
-            _buildSearchBar(false),
-            const SizedBox(height: 16),
-            _buildFilters(false),
-            const SizedBox(height: 20),
-            _buildHeader(false),
-            const SizedBox(height: 16),
-            _buildRequestsListForDesktop(),
-            if (filteredRequests.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              PaginationWidget(
-                currentPage: currentPage,
-                totalPages: totalPages,
-                onPageChanged: _goToPage,
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollInfo) {
+        if (scrollInfo.metrics.pixels >=
+            scrollInfo.metrics.maxScrollExtent - 200 &&
+            !_isLoadingMore && _hasMorePages) {
+          _loadMore();
+        }
+        return false;
+      },
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              StatsWidget(
+                total: total,
+                approved: approved,
+                rejected: rejected,
+                waiting: waiting,
+                needsChange: needsChange,
+                fulfilled: fulfilled,
                 isMobile: false,
               ),
+              const SizedBox(height: 16),
+              _buildSearchBar(false),
+              const SizedBox(height: 16),
+              _buildFilters(false),
+              const SizedBox(height: 20),
+              _buildHeader(false),
+              const SizedBox(height: 16),
+              _buildRequestsListForDesktop(),
+              // ✅ Loading indicator للـ infinite scroll
+              if (_isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              const SizedBox(height: 24),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -379,20 +440,7 @@ class _AdministrativeDashboardPageState
         _buildMobileStatsSection(),
         _buildMobileFilterSection(),
         Expanded(
-          child: Column(
-            children: [
-              Expanded(
-                child: _buildMobileRequestsList(),
-              ),
-              if (filteredRequests.isNotEmpty)
-                PaginationWidget(
-                  currentPage: currentPage,
-                  totalPages: totalPages,
-                  onPageChanged: _goToPage,
-                  isMobile: true,
-                ),
-            ],
-          ),
+          child: _buildMobileRequestsList(),
         ),
       ],
     );
@@ -914,66 +962,80 @@ class _AdministrativeDashboardPageState
       return const EmptyState();
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      itemCount: paginatedRequests.length,
-      itemBuilder: (context, index) {
-        final req = paginatedRequests[index];
-        final id = req["id"].toString();
-        final title =
-            req["title"] ?? AppLocalizations.of(context)!.translate('no_title');
-        final type = req["type"]?["name"] ??
-            req["typeName"] ??
-            AppLocalizations.of(context)!.translate('n_a');
-        final priority =
-            req["priority"] ?? AppLocalizations.of(context)!.translate('n_a');
-        final creator = req["creator"]?["name"] ??
-            req["creatorName"] ??
-            AppLocalizations.of(context)!.translate('unknown');
-        final lastForwardStatus = req["lastForwardStatus"];
-        final statusInfo = DashboardHelpers.getStatusInfo(lastForwardStatus);
-        final documentsCount = req["documentsCount"] ?? 0;
-        final createdDate = req["createdDate"] ?? req["createdAt"];
-
-        return MobileRequestCard(
-          id: id,
-          title: title,
-          type: type,
-          priority: priority,
-          creator: creator,
-          statusText: statusInfo['text'],
-          statusColor: statusInfo['color'],
-          statusIcon: statusInfo['icon'],
-          documentsCount: documentsCount,
-          createdAt: createdDate,
-          onViewDetails: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => CourseApprovalRequestPage(requestId: id),
-              ),
-            );
-          },
-          onTrackRequest: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    TransactionTrackingPage(transactionId: id),
-              ),
-            );
-          },
-          onEditRequest: () => _editRequest(id),
-          onDeleteRequest: () => _deleteRequest(id),
-        );
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollInfo) {
+        if (scrollInfo.metrics.pixels >=
+            scrollInfo.metrics.maxScrollExtent - 200 &&
+            !_isLoadingMore && _hasMorePages) {
+          _loadMore();
+        }
+        return false;
       },
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        // +1 عشان نضيف loading indicator في الأسفل
+        itemCount: paginatedRequests.length + (_hasMorePages ? 1 : 0),
+        itemBuilder: (context, index) {
+          // آخر عنصر = loading indicator
+          if (index == paginatedRequests.length) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                child: _isLoadingMore
+                    ? CircularProgressIndicator(
+                        color: AppColors.primary,
+                        strokeWidth: 2,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            );
+          }
+
+          final req = paginatedRequests[index];
+          final id = req["id"].toString();
+          final title = req["title"] ?? AppLocalizations.of(context)!.translate('no_title');
+          final type = req["type"]?["name"] ?? req["typeName"] ?? AppLocalizations.of(context)!.translate('n_a');
+          final priority = req["priority"] ?? AppLocalizations.of(context)!.translate('n_a');
+          final creator = req["creator"]?["name"] ?? req["creatorName"] ?? AppLocalizations.of(context)!.translate('unknown');
+          final lastForwardStatus = req["lastForwardStatus"];
+          final statusInfo = DashboardHelpers.getStatusInfo(lastForwardStatus);
+          final documentsCount = req["documentsCount"] ?? 0;
+          final createdDate = req["createdDate"] ?? req["createdAt"];
+
+          return MobileRequestCard(
+            id: id,
+            title: title,
+            type: type,
+            priority: priority,
+            creator: creator,
+            statusText: statusInfo['text'],
+            statusColor: statusInfo['color'],
+            statusIcon: statusInfo['icon'],
+            documentsCount: documentsCount,
+            createdAt: createdDate,
+            onViewDetails: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CourseApprovalRequestPage(requestId: id),
+                ),
+              );
+            },
+            onTrackRequest: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TransactionTrackingPage(transactionId: id),
+                ),
+              );
+            },
+            onEditRequest: () => _editRequest(id),
+            onDeleteRequest: () => _deleteRequest(id),
+          );
+        },
+      ),
     );
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _searchDebounce?.cancel();
-    super.dispose();
-  }
 }
+
