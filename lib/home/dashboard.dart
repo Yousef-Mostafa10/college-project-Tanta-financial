@@ -1,4 +1,5 @@
 import 'package:college_project/l10n/app_localizations.dart';
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,6 +39,7 @@ class _AdministrativeDashboardPageState
   List<dynamic> paginatedRequests = [];
   bool isLoading = false;
   bool isRefreshing = false; // loading خفيف للفلاتر وتغيير الصفحات
+  Timer? _searchDebounce;
 
   // ✅ Pagination
   int currentPage = 1;
@@ -160,6 +162,8 @@ class _AdministrativeDashboardPageState
         perPage: itemsPerPage,
         priority: selectedPriority != 'All' ? selectedPriority : null,
         typeName: selectedType != 'All Types' ? selectedType : null,
+        status: selectedStatus != 'All' ? selectedStatus : null,
+        search: _searchController.text.trim(),
       );
 
       final List<dynamic> fetchedTransactions = result['data'] ?? [];
@@ -171,14 +175,13 @@ class _AdministrativeDashboardPageState
 
       setState(() {
         requests = fetchedTransactions;
+        filteredRequests = fetchedTransactions;
+        paginatedRequests = fetchedTransactions;
         currentPage = pagination?['currentPage'] ?? page;
         totalPages = pagination?['lastPage'] ?? 1;
         if (totalPages == 0) totalPages = 1;
         total = pagination?['total'] ?? fetchedTransactions.length;
       });
-
-      // تطبيق الفلاتر المحلية (البحث والاستيتس)
-      _applyLocalFilters();
 
       debugPrint("✅ Loaded page $currentPage/$totalPages - ${fetchedTransactions.length} items");
     } catch (e) {
@@ -193,43 +196,11 @@ class _AdministrativeDashboardPageState
     });
   }
 
-  // فلاتر محلية (بحث + ستاتس) على البيانات الحالية
-  void _applyLocalFilters() {
-    List<dynamic> filtered = requests;
-
-    if (selectedStatus != "All") {
-      filtered = filtered.where((request) {
-        final lastForwardStatus = request["lastForwardStatus"];
-
-        switch (selectedStatus) {
-          case "Approved":
-            return lastForwardStatus == "approved";
-          case "Rejected":
-            return lastForwardStatus == "rejected";
-          case "Waiting":
-            return lastForwardStatus == "waiting" || lastForwardStatus == "pending";
-          case "Fulfilled":
-            return lastForwardStatus == "fulfilled";
-          case "Needs Change":
-            return lastForwardStatus == "needsChange";
-          default:
-            return true;
-        }
-      }).toList();
-    }
-
-    final searchTerm = _searchController.text.toLowerCase();
-    if (searchTerm.isNotEmpty) {
-      filtered = filtered.where((request) {
-        final title = (request["title"] ?? "").toLowerCase();
-        final creator = (request["creator"]?["name"] ?? request["creatorName"] ?? "").toLowerCase();
-        return title.contains(searchTerm) || creator.contains(searchTerm);
-      }).toList();
-    }
-
-    setState(() {
-      filteredRequests = filtered;
-      paginatedRequests = filtered; // الداتا جاية من السيرفر مـ paginated أصلاً
+  // البحث مع Debounce لتقليل ضغط الـ API
+  void _onSearchChanged(String value) {
+    if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      fetchRequests(page: 1);
     });
   }
 
@@ -465,7 +436,7 @@ class _AdministrativeDashboardPageState
             vertical: isMobile ? 12 : 14,
           ),
         ),
-        onChanged: (value) => _applyLocalFilters(),
+        onChanged: _onSearchChanged,
       ),
     );
   }
@@ -480,7 +451,7 @@ class _AdministrativeDashboardPageState
       typeNames: typeNames,
       statuses: statuses,
       isMobile: isMobile,
-      onSearchChanged: (value) => _applyLocalFilters(),
+      onSearchChanged: _onSearchChanged,
       onPriorityChanged: (value) {
         setState(() => selectedPriority = value!);
         fetchRequests(page: 1);
@@ -491,7 +462,7 @@ class _AdministrativeDashboardPageState
       },
       onStatusChanged: (value) {
         setState(() => selectedStatus = value!);
-        _applyLocalFilters();
+        fetchRequests(page: 1);
       },
     );
   }
@@ -514,10 +485,10 @@ class _AdministrativeDashboardPageState
       children: [
         ...paginatedRequests.map((req) {
           final id = req["id"].toString();
-          final title = req["title"] ?? "No Title";
-          final type = req["type"]?["name"] ?? req["typeName"] ?? "N/A";
-          final priority = req["priority"] ?? "N/A";
-          final creator = req["creator"]?["name"] ?? req["creatorName"] ?? "Unknown";
+          final title = req["title"] ?? AppLocalizations.of(context)!.translate('no_title');
+          final type = req["type"]?["name"] ?? req["typeName"] ?? AppLocalizations.of(context)!.translate('n_a');
+          final priority = req["priority"] ?? AppLocalizations.of(context)!.translate('n_a');
+          final creator = req["creator"]?["name"] ?? req["creatorName"] ?? AppLocalizations.of(context)!.translate('unknown');
           final lastForwardStatus = req["lastForwardStatus"];
           final statusInfo = DashboardHelpers.getStatusInfo(lastForwardStatus);
           final documentsCount = req["documentsCount"] ?? 0;
@@ -719,7 +690,7 @@ class _AdministrativeDashboardPageState
               const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               isDense: true,
             ),
-            onChanged: (value) => _applyLocalFilters(),
+            onChanged: _onSearchChanged,
           ),
           const SizedBox(height: 12),
           Row(
@@ -769,7 +740,7 @@ class _AdministrativeDashboardPageState
                     selectedStatus,
                         (value) {
                       setState(() => selectedStatus = value);
-                      _applyLocalFilters();
+                      fetchRequests(page: 1);
                     },
                   ),
                 ),
@@ -949,10 +920,16 @@ class _AdministrativeDashboardPageState
       itemBuilder: (context, index) {
         final req = paginatedRequests[index];
         final id = req["id"].toString();
-        final title = req["title"] ?? "No Title";
-        final type = req["type"]?["name"] ?? req["typeName"] ?? "N/A";
-        final priority = req["priority"] ?? "N/A";
-        final creator = req["creator"]?["name"] ?? req["creatorName"] ?? "Unknown";
+        final title =
+            req["title"] ?? AppLocalizations.of(context)!.translate('no_title');
+        final type = req["type"]?["name"] ??
+            req["typeName"] ??
+            AppLocalizations.of(context)!.translate('n_a');
+        final priority =
+            req["priority"] ?? AppLocalizations.of(context)!.translate('n_a');
+        final creator = req["creator"]?["name"] ??
+            req["creatorName"] ??
+            AppLocalizations.of(context)!.translate('unknown');
         final lastForwardStatus = req["lastForwardStatus"];
         final statusInfo = DashboardHelpers.getStatusInfo(lastForwardStatus);
         final documentsCount = req["documentsCount"] ?? 0;
@@ -991,5 +968,12 @@ class _AdministrativeDashboardPageState
         );
       },
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 }

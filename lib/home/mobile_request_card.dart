@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import 'dashboard_colors.dart';
 import 'dashboard_helpers.dart';
+import 'package:intl/intl.dart';
 
 class MobileRequestCard extends StatelessWidget {
   final String id;
@@ -40,9 +41,9 @@ class MobileRequestCard extends StatelessWidget {
   String _formatDate(String dateString) {
     try {
       final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year}'; // ✅ التاريخ الفعلي دائماً
+      return DateFormat('MMM dd, yyyy - HH:mm').format(date);
     } catch (e) {
-      return dateString.substring(0, 10);
+      return dateString.length > 10 ? dateString.substring(0, 10) : dateString;
     }
   }
 
@@ -121,17 +122,6 @@ class MobileRequestCard extends StatelessWidget {
               // معلومات المرسل والتاريخ
               Row(
                 children: [
-                  Icon(Icons.person_rounded, size: 12, color: AppColors.textSecondary),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      "${AppLocalizations.of(context)!.translate('by')}: $creator",
-                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   Icon(Icons.calendar_today_rounded, size: 10, color: AppColors.textSecondary),
                   const SizedBox(width: 2),
                   Text(

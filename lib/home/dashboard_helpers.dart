@@ -22,7 +22,9 @@ class DashboardHelpers {
           'color': AppColors.statusWaiting,
           'icon': Icons.hourglass_empty_rounded,
         };
-      case "needsChange":  // حالة جديدة
+      case "needsChange":
+      case "needs_editing":
+      case "needs-editing":
         return {
           'text': 'Needs Change',
           'color': AppColors.statusNeedsChange,

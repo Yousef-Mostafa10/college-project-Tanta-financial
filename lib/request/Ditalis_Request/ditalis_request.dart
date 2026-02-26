@@ -383,7 +383,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
     try {
       setState(() {
-        _downloadProgress[fileName] = '📥 Downloading...';
+        _downloadProgress[fileName] = AppLocalizations.of(context)!.translate('downloading_status');
       });
 
       final response = await http.get(
@@ -521,7 +521,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     } catch (e) {
       print('Error getting file size: $e');
     }
-    return 'Unknown';
+    return AppLocalizations.of(context)!.translate('unknown');
   }
 
   void _openFileLocation(String filePath) async {
@@ -982,7 +982,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                         ),
                       ),
                       Text(
-                        'ID: $fileId',
+                        '${AppLocalizations.of(context)!.translate('file_id_label')}: $fileId',
                         style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                       ),
                     ],
@@ -1030,7 +1030,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                     shape: BoxShape.circle,
                   ),
                 ),
-                Text('ID: $fileId',
+                Text('${AppLocalizations.of(context)!.translate('file_id_label')}: $fileId',
                     style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
               ],
             ],

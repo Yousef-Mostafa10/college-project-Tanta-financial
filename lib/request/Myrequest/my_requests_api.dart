@@ -265,62 +265,65 @@ class MyRequestsApi {
   }
 
   // 🔹 جلب المستخدمين (paginated)
-  Future<List<dynamic>> fetchUsers() async {
-    if (userToken == null) return [];
-
-    List<dynamic> allUsers = [];
-    int currentPage = 1;
-    bool hasMore = true;
+  Future<Map<String, dynamic>> fetchUsers({int page = 1, int perPage = 10}) async {
+    if (userToken == null) return {'users': [], 'hasMore': false};
 
     try {
-      while (hasMore) {
-        final response = await http.get(
-          Uri.parse("$baseUrl/users?page=$currentPage&perPage=50"),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $userToken',
-          },
-        );
+      final response = await http.get(
+        Uri.parse("$baseUrl/users?page=$page&perPage=$perPage"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $userToken',
+        },
+      );
 
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          List<dynamic> pageUsers = [];
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        List<dynamic> pageUsers = [];
 
-          if (data is Map) {
-            pageUsers = data['data'] ?? data['users'] ?? [];
-          } else if (data is List) {
-            pageUsers = data;
-          }
-
-          allUsers.addAll(pageUsers);
-
-          final pagination = data is Map ? data['pagination'] : null;
-          if (pagination != null && pagination['next'] != null) {
-            currentPage = pagination['next'];
-          } else {
-            hasMore = false;
-          }
-        } else {
-          hasMore = false;
+        if (data is Map) {
+          pageUsers = data['data'] ?? data['users'] ?? [];
+        } else if (data is List) {
+          pageUsers = data;
         }
-      }
 
-      final uniqueUsers = <dynamic>[];
-      final seenIds = <dynamic>{};
-
-      for (var user in allUsers) {
-        final userId = user["id"] ?? user["_id"] ?? user["name"];
-        if (!seenIds.contains(userId)) {
-          seenIds.add(userId);
-          uniqueUsers.add(user);
+        bool hasMore = false;
+        if (data is Map && data['pagination'] != null) {
+          hasMore = data['pagination']['next'] != null;
         }
-      }
 
-      return uniqueUsers;
+        return {
+          'users': pageUsers,
+          'hasMore': hasMore,
+        };
+      }
+      return {'users': [], 'hasMore': false};
     } catch (e) {
       print("❌ Error in fetchUsers: $e");
-      return [];
+      return {'users': [], 'hasMore': false};
     }
+  }
+
+  // Helper method to resolve name to ID
+  Future<int?> resolveUserNameToId(String name) async {
+    if (userToken == null) return null;
+    int currentPage = 1;
+    bool hasMore = true;
+    try {
+      while (hasMore) {
+        final result = await fetchUsers(page: currentPage, perPage: 50);
+        final users = result['users'] as List;
+        final user = users.firstWhere((u) => u['name'] == name, orElse: () => null);
+        if (user != null) {
+          return user['id'] is int ? user['id'] : int.tryParse(user['id'].toString());
+        }
+        hasMore = result['hasMore'];
+        currentPage++;
+      }
+    } catch (e) {
+      print("❌ Error resolving user: $e");
+    }
+    return null;
   }
 
   // 🔹 إرسال المعاملة لمستخدم آخر (Forward)
@@ -328,19 +331,12 @@ class MyRequestsApi {
     if (userToken == null) return false;
 
     try {
-      final users = await fetchUsers();
-      final user = users.firstWhere(
-        (u) => u['name'] == receiverName,
-        orElse: () => null,
-      );
+      final receiverId = await resolveUserNameToId(receiverName);
 
-      if (user == null) {
+      if (receiverId == null) {
         print("❌ Could not resolve receiver for: $receiverName");
         return false;
       }
-
-      final receiverId = user['id'] is int ? user['id'] : int.tryParse(user['id'].toString());
-      if (receiverId == null) return false;
 
       final response = await http.post(
         Uri.parse("$baseUrl/transaction/$transactionId/forward"),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_config.dart';
+import '../l10n/app_localizations.dart';
 
 class DepartmentsPage extends StatefulWidget {
   const DepartmentsPage({Key? key}) : super(key: key);
@@ -112,7 +113,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
     } catch (e) {
       setState(() {
         isLoading = false;
-        errorMessage = 'Failed to load departments';
+        errorMessage = AppLocalizations.of(context)!.translate('failed_load_depts');
       });
       print('Error fetching departments: $e');
     }
@@ -232,7 +233,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Department "$name" added successfully'),
+              content: Text(AppLocalizations.of(context)!.translate('dept_added_success').replaceAll('{name}', name)),
               backgroundColor: AppColors.accentGreen,
             ),
           );
@@ -242,7 +243,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to add department'),
+            content: Text(AppLocalizations.of(context)!.translate('dept_add_failed')),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -297,7 +298,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Department updated successfully'),
+              content: Text(AppLocalizations.of(context)!.translate('dept_updated_success')),
               backgroundColor: AppColors.accentGreen,
             ),
           );
@@ -307,7 +308,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update department: ${e.toString()}'),
+            content: Text('${AppLocalizations.of(context)!.translate('dept_update_failed')}: ${e.toString()}'),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -334,35 +335,35 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Department "$name" deleted successfully'),
+              content: Text(AppLocalizations.of(context)!.translate('dept_deleted_success').replaceAll('{name}', name)),
               backgroundColor: AppColors.accentRed,
             ),
           );
         }
       }
     } on DioException catch (e) {
-      String errorMessage = 'Failed to delete department';
+      String statusErrorMessage = AppLocalizations.of(context)!.translate('dept_delete_failed');
       
       if (e.response != null) {
         if (e.response!.statusCode == 500) {
-          errorMessage = 'Cannot delete: This department may have associated users or data';
+          statusErrorMessage = AppLocalizations.of(context)!.translate('delete_associated_error');
         } else if (e.response!.statusCode == 403) {
-          errorMessage = 'Permission denied';
+          statusErrorMessage = AppLocalizations.of(context)!.translate('permission_error');
         } else if (e.response!.statusCode == 404) {
-          errorMessage = 'Department not found';
+          statusErrorMessage = AppLocalizations.of(context)!.translate('user_not_found'); // Assuming user/dept sharing same key or just 'not found'
         } else {
-          errorMessage = 'Server error (${e.response!.statusCode})';
+          statusErrorMessage = 'Server error (${e.response!.statusCode})';
         }
       } else {
-        errorMessage = 'Connection error: ${e.message}';
+        statusErrorMessage = '${AppLocalizations.of(context)!.translate('connection_error')}: ${e.message}';
       }
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text(statusErrorMessage),
             backgroundColor: AppColors.accentRed,
-            duration: Duration(seconds: 4),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -372,7 +373,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Unexpected error: ${e.toString()}'),
+            content: Text('${AppLocalizations.of(context)!.translate('unknown_error')}: ${e.toString()}'),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -403,9 +404,9 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Add New Department',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context)!.translate('add_new_dept'),
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
@@ -415,7 +416,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     TextField(
                       controller: nameController,
                       decoration: InputDecoration(
-                        labelText: 'Department Name',
+                        labelText: AppLocalizations.of(context)!.translate('dept_name_label'),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -436,7 +437,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                       },
                       child: InputDecorator(
                         decoration: InputDecoration(
-                          labelText: 'Manager (Optional)',
+                          labelText: AppLocalizations.of(context)!.translate('manager_optional'),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -456,7 +457,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                         child: Text(
                           selectedManagerId != null
                               ? '$selectedManagerName  (ID: $selectedManagerId)'
-                              : 'Tap to select manager',
+                              : AppLocalizations.of(context)!.translate('tap_to_select_manager'),
                           style: TextStyle(
                             color: selectedManagerId != null
                                 ? AppColors.textPrimary
@@ -487,7 +488,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: const Text('Add', style: TextStyle(color: Colors.black)),
+                            child: Text(AppLocalizations.of(context)!.translate('add'), style: const TextStyle(color: Colors.black)),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -501,7 +502,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                               ),
                               side: const BorderSide(color: AppColors.textMuted),
                             ),
-                            child: const Text('Cancel'),
+                            child: Text(AppLocalizations.of(context)!.translate('cancel')),
                           ),
                         ),
                       ],
@@ -538,9 +539,9 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Edit Department',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context)!.translate('edit_dept'),
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
@@ -550,7 +551,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     TextField(
                       controller: nameController,
                       decoration: InputDecoration(
-                        labelText: 'Department Name',
+                        labelText: AppLocalizations.of(context)!.translate('dept_name_label'),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -571,7 +572,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                       },
                       child: InputDecorator(
                         decoration: InputDecoration(
-                          labelText: 'Manager (Optional)',
+                          labelText: AppLocalizations.of(context)!.translate('manager_optional'),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -591,7 +592,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                         child: Text(
                           selectedManagerId != null
                               ? '${selectedManagerName ?? 'User'}  (ID: $selectedManagerId)'
-                              : 'Tap to select manager',
+                              : AppLocalizations.of(context)!.translate('tap_to_select_manager'),
                           style: TextStyle(
                             color: selectedManagerId != null
                                 ? AppColors.textPrimary
@@ -621,7 +622,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: const Text('Save Changes'),
+                            child: Text(AppLocalizations.of(context)!.translate('save_changes')),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -745,9 +746,9 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                       children: [
                         const Icon(Icons.person_search, color: AppColors.primary),
                         const SizedBox(width: 10),
-                        const Text(
-                          'Select Manager',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.translate('select_manager'),
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
@@ -765,7 +766,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     TextField(
                       controller: searchCtrl,
                       decoration: InputDecoration(
-                        hintText: 'Search by name or ID...',
+                        hintText: AppLocalizations.of(context)!.translate('search_user_name_id'),
                         prefixIcon: const Icon(Icons.search, size: 20),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -796,8 +797,8 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                               child: CircularProgressIndicator(color: AppColors.primary),
                             )
                           : filteredUsers.isEmpty
-                              ? const Center(
-                                  child: Text('No users found', style: TextStyle(color: AppColors.textMuted)),
+                              ? Center(
+                                  child: Text(AppLocalizations.of(context)!.translate('no_users_found'), style: const TextStyle(color: AppColors.textMuted)),
                                 )
                               : NotificationListener<ScrollNotification>(
                                   onNotification: (scrollInfo) {
@@ -825,9 +826,9 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                                       strokeWidth: 2,
                                                     ),
                                                   )
-                                                : const Text(
-                                                    'Scroll for more...',
-                                                    style: TextStyle(
+                                                : Text(
+                                                    AppLocalizations.of(context)!.translate('scroll_for_more'),
+                                                    style: const TextStyle(
                                                       color: AppColors.textMuted,
                                                       fontSize: 12,
                                                     ),
@@ -888,7 +889,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           children: [
             Icon(Icons.warning_rounded, color: AppColors.accentRed, size: 28),
             SizedBox(width: 12),
-            Text('Confirm Delete', style: TextStyle(color: AppColors.textPrimary)),
+            Text(AppLocalizations.of(context)!.translate('confirm_delete_title'), style: const TextStyle(color: AppColors.textPrimary)),
           ],
         ),
         content: Column(
@@ -896,8 +897,8 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Are you sure you want to delete the department:',
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+              AppLocalizations.of(context)!.translate('confirm_delete_dept'),
+              style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
             ),
             SizedBox(height: 8),
             Text(
@@ -922,8 +923,8 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Note: If this department has users, deletion may fail.',
-                      style: TextStyle(
+                      AppLocalizations.of(context)!.translate('delete_note_users'),
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.accentRed,
                       ),
@@ -937,7 +938,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.translate('cancel')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -948,7 +949,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
               backgroundColor: AppColors.accentRed,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.translate('delete')),
           ),
         ],
       ),
@@ -960,9 +961,9 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
     return Scaffold(
       backgroundColor: AppColors.bodyBg,
       appBar: AppBar(
-        title: const Text(
-          'Departments Management',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.translate('departments_management'),
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -997,7 +998,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
               child: TextField(
                 controller: searchController,
                 decoration: InputDecoration(
-                  hintText: 'Search by department name...',
+                  hintText: AppLocalizations.of(context)!.translate('search_dept_hint'),
                   hintStyle: const TextStyle(color: AppColors.textMuted),
                   prefixIcon: const Icon(Icons.search, color: AppColors.primary),
                   suffixIcon: searchController.text.isNotEmpty
@@ -1035,7 +1036,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                       const Icon(Icons.corporate_fare, size: 16, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Text(
-                        'Total Departments: $_totalDepartments',
+                        AppLocalizations.of(context)!.translate('total_departments').replaceAll('{count}', '$_totalDepartments'),
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w500,
@@ -1078,7 +1079,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                     ),
-                    child: const Text('Retry'),
+                    child: Text(AppLocalizations.of(context)!.translate('retry')),
                   ),
                 ],
               ),
@@ -1096,8 +1097,8 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                   const SizedBox(height: 16),
                   Text(
                     searchController.text.isEmpty
-                        ? 'No departments found'
-                        : 'No search results',
+                        ? AppLocalizations.of(context)!.translate('no_depts_found')
+                        : AppLocalizations.of(context)!.translate('no_search_results'),
                     style: TextStyle(
                       fontSize: 16,
                       color: AppColors.textMuted,
@@ -1205,7 +1206,7 @@ class DepartmentCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 // Department Name
                 Text(
-                  department['name'] ?? 'No name',
+                  department['name'] ?? AppLocalizations.of(context)!.translate('untitled_dept'),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -1227,8 +1228,8 @@ class DepartmentCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         department['managerId'] != null 
-                            ? 'Manager ID: ${department['managerId']}'
-                            : 'No manager assigned',
+                            ? AppLocalizations.of(context)!.translate('manager_id_label').replaceAll('{id}', '${department['managerId']}')
+                            : AppLocalizations.of(context)!.translate('no_manager_assigned'),
                         style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary,
@@ -1264,23 +1265,23 @@ class DepartmentCard extends StatelessWidget {
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'edit',
                   child: Row(
                     children: [
-                      Icon(Icons.edit, color: AppColors.accentBlue, size: 20),
-                      SizedBox(width: 8),
-                      Text('Edit'),
+                      const Icon(Icons.edit, color: AppColors.accentBlue, size: 20),
+                      const SizedBox(width: 8),
+                      Text(AppLocalizations.of(context)!.translate('edit')),
                     ],
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete, color: AppColors.accentRed, size: 20),
-                      SizedBox(width: 8),
-                      Text('Delete'),
+                      const Icon(Icons.delete, color: AppColors.accentRed, size: 20),
+                      const SizedBox(width: 8),
+                      Text(AppLocalizations.of(context)!.translate('delete')),
                     ],
                   ),
                 ),

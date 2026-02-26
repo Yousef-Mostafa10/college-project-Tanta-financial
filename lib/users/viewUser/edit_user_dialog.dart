@@ -96,7 +96,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
         borderRadius: BorderRadius.circular(widget.isMobile ? 16 : 20),
       ),
       title: Text(
-        AppLocalizations.of(context)!.translate('edit_user') ?? 'Edit User',
+        AppLocalizations.of(context)!.translate('edit_user'),
         style: TextStyle(
           fontWeight: FontWeight.bold,
           color: AppColors.primary,
@@ -110,19 +110,19 @@ class _EditUserDialogState extends State<EditUserDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildLabel(AppLocalizations.of(context)!.translate('name_label') ?? 'Name'),
+              _buildLabel(AppLocalizations.of(context)!.translate('name_label')),
               TextFormField(
                 controller: _nameController,
                 decoration: _buildInputDecoration(Icons.person),
-                validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                validator: (v) => (v == null || v.isEmpty) ? AppLocalizations.of(context)!.translate('required') : null,
               ),
               SizedBox(height: 12),
 
-              _buildLabel(AppLocalizations.of(context)!.translate('department') ?? 'Department'),
+              _buildLabel(AppLocalizations.of(context)!.translate('department_name')),
               _departments.isEmpty
                   ? Text(
-                'No departments found',
-                style: TextStyle(color: Colors.red, fontSize: 12),
+                AppLocalizations.of(context)!.translate('no_departments_found'),
+                style: const TextStyle(color: Colors.red, fontSize: 12),
               )
                   : DropdownButtonFormField<String>(
                 value: _selectedDepartment,
@@ -135,12 +135,12 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     .toList(),
                 onChanged: (v) => setState(() => _selectedDepartment = v),
                 hint: Text(
-                  AppLocalizations.of(context)!.translate('select_department') ?? 'Select Dept',
+                  AppLocalizations.of(context)!.translate('select_department'),
                 ),
               ),
               SizedBox(height: 12),
 
-              _buildLabel(AppLocalizations.of(context)!.translate('role_label') ?? 'Role'),
+              _buildLabel(AppLocalizations.of(context)!.translate('role_label')),
               DropdownButtonFormField<String>(
                 value: _selectedRole,
                 decoration: _buildInputDecoration(Icons.admin_panel_settings),
@@ -158,7 +158,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
               ),
               SizedBox(height: 12),
 
-              _buildLabel(AppLocalizations.of(context)!.translate('password') ?? 'Password'),
+              _buildLabel(AppLocalizations.of(context)!.translate('password')),
               TextFormField(
                 controller: _passwordController,
                 obscureText: !_showPassword,
@@ -169,7 +169,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     ),
                     onPressed: () => setState(() => _showPassword = !_showPassword),
                   ),
-                  hintText: 'Enter new password or leave as is',
+                  hintText: AppLocalizations.of(context)!.translate('enter_password_hint'),
                 ),
                 onTap: () {
                   if (_passwordController.text == _currentPasswordPlaceholder) {
@@ -181,7 +181,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
               Row(
                 children: [
-                  Text(AppLocalizations.of(context)!.translate('active_status') ?? 'Active Status'),
+                  Text(AppLocalizations.of(context)!.translate('active_status')),
                   const Spacer(),
                   Switch(
                     value: _isActive,
@@ -214,7 +214,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
               color: Colors.white,
             ),
           )
-              : Text(AppLocalizations.of(context)!.translate('save') ?? 'Save'),
+              : Text(AppLocalizations.of(context)!.translate('save')),
         ),
       ],
     );
@@ -268,7 +268,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
       );
 
       if (mounted) {
-        UsersHelpers.showSuccessMessage(context, 'User updated successfully');
+        UsersHelpers.showSuccessMessage(context, AppLocalizations.of(context)!.translate('user_updated_success'));
         Navigator.pop(context, true);
       }
     } catch (e) {

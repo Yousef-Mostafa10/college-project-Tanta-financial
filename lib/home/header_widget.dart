@@ -56,8 +56,11 @@ class HeaderWidget extends StatelessWidget {
             ),
             child: Text(
               itemCount > 0
-                  ? '$startIndex-$endIndex من $itemCount'
-                  : '0 معاملة',
+                  ? AppLocalizations.of(context)!.translate('showing_range')
+                      .replaceFirst('{start}', startIndex.toString())
+                      .replaceFirst('{end}', endIndex.toString())
+                      .replaceFirst('{total}', itemCount.toString())
+                  : AppLocalizations.of(context)!.translate('transactions_count').replaceFirst('{count}', '0'),
               style: TextStyle(
                 fontSize: isMobile ? 10 : 12,
                 color: AppColors.primary,

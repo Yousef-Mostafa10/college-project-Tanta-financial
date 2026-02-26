@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import 'dashboard_colors.dart';
 import 'dashboard_helpers.dart';
+import 'package:intl/intl.dart';
 
 class DesktopRequestCard extends StatelessWidget {
   final String id;
@@ -40,9 +41,9 @@ class DesktopRequestCard extends StatelessWidget {
   String _formatDate(String dateString) {
     try {
       final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year}'; // ✅ التاريخ الفعلي دائماً
+      return DateFormat('MMM dd, yyyy - HH:mm').format(date);
     } catch (e) {
-      return dateString.substring(0, 10);
+      return dateString.length > 10 ? dateString.substring(0, 10) : dateString;
     }
   }
 
@@ -119,13 +120,6 @@ class DesktopRequestCard extends StatelessWidget {
             // 2️⃣ معلومات المرسل والتاريخ
             Row(
               children: [
-                Icon(Icons.person_rounded, size: 14, color: AppColors.textSecondary),
-                const SizedBox(width: 6),
-                Text(
-                  "${AppLocalizations.of(context)!.translate('by')}: $creator",
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                ),
-                const SizedBox(width: 16),
                 Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.textSecondary),
                 const SizedBox(width: 4),
                 Text(
@@ -143,7 +137,7 @@ class DesktopRequestCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 _buildChip(displayPriority, Icons.flag_outlined, priorityColor),
                 const SizedBox(width: 8),
-                _buildDocumentsChip(),
+                _buildDocumentsChip(context),
                 const Spacer(),
 
                 // 4️⃣ أزرار الإجراءات
@@ -252,11 +246,11 @@ class DesktopRequestCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDocumentsChip() {
+  Widget _buildDocumentsChip(BuildContext context) {
     final color = documentsCount > 0 ? AppColors.primary : AppColors.textMuted;
     final text = documentsCount > 0
-        ? '$documentsCount ${documentsCount == 1 ? 'ملف' : 'ملفات'}'
-        : 'لا يوجد مرفقات';
+        ? '$documentsCount ${documentsCount == 1 ? AppLocalizations.of(context)!.translate('file') : AppLocalizations.of(context)!.translate('files')}'
+        : AppLocalizations.of(context)!.translate('no_attachments');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

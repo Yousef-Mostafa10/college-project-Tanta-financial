@@ -229,9 +229,9 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         await _fetchRequestTypes();
-        _showSuccessSnackBar('Type created successfully!');
+        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_type_created'));
       } else {
-        _showErrorSnackBar('Failed to create type: ${response.statusCode}');
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('request_type_create_failed').replaceFirst('{error}', response.statusCode.toString()));
       }
     } catch (e) {
       _showErrorSnackBar('Error: $e');
@@ -250,9 +250,9 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         await _fetchRequestTypes();
-        _showSuccessSnackBar('Type deleted successfully!');
+        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_type_deleted'));
       } else {
-        _showErrorSnackBar('Failed to delete: ${response.statusCode}');
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('request_type_delete_failed').replaceFirst('{error}', response.statusCode.toString()));
       }
     } catch (e) {
       _showErrorSnackBar('Error: $e');
@@ -265,7 +265,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          title: Text('Manage Request Types'),
+          title: Text(AppLocalizations.of(context)!.translate('manage_request_types')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -274,7 +274,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                   Expanded(
                     child: TextField(
                       controller: nameController,
-                      decoration: InputDecoration(hintText: 'New type name'),
+                      decoration: InputDecoration(hintText: AppLocalizations.of(context)!.translate('new_type_name_hint')),
                     ),
                   ),
                   IconButton(
@@ -300,7 +300,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                     final type = _requestTypesData[index];
                     return ListTile(
                       title: Text(type.name),
-                      subtitle: Text('By: ${type.creatorName}', style: TextStyle(fontSize: 10)),
+                      subtitle: Text(AppLocalizations.of(context)!.translate('type_by').replaceFirst('{name}', type.creatorName), style: TextStyle(fontSize: 10)),
                       trailing: IconButton(
                         icon: Icon(Icons.delete_outline, color: AppColors.accentRed, size: 20),
                         onPressed: () {
@@ -315,7 +315,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text('Close')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text(AppLocalizations.of(context)!.translate('close'))),
           ],
         ),
       ),
@@ -345,7 +345,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
         debugPrint('📄 Transaction details: ${response.body}');
 
         if (data == null) {
-          _showErrorSnackBar('No transaction data found');
+          _showErrorSnackBar(AppLocalizations.of(context)!.translate('no_transaction_data'));
           return;
         }
 
@@ -368,7 +368,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
           _checkPermissions(data);
         });
       } else {
-        _showErrorSnackBar('Failed to load request details: ${response.statusCode}');
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('failed_load_request_details').replaceFirst('{error}', response.statusCode.toString()));
       }
     } catch (e) {
       _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
@@ -487,7 +487,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
         debugPrint('✅ Sender comment updated successfully');
       } else {
         debugPrint('❌ Failed to update comment: ${response.statusCode}');
-        _showErrorSnackBar('Failed to update comment: ${response.statusCode}');
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('sender_comment_update_failed').replaceFirst('{error}', response.statusCode.toString()));
       }
     } catch (e) {
       debugPrint('❌ Error updating comment: $e');
@@ -693,7 +693,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Select Files',
+                        AppLocalizations.of(context)!.translate('select_files'),
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -719,7 +719,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                       child: Icon(Icons.cloud_upload_rounded, color: AppColors.accentBlue),
                     ),
                     title: Text(
-                      'Upload New Files',
+                      AppLocalizations.of(context)!.translate('upload_new_files'),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -727,7 +727,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                       ),
                     ),
                     subtitle: Text(
-                      'Select PDF files from your device',
+                      AppLocalizations.of(context)!.translate('select_pdf_hint'),
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
@@ -774,7 +774,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                       Icon(Icons.history_rounded, size: 20, color: AppColors.primary),
                       SizedBox(width: 8),
                       Text(
-                        'Previously Uploaded Files',
+                        AppLocalizations.of(context)!.translate('previously_uploaded_files'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -795,7 +795,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                               children: [
                                 Icon(Icons.folder_open_rounded, size: 32, color: AppColors.textMuted),
                                 SizedBox(height: 8),
-                                Text('No previous files found', style: TextStyle(color: AppColors.textMuted)),
+                                Text(AppLocalizations.of(context)!.translate('no_previous_files'), style: TextStyle(color: AppColors.textMuted)),
                               ],
                             ),
                           )
@@ -821,7 +821,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                                               height: 24,
                                               child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
                                             )
-                                          : Text('Scroll for more...', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                                          : Text(AppLocalizations.of(context)!.translate('scroll_for_more'), style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                                     ),
                                   );
                                 }
@@ -836,7 +836,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                                     child: Icon(Icons.description_rounded, color: AppColors.primary, size: 20),
                                   ),
                                   title: Text(
-                                    doc['title'] ?? 'Untitled',
+                                    doc['title'] ?? AppLocalizations.of(context)!.translate('untitled'),
                                     style: TextStyle(
                                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                       color: isSelected ? AppColors.primary : AppColors.textPrimary,
@@ -846,7 +846,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                                   ),
                                   subtitle: Text(
                                     isAlreadyAttached
-                                        ? 'Already attached to this request'
+                                        ? AppLocalizations.of(context)!.translate('already_attached')
                                         : _formatDate(doc['uploadedAt'] ?? ''),
                                     style: TextStyle(
                                       fontSize: 11,
@@ -886,7 +886,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Selected Files:',
+                          AppLocalizations.of(context)!.translate('selected_files_label'),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
@@ -915,7 +915,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                         padding: EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: Text(
-                        'Done',
+                        AppLocalizations.of(context)!.translate('done'),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -1013,7 +1013,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
           final exists = _documents.any((d) => d['id'] == documentId);
           if (!exists) {
             _documents.add(doc);
-            _recentlyLinkedFiles.add(doc['title'] ?? 'Existing File');
+            _recentlyLinkedFiles.add(doc['title'] ?? AppLocalizations.of(context)!.translate('untitled'));
           }
         });
       } catch (e) {
@@ -1135,7 +1135,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
         _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_updated_success_details'));
         await _fetchRequestDetails();
       } else {
-        _showErrorSnackBar('Failed to update request with status: ${response.statusCode}');
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('failed_update_request_status').replaceFirst('{status}', response.statusCode.toString()));
       }
     } catch (e) {
       _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
@@ -1202,7 +1202,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                     SizedBox(width: isMobile ? 8 : 12),
                     Expanded(
                       child: Text(
-                        '${_recentlyLinkedFiles.length} file(s) linked successfully',
+                        AppLocalizations.of(context)!.translate('files_linked_success').replaceFirst('{count}', _recentlyLinkedFiles.length.toString()),
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: isMobile ? 14 : 16,
@@ -1264,7 +1264,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
         // عرض الملفات المختارة (جديدة + قديمة) قبل الرفع
         if (_selectedFiles.isNotEmpty || _selectedPreviousDocuments.isNotEmpty) ...[
           Text(
-            'Files to be added:',
+            AppLocalizations.of(context)!.translate('files_to_be_added'),
             style: TextStyle(
               fontSize: isMobile ? 14 : 16,
               fontWeight: FontWeight.bold,
@@ -1294,7 +1294,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        doc['title'] ?? 'Existing File',
+                        doc['title'] ?? AppLocalizations.of(context)!.translate('untitled'),
                         style: TextStyle(
                           fontSize: isMobile ? 13 : 14,
                           color: AppColors.textPrimary,
@@ -1303,7 +1303,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        'Existing file',
+                        AppLocalizations.of(context)!.translate('existing_file'),
                         style: TextStyle(
                           fontSize: isMobile ? 11 : 12,
                           color: AppColors.accentGreen,
@@ -1382,7 +1382,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
           onPressed: _showFileSelectionMenu,
           icon: Icon(Icons.add, size: isMobile ? 18 : 20),
           label: Text(
-            'Add Files',
+            AppLocalizations.of(context)!.translate('add_files'),
             style: TextStyle(fontSize: isMobile ? 14 : 16),
           ),
           style: ElevatedButton.styleFrom(
@@ -1427,7 +1427,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ID: $fileId | Uploaded by: $uploader',
+              '${AppLocalizations.of(context)!.translate('file_id_value').replaceFirst('{id}', fileId)} | ${AppLocalizations.of(context)!.translate('uploaded_by_user').replaceFirst('{name}', uploader)}',
               style: TextStyle(
                 fontSize: isMobile ? 11 : 12,
                 color: AppColors.textSecondary,
@@ -1435,7 +1435,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
             if (uploadDate.isNotEmpty)
               Text(
-                'Uploaded: ${_formatDate(uploadDate)}',
+                AppLocalizations.of(context)!.translate('uploaded_at_date').replaceFirst('{date}', _formatDate(uploadDate)),
                 style: TextStyle(
                   fontSize: isMobile ? 10 : 11,
                   color: AppColors.textMuted,
@@ -1535,8 +1535,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        AppLocalizations.of(context)!.translate('view_only_mode_hint') ?? 
-                        'You are viewing this request. You can only upload new documents.',
+                        AppLocalizations.of(context)!.translate('view_only_mode_hint'),
                         style: TextStyle(color: AppColors.accentBlue, fontSize: 13, fontWeight: FontWeight.w500),
                       ),
                     ),
@@ -1603,7 +1602,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                 IconButton(
                   icon: Icon(Icons.settings, color: AppColors.primary, size: 20),
                   onPressed: _showManageTypesDialog,
-                  tooltip: 'Manage Request Types',
+                  tooltip: AppLocalizations.of(context)!.translate('manage_request_types'),
                 ),
               ],
             ),
@@ -1648,7 +1647,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                       ),
                       if (v != 'Request Type' && typeData.creatorName != 'System' && typeData.creatorName != '')
                         Text(
-                          'Created by: ${typeData.creatorName}',
+                          AppLocalizations.of(context)!.translate('created_by').replaceFirst('{name}', typeData.creatorName),
                           style: TextStyle(
                             fontSize: 10,
                             color: AppColors.textSecondary,
@@ -1802,9 +1801,9 @@ class _EditRequestPageState extends State<EditRequestPage> {
                       ),
                        suffixIcon: _forwardId == null
                            ? Tooltip(
-                               message: 'No forward found',
-                               child: Icon(Icons.info_outline, color: AppColors.textMuted, size: 18),
-                             )
+                                message: AppLocalizations.of(context)!.translate('no_forward_comment_hint'),
+                                child: Icon(Icons.info_outline, color: AppColors.textMuted, size: 18),
+                              )
                            : null,
                      ),
                      enabled: _forwardId != null, // 👈 متاح للتعديل لأي شخص له Forward ID خاص به

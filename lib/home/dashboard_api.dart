@@ -103,12 +103,14 @@ class DashboardAPI {
     }
   }
 
-  // ✅ جلب الطلبات مع Pagination
+  // ✅ جلب الطلبات مع Pagination وفلترة من السيرفر
   Future<Map<String, dynamic>> fetchAllRequests({
     int page = 1,
     int perPage = 10,
     String? priority,
     String? typeName,
+    String? search,
+    String? status,
   }) async {
     final token = await _getToken();
     if (token == null) throw Exception("No token found");
@@ -117,14 +119,45 @@ class DashboardAPI {
       'page': page.toString(),
       'perPage': perPage.toString(),
       'query': 'all',
-      if (priority != null && priority != 'All')
-        "priority": priority.toLowerCase(),
-      if (typeName != null && typeName != 'All Types')
-        "typeName": typeName,
     };
+
+    // فلترة الأولوية
+    if (priority != null && priority != 'All') {
+      queryParams["priority"] = priority.toUpperCase();
+    }
+
+    // فلترة النوع
+    if (typeName != null && typeName != 'All Types') {
+      queryParams["typeName"] = typeName;
+    }
+
+    // البحث بالـ Title أو الـ CreatorId
+    if (search != null && search.isNotEmpty) {
+      if (RegExp(r'^\d+$').hasMatch(search)) {
+        queryParams["creatorId"] = search;
+      } else {
+        queryParams["title"] = search;
+      }
+    }
+
+    // فلترة الحالة (Waiting, Approved, Rejected, Fulfilled, Needs Change)
+    if (status != null && status != 'All') {
+      if (status == 'Fulfilled') {
+        queryParams["fulfilled"] = "true";
+      } else {
+        // تحويل الحالة للشكل المتوقع في السيرفر (بالحروف الكبيرة)
+        String serverStatus = status.toUpperCase();
+        if (serverStatus == "NEEDS CHANGE") {
+          serverStatus = "NEEDS_EDITING";
+        }
+        queryParams["lastForwardStatus"] = serverStatus;
+      }
+    }
 
     final uri = Uri.parse("$_baseUrl/transactions")
         .replace(queryParameters: queryParams);
+
+    debugPrint("📡 Fetching transactions: $uri");
 
     final response = await http.get(
       uri,
