@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -651,23 +652,37 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
     );
   }
 
-  // 👤 User Picker Dialog - قائمة بسيطة لاختيار رئيس القسم
+  // 👤 User Picker Dialog - بحث حقيقي عبر الـ API
   Future<Map<String, dynamic>?> _showUserPickerDialog() async {
     List<Map<String, dynamic>> users = [];
-    List<Map<String, dynamic>> filteredUsers = [];
     bool isLoadingUsers = true;
     bool isLoadingMoreUsers = false;
     bool hasMoreUsers = true;
     int usersPage = 1;
     String currentSearchQuery = '';
     TextEditingController searchCtrl = TextEditingController();
+    Timer? _searchDebounce;
 
-    // دالة لجلب صفحة من المستخدمين
-    Future<void> fetchUsersPage(int page, void Function(void Function()) setPickerState) async {
+    bool initialLoadCalled = false;
+
+    // ✅ جلب صفحة من المستخدمين (مع دعم البحث بالـ name)
+    Future<void> fetchUsersPage(
+      int page,
+      void Function(void Function()) setPickerState, {
+      String searchQuery = '',
+      bool reset = false,
+    }) async {
       try {
         final headers = await _getAuthHeaders();
+
+        // ✅ استخدام الـ endpoint المخصص للبحث بالاسم
+        String endpoint = '/users?page=$page&perPage=10';
+        if (searchQuery.isNotEmpty) {
+          endpoint += '&name=${Uri.encodeComponent(searchQuery)}';
+        }
+
         final response = await _dio.get(
-          '/users?page=$page&perPage=10',
+          endpoint,
           options: Options(headers: headers),
         );
 
@@ -689,21 +704,15 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           }).toList();
 
           setPickerState(() {
-            users.addAll(newUsers);
+            if (reset) {
+              users = newUsers; // امسح القديم لو بحث جديد
+            } else {
+              users.addAll(newUsers); // أضف للقائمة (infinite scroll)
+            }
             usersPage = pagination?['currentPage'] ?? page;
             hasMoreUsers = pagination?['next'] != null;
             isLoadingUsers = false;
             isLoadingMoreUsers = false;
-            // تطبيق الفلتر الحالي
-            if (currentSearchQuery.isEmpty) {
-              filteredUsers = List.from(users);
-            } else {
-              final q = currentSearchQuery.toLowerCase();
-              filteredUsers = users.where((u) {
-                return u['name'].toString().toLowerCase().contains(q) ||
-                    u['id'].toString().contains(q);
-              }).toList();
-            }
           });
         } else {
           setPickerState(() {
@@ -726,9 +735,10 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setPickerState) {
-            // جلب المستخدمين أول مرة
-            if (isLoadingUsers && users.isEmpty) {
-              fetchUsersPage(1, setPickerState);
+            // جلب المستخدمين أول مرة فقط
+            if (!initialLoadCalled) {
+              initialLoadCalled = true;
+              fetchUsersPage(1, setPickerState, reset: true);
             }
 
             return Dialog(
@@ -762,58 +772,92 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Search
+
+                    // ✅ Search bar — بيعمل API call بالـ name
                     TextField(
                       controller: searchCtrl,
                       decoration: InputDecoration(
                         hintText: AppLocalizations.of(context)!.translate('search_user_name_id'),
                         prefixIcon: const Icon(Icons.search, size: 20),
+                        suffixIcon: isLoadingUsers && users.isNotEmpty
+                            ? const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.5,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              )
+                            : null,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         isDense: true,
                       ),
                       onChanged: (query) {
-                        setPickerState(() {
-                          currentSearchQuery = query;
-                          if (query.isEmpty) {
-                            filteredUsers = List.from(users);
-                          } else {
-                            final q = query.toLowerCase();
-                            filteredUsers = users.where((u) {
-                              return u['name'].toString().toLowerCase().contains(q) ||
-                                     u['id'].toString().contains(q);
-                            }).toList();
-                          }
+                        // debounce 400ms عشان ما نضغطش على السيرفر
+                        _searchDebounce?.cancel();
+                        _searchDebounce =
+                            Timer(const Duration(milliseconds: 400), () {
+                          currentSearchQuery = query.trim();
+                          setPickerState(() {
+                            isLoadingUsers = true;
+                            // users = []; // لا نمسح القائمة هنا لتجنب القفز في الـ UI، الـ reset في fetch سيقوم بالمهمة
+                            hasMoreUsers = false;
+                          });
+                          // ✅ API call بالـ name parameter
+                          fetchUsersPage(
+                            1,
+                            setPickerState,
+                            searchQuery: currentSearchQuery,
+                            reset: true,
+                          );
                         });
                       },
                     ),
                     const SizedBox(height: 12),
+
                     // List
                     Expanded(
-                      child: isLoadingUsers
+                      child: isLoadingUsers && users.isEmpty
                           ? const Center(
                               child: CircularProgressIndicator(color: AppColors.primary),
                             )
-                          : filteredUsers.isEmpty
+                          : users.isEmpty
                               ? Center(
-                                  child: Text(AppLocalizations.of(context)!.translate('no_users_found'), style: const TextStyle(color: AppColors.textMuted)),
+                                  child: Text(
+                                    AppLocalizations.of(context)!.translate('no_users_found'),
+                                    style: const TextStyle(color: AppColors.textMuted),
+                                  ),
                                 )
                               : NotificationListener<ScrollNotification>(
                                   onNotification: (scrollInfo) {
-                                    if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 100 &&
-                                        !isLoadingMoreUsers && hasMoreUsers && currentSearchQuery.isEmpty) {
-                                      isLoadingMoreUsers = true;
-                                      fetchUsersPage(usersPage + 1, setPickerState);
+                                    // Infinite scroll (يعمل في البحث والعادي)
+                                    if (scrollInfo.metrics.pixels >=
+                                            scrollInfo.metrics.maxScrollExtent - 100 &&
+                                        !isLoadingMoreUsers &&
+                                        hasMoreUsers) {
+                                      setPickerState(() => isLoadingMoreUsers = true);
+                                      fetchUsersPage(
+                                        usersPage + 1,
+                                        setPickerState,
+                                        searchQuery: currentSearchQuery,
+                                        reset: false,
+                                      );
                                     }
                                     return false;
                                   },
                                   child: ListView.builder(
-                                    itemCount: filteredUsers.length + (hasMoreUsers && currentSearchQuery.isEmpty ? 1 : 0),
+                                    itemCount: users.length +
+                                        (hasMoreUsers && currentSearchQuery.isEmpty ? 1 : 0),
                                     itemBuilder: (context, index) {
-                                      // عنصر تحميل المزيد
-                                      if (index >= filteredUsers.length) {
+                                      // Loading indicator في الأسفل
+                                      if (index >= users.length) {
                                         return Padding(
                                           padding: const EdgeInsets.all(16),
                                           child: Center(
@@ -827,7 +871,8 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                                     ),
                                                   )
                                                 : Text(
-                                                    AppLocalizations.of(context)!.translate('scroll_for_more'),
+                                                    AppLocalizations.of(context)!
+                                                        .translate('scroll_for_more'),
                                                     style: const TextStyle(
                                                       color: AppColors.textMuted,
                                                       fontSize: 12,
@@ -837,16 +882,19 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                         );
                                       }
 
-                                      final user = filteredUsers[index];
+                                      final user = users[index];
                                       return ListTile(
                                         dense: true,
                                         leading: CircleAvatar(
                                           radius: 16,
-                                          backgroundColor: AppColors.primary.withOpacity(0.1),
+                                          backgroundColor:
+                                              AppColors.primary.withOpacity(0.1),
                                           child: Text(
-                                            '${user['id']}',
+                                            user['name'].toString().isNotEmpty
+                                                ? user['name'].toString()[0].toUpperCase()
+                                                : '?',
                                             style: const TextStyle(
-                                              fontSize: 11,
+                                              fontSize: 13,
                                               fontWeight: FontWeight.bold,
                                               color: AppColors.primary,
                                             ),
@@ -858,7 +906,8 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                         ),
                                         subtitle: Text(
                                           'ID: ${user['id']}',
-                                          style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                          style: const TextStyle(
+                                              fontSize: 11, color: AppColors.textMuted),
                                         ),
                                         onTap: () => Navigator.pop(context, user),
                                       );
@@ -875,6 +924,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
       },
     );
   }
+
 
 
   // 🎨 Confirm delete
