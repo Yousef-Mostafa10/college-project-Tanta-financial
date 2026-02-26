@@ -1,0 +1,226 @@
+import 'package:flutter/material.dart';
+import 'archive_colors.dart';
+import '../request/Ditalis_Request/ditalis_request.dart';
+import 'package:college_project/l10n/app_localizations.dart';
+import '../request/editerequest.dart';
+
+Widget buildArchiveDesktopCard({
+  required String id,
+  required String title,
+  required String type,
+  required String priority,
+  required String date,
+  required String statusText,
+  required Color statusColor,
+  required IconData statusIcon,
+  required int documentsCount,
+  required BuildContext context,
+}) {
+  Color getPriorityColor(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return ArchiveColors.accentRed;
+      case 'medium':
+        return ArchiveColors.accentYellow;
+      case 'low':
+        return ArchiveColors.accentGreen;
+      default:
+        return ArchiveColors.textMuted;
+    }
+  }
+
+  final priorityColor = getPriorityColor(priority);
+  final priorityIcon = _getPriorityIcon(priority);
+
+  String displayPriority = priority;
+  if (priority.toLowerCase() == 'high') displayPriority = AppLocalizations.of(context)!.translate('priority_high');
+  else if (priority.toLowerCase() == 'medium') displayPriority = AppLocalizations.of(context)!.translate('priority_medium');
+  else if (priority.toLowerCase() == 'low') displayPriority = AppLocalizations.of(context)!.translate('priority_low');
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    child: Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: ArchiveColors.cardBg,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CourseApprovalRequestPage(requestId: id),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1️⃣ الصف العلوي: العنوان والحالة
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: statusColor.withOpacity(0.3)),
+                    ),
+                    child: Icon(statusIcon, color: statusColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: ArchiveColors.textPrimary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: statusColor.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: statusColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // 2️⃣ التاريخ
+              Row(
+                children: [
+                  Icon(Icons.calendar_today_rounded, size: 14, color: ArchiveColors.textSecondary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      date,
+                      style: TextStyle(fontSize: 13, color: ArchiveColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // 3️⃣ النوع والأولوية والمستندات وزر التفاصيل
+              Row(
+                children: [
+                  _buildDesktopChip(type, Icons.category_outlined, ArchiveColors.primary),
+                  const SizedBox(width: 8),
+                  _buildDesktopChip(displayPriority, priorityIcon, priorityColor),
+                  const SizedBox(width: 8),
+                  _buildDesktopChip(
+                    '$documentsCount',
+                    Icons.attach_file_rounded,
+                    documentsCount > 0 ? ArchiveColors.accentBlue : ArchiveColors.textMuted,
+                  ),
+                  const Spacer(),
+
+                  // زر التعديل
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EditRequestPage(requestId: id),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.edit_outlined, size: 16),
+                    label: Text(
+                      AppLocalizations.of(context)!.translate('edit'),
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ArchiveColors.accentYellow,
+                      side: BorderSide(color: ArchiveColors.accentYellow.withOpacity(0.5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // زر عرض التفاصيل فقط
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CourseApprovalRequestPage(requestId: id),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.remove_red_eye_outlined, size: 16),
+                    label: Text(
+                      AppLocalizations.of(context)!.translate('view_details'),
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ArchiveColors.primary,
+                      side: BorderSide(color: ArchiveColors.primary.withOpacity(0.5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildDesktopChip(String text, IconData icon, Color color) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color.withOpacity(0.3)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+IconData _getPriorityIcon(String priority) {
+  switch (priority.toLowerCase()) {
+    case 'high': return Icons.warning_amber_rounded;
+    case 'medium': return Icons.info_rounded;
+    case 'low': return Icons.flag_rounded;
+    default: return Icons.flag_rounded;
+  }
+}
