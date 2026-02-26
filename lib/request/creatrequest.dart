@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
@@ -72,6 +73,8 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   bool _isLoadingTypes = true;
   bool _isSubmitting = false;
 
+  Timer? _userSearchTimer;
+
   List<int> _uploadedDocumentIds = [];
   List<PlatformFile> _selectedFiles = [];
 
@@ -91,6 +94,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     _descriptionController.dispose();
     _commentController.dispose();
     _userSearchController.dispose();
+    _userSearchTimer?.cancel();
     super.dispose();
   }
 
@@ -279,7 +283,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   }
 
     // ✅ جلب أول صفحة من المستخدمين
-  Future<void> fetchUsers() async {
+  Future<void> fetchUsers({String? name}) async {
     setState(() {
       _isLoadingUsers = true;
       _usersData = [];
@@ -291,8 +295,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token') ?? '';
 
+      String url = '$_documentApiUrl/users?page=1&perPage=10';
+      if (name != null && name.isNotEmpty) {
+        url += '&name=${Uri.encodeComponent(name)}';
+      }
+
       final response = await http.get(
-        Uri.parse('$_documentApiUrl/users?page=1&perPage=10'),
+        Uri.parse(url),
         headers: {"Authorization": "Bearer $token"},
       );
 
@@ -332,7 +341,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   }
 
   // ✅ جلب المزيد من المستخدمين (عند السكرول)
-  Future<void> _loadMoreUsers({void Function(void Function())? setStateDialog}) async {
+  Future<void> _loadMoreUsers({void Function(void Function())? setStateDialog, String? name}) async {
     if (_isLoadingMoreUsers || !_usersHasMore) return;
 
     setState(() => _isLoadingMoreUsers = true);
@@ -343,8 +352,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       final token = prefs.getString('token') ?? '';
       final nextPage = _usersCurrentPage + 1;
 
+      String url = '$_documentApiUrl/users?page=$nextPage&perPage=10';
+      if (name != null && name.isNotEmpty) {
+        url += '&name=${Uri.encodeComponent(name)}';
+      }
+
       final response = await http.get(
-        Uri.parse('$_documentApiUrl/users?page=$nextPage&perPage=10'),
+        Uri.parse(url),
         headers: {"Authorization": "Bearer $token"},
       );
 
@@ -1063,8 +1077,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                       onChanged: (value) {
-                        setStateDialog(() {
-                          _filterUsers(value);
+                        _userSearchTimer?.cancel();
+                        _userSearchTimer = Timer(const Duration(milliseconds: 500), () {
+                          if (mounted) {
+                            fetchUsers(name: value).then((_) {
+                              if (mounted) setStateDialog(() {});
+                            });
+                          }
                         });
                       },
                     ),
@@ -1075,14 +1094,17 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                           : NotificationListener<ScrollNotification>(
                               onNotification: (scrollInfo) {
                                 if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 100 &&
-                                    !_isLoadingMoreUsers && _usersHasMore && _userSearchController.text.isEmpty) {
-                                  _loadMoreUsers(setStateDialog: setStateDialog);
+                                    !_isLoadingMoreUsers && _usersHasMore) {
+                                  _loadMoreUsers(
+                                    setStateDialog: setStateDialog,
+                                    name: _userSearchController.text
+                                  );
                                 }
                                 return false;
                               },
                               child: ListView.builder(
                                 shrinkWrap: true,
-                                itemCount: _filteredUsersData.length + 1 + (_usersHasMore && _userSearchController.text.isEmpty ? 1 : 0),
+                                itemCount: _filteredUsersData.length + 1 + (_usersHasMore ? 1 : 0),
                                 itemBuilder: (context, index) {
                                   if (index == 0) {
                                     return ListTile(
