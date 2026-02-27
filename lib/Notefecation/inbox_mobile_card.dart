@@ -382,10 +382,9 @@ class InboxMobileCard extends StatelessWidget {
                     Row(
                       children: [
                         _buildMobileActionButton(
-                          text: AppLocalizations.of(context)!.translate('view'),
-                          onPressed: onViewDetails,
-                          color: InboxColors.primary,
-                          isOutlined: true,
+                          text: AppLocalizations.of(context)!.translate('reject'),
+                          onPressed: onReject,
+                          color: InboxColors.accentRed,
                         ),
                         const SizedBox(width: 6),
                         _buildMobileActionButton(
@@ -405,9 +404,10 @@ class InboxMobileCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         _buildMobileActionButton(
-                          text: AppLocalizations.of(context)!.translate('reject'),
-                          onPressed: onReject,
-                          color: InboxColors.accentRed,
+                          text: AppLocalizations.of(context)!.translate('view'),
+                          onPressed: onViewDetails,
+                          color: InboxColors.primary,
+                          isOutlined: true,
                         ),
                       ],
                     ),

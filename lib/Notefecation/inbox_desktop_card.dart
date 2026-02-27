@@ -377,10 +377,9 @@ class InboxDesktopCard extends StatelessWidget {
                     Row(
                       children: [
                         _buildActionButton(
-                          text: AppLocalizations.of(context)!.translate('view_details'),
-                          onPressed: onViewDetails,
-                          color: InboxColors.primary,
-                          isOutlined: true,
+                          text: AppLocalizations.of(context)!.translate('reject'),
+                          onPressed: onReject,
+                          color: InboxColors.accentRed,
                         ),
                         const SizedBox(width: 12),
                         _buildActionButton(
@@ -397,17 +396,17 @@ class InboxDesktopCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // زر الرفض فقط
+                    // زر التفاصيل فقط
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: onReject,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: InboxColors.accentRed,
-                          foregroundColor: Colors.white,
+                      child: OutlinedButton(
+                        onPressed: onViewDetails,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: InboxColors.primary,
+                          side: BorderSide(color: InboxColors.primary),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: Text(AppLocalizations.of(context)!.translate('reject')),
+                        child: Text(AppLocalizations.of(context)!.translate('view_details')),
                       ),
                     ),
                   ],
