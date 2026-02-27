@@ -204,7 +204,7 @@ class DashboardAPI {
 
         // إضافة عدد المستندات
         transaction["documentsCount"] =
-            transaction["documents"]?.length ?? 0;
+            transaction["documentsCount"] ?? (transaction["documents"] as List?)?.length ?? 0;
 
         // إضافة تاريخ الإنشاء
         transaction["createdDate"] =
