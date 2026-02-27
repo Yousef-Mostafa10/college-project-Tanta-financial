@@ -28,7 +28,6 @@ class InboxStatsWidget extends StatelessWidget {
         'approved': apiSummary!['APPROVED'] ?? 0,
         'rejected': apiSummary!['REJECTED'] ?? 0,
         'needs_change': apiSummary!['NEEDS_EDITING'] ?? 0,
-        'fulfilled': 0,
       };
     }
 
@@ -62,7 +61,6 @@ class InboxStatsWidget extends StatelessWidget {
       'approved': approved,
       'rejected': rejected,
       'needs_change': needsChange,
-      'fulfilled': fulfilled,
     };
   }
 
@@ -76,7 +74,6 @@ class InboxStatsWidget extends StatelessWidget {
       {"label": AppLocalizations.of(context)!.translate('approved'), "value": stats['approved']!, "color": InboxColors.statusApproved, "icon": Icons.check_circle_rounded},
       {"label": AppLocalizations.of(context)!.translate('rejected'), "value": stats['rejected']!, "color": InboxColors.statusRejected, "icon": Icons.cancel_rounded},
       {"label": AppLocalizations.of(context)!.translate('needs_change'), "value": stats['needs_change']!, "color": Colors.orange, "icon": Icons.edit_note_rounded},
-      {"label": AppLocalizations.of(context)!.translate('fulfilled'), "value": stats['fulfilled']!, "color": InboxColors.statusFulfilled, "icon": Icons.task_alt_rounded},
     ];
 
     return Container(

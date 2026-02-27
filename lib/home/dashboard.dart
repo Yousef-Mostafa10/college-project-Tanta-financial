@@ -54,7 +54,6 @@ class _AdministrativeDashboardPageState
   int rejected = 0;
   int waiting = 0;
   int needsChange = 0;
-  int fulfilled = 0;
 
   // فلاتر
   String selectedPriority = 'All';
@@ -295,8 +294,7 @@ class _AdministrativeDashboardPageState
       needsChange = summary['NEEDS_EDITING'] ?? 0;
       rejected = summary['REJECTED'] ?? 0;
       approved = summary['APPROVED'] ?? 0;
-      fulfilled = summary['FULFILLED'] ?? 0;
-      total = waiting + needsChange + rejected + approved + fulfilled;
+      total = waiting + needsChange + rejected + approved;
     }
   }
 
@@ -409,7 +407,6 @@ class _AdministrativeDashboardPageState
                 rejected: rejected,
                 waiting: waiting,
                 needsChange: needsChange,
-                fulfilled: fulfilled,
                 isMobile: false,
               ),
               const SizedBox(height: 16),
@@ -614,15 +611,10 @@ class _AdministrativeDashboardPageState
         "color": AppColors.statusNeedsChange,
         "icon": Icons.edit_note_rounded
       },
-      {
-        "label": "Fulfilled",
-        "value": fulfilled,
-        "color": AppColors.statusFulfilled,
-        "icon": Icons.task_alt_rounded
-      },
     ];
 
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -637,22 +629,18 @@ class _AdministrativeDashboardPageState
         ],
         border: Border.all(color: AppColors.statBorder),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: statItems.map((stat) =>
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: _buildMobileStatItem(
-                  label: stat["label"] as String,
-                  value: stat["value"] as int,
-                  color: stat["color"] as Color,
-                  icon: stat["icon"] as IconData,
-                ),
-              )
-          ).toList(),
-        ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: statItems.map((stat) =>
+            Expanded(
+              child: _buildMobileStatItem(
+                label: stat["label"] as String,
+                value: stat["value"] as int,
+                color: stat["color"] as Color,
+                icon: stat["icon"] as IconData,
+              ),
+            )
+        ).toList(),
       ),
     );
   }

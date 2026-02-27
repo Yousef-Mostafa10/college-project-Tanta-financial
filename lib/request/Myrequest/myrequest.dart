@@ -57,7 +57,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   // أنواع الطلبات
   List<String> typeNames = ['All Types'];
   List<String> priorities = ['All', 'High', 'Medium', 'Low'];
-  List<String> statuses = ['All', 'Waiting', 'Approved', 'Rejected', 'Needs Change', 'Fulfilled'];
+  List<String> statuses = ['All', 'Waiting', 'Approved', 'Rejected', 'Needs Change'];
 
   late MyRequestsApi _api;
 
@@ -186,6 +186,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
             _approvedCount = summary['APPROVED'] ?? 0;
             _rejectedCount = summary['REJECTED'] ?? 0;
             _needsEditingCount = summary['NEEDS_EDITING'] ?? 0;
+            _totalCount = _waitingCount + _approvedCount + _rejectedCount + _needsEditingCount;
           }
 
           _applyFilters();
@@ -647,14 +648,10 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
 
   // ⭐ تصميم الجوال
   Widget _buildMobileBody() {
-    final fulfilledForwards = _requests.where((req) => req["fulfilled"] == true).length;
-
     return Column(
       children: [
         // 1️⃣ الجزء الثابت عند الأعلى - الإحصائيات من الـ Summary
-        buildMobileStatsSection(context, _totalCount, _approvedCount, _rejectedCount, _waitingCount, _needsEditingCount, fulfilledForwards),
-
-        // 2️⃣ الجزء الثابت عند الأعلى - البحث والفلترة
+        buildMobileStatsSection(context, _totalCount, _approvedCount, _rejectedCount, _waitingCount, _needsEditingCount),
         buildMobileFilterSection(
           context: context,
           searchController: _searchController,
@@ -860,16 +857,13 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   }
 
   Widget _buildDesktopStatsRow() {
-    final fulfilledForwards = _requests.where((req) => req["fulfilled"] == true).length;
-
     return buildDesktopStatsRow(
         context,
         _totalCount,
         _approvedCount,
         _rejectedCount,
         _waitingCount,
-        _needsEditingCount,
-        fulfilledForwards
+        _needsEditingCount
     );
   }
 

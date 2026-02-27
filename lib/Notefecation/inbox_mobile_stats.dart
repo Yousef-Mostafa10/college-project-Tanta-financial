@@ -9,7 +9,6 @@ class InboxMobileStats extends StatelessWidget {
   final int waiting;
   final int approved;
   final int rejected;
-  final int fulfilled;
   final int needsChange; // إضافة هذا الحقل
 
   const InboxMobileStats({
@@ -18,7 +17,6 @@ class InboxMobileStats extends StatelessWidget {
     required this.waiting,
     required this.approved,
     required this.rejected,
-    required this.fulfilled,
     required this.needsChange, // إضافة هذا
   }) : super(key: key);
 
@@ -30,7 +28,6 @@ class InboxMobileStats extends StatelessWidget {
       {"label": AppLocalizations.of(context)!.translate('approved'), "value": approved, "color": InboxColors.statusApproved, "icon": Icons.check_circle_rounded},
       {"label": AppLocalizations.of(context)!.translate('rejected'), "value": rejected, "color": InboxColors.statusRejected, "icon": Icons.cancel_rounded},
       {"label": AppLocalizations.of(context)!.translate('needs_change'), "value": needsChange, "color": Colors.orange, "icon": Icons.edit_note_rounded}, // إضافة هذا الصف
-      {"label": AppLocalizations.of(context)!.translate('fulfilled'), "value": fulfilled, "color": InboxColors.statusFulfilled, "icon": Icons.task_alt_rounded},
     ];
 
     return Container(

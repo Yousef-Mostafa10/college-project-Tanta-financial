@@ -9,7 +9,6 @@ class StatsWidget extends StatelessWidget {
   final int rejected;
   final int waiting;
   final int needsChange;  // إضافة
-  final int fulfilled;    // إضافة
   final bool isMobile;
 
   const StatsWidget({
@@ -19,7 +18,6 @@ class StatsWidget extends StatelessWidget {
     required this.rejected,
     required this.waiting,
     required this.needsChange,  // إضافة
-    required this.fulfilled,    // إضافة
     required this.isMobile,
   });
 
@@ -32,10 +30,10 @@ class StatsWidget extends StatelessWidget {
       {"label": AppLocalizations.of(context)!.translate('waiting'), "value": waiting, "color": AppColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
       // إضافة الحالتين الجديدتين:
       {"label": AppLocalizations.of(context)!.translate('needs_change'), "value": needsChange, "color": AppColors.statusNeedsChange, "icon": Icons.edit_note_rounded},
-      {"label": AppLocalizations.of(context)!.translate('fulfilled'), "value": fulfilled, "color": AppColors.statusFulfilled, "icon": Icons.task_alt_rounded},
     ];
 
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: AppColors.statBgLight,
         borderRadius: BorderRadius.circular(16),
@@ -53,12 +51,21 @@ class StatsWidget extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: stats.map((stat) =>
-              _buildStatItem(
-                stat["label"] as String,
-                stat["value"] as int,
-                stat["color"] as Color,
-                stat["icon"] as IconData,
-              )
+              isMobile 
+                  ? Expanded(
+                      child: _buildStatItem(
+                        stat["label"] as String,
+                        stat["value"] as int,
+                        stat["color"] as Color,
+                        stat["icon"] as IconData,
+                      ),
+                    )
+                  : _buildStatItem(
+                      stat["label"] as String,
+                      stat["value"] as int,
+                      stat["color"] as Color,
+                      stat["icon"] as IconData,
+                    )
           ).toList(),
         ),
       ),
@@ -77,22 +84,29 @@ class StatsWidget extends StatelessWidget {
           ),
           child: Icon(icon, color: color, size: isMobile ? 18 : 22),
         ),
-        SizedBox(height: isMobile ? 8 : 10),
+        SizedBox(height: isMobile ? 6 : 10),
         Text(
           value.toString(),
           style: TextStyle(
-            fontSize: isMobile ? 18 : 20,
+            fontSize: isMobile ? 16 : 20,
             fontWeight: FontWeight.bold,
             color: color, // الرقم باللون المميز لكل حالة
           ),
         ),
-        SizedBox(height: isMobile ? 4 : 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: isMobile ? 11 : 13,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary, // النص باللون الرمادي الثابت
+        SizedBox(height: isMobile ? 2 : 6),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: isMobile ? 9 : 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+              ),
+            ),
           ),
         ),
       ],

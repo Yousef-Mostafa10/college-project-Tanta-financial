@@ -66,7 +66,6 @@ class _InboxPageState extends State<InboxPage> {
     'Waiting',
     'Approved',
     'Rejected',
-    'Fulfilled',
     'Needs Change',
   ];
 
@@ -1596,7 +1595,6 @@ class _InboxPageState extends State<InboxPage> {
           waiting: _apiSummary['WAITING'] ?? 0,
           approved: _apiSummary['APPROVED'] ?? 0,
           rejected: _apiSummary['REJECTED'] ?? 0,
-          fulfilled: 0,
           needsChange: _apiSummary['NEEDS_EDITING'] ?? 0,
         ),
 

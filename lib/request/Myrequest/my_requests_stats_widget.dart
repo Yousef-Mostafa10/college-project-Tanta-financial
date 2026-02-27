@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import 'my_requests_colors.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 
-Widget buildDesktopStatsRow(BuildContext context, int total, int approved, int rejected, int waiting, int needsChange, int fulfilled) {
+Widget buildDesktopStatsRow(BuildContext context, int total, int approved, int rejected, int waiting, int needsChange) {
   final stats = [
     {"label": AppLocalizations.of(context)!.translate('total_stat'), "value": total, "color": MyRequestsColors.textPrimary, "icon": Icons.dashboard_rounded},
     {"label": AppLocalizations.of(context)!.translate('status_approved'), "value": approved, "color": MyRequestsColors.statusApproved, "icon": Icons.check_circle_rounded},
     {"label": AppLocalizations.of(context)!.translate('status_rejected'), "value": rejected, "color": MyRequestsColors.statusRejected, "icon": Icons.cancel_rounded},
     {"label": AppLocalizations.of(context)!.translate('status_waiting'), "value": waiting, "color": MyRequestsColors.statusWaiting, "icon": Icons.hourglass_empty_rounded},
     {"label": AppLocalizations.of(context)!.translate('needs_change_stat'), "value": needsChange, "color": MyRequestsColors.statusNeedsChange, "icon": Icons.edit_note_rounded},
-    {"label": AppLocalizations.of(context)!.translate('fulfilled_stat'), "value": fulfilled, "color": MyRequestsColors.statusFulfilled, "icon": Icons.task_alt_rounded},
   ];
 
   return Container(
