@@ -285,6 +285,7 @@ class AppLocalizations {
       'created_at': 'Created At',
       'updated_at': 'Updated At',
       'close': 'Close',
+      'edit_user': 'Edit User',
 
       // User Model
       'username': 'Username',
