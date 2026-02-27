@@ -399,7 +399,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Container(
-                width: 400,
+                constraints: const BoxConstraints(maxWidth: 400),
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -534,7 +534,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Container(
-                width: 400,
+                constraints: const BoxConstraints(maxWidth: 400),
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -746,8 +746,8 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Container(
-                width: 400,
-                height: 500,
+                constraints: const BoxConstraints(maxWidth: 400),
+                height: MediaQuery.of(context).size.height * 0.7,
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
@@ -1157,37 +1157,47 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                 ],
               ),
             )
-                : GridView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(24),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                childAspectRatio: 1.2,
-                crossAxisSpacing: 20,
-                mainAxisSpacing: 20,
-              ),
-              itemCount: filteredDepartments.length + (_hasMorePages && searchController.text.isEmpty ? 1 : 0),
-              itemBuilder: (context, index) {
-                // عنصر اللودينج في الآخر
-                if (index == filteredDepartments.length) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                        strokeWidth: 2,
-                      ),
-                    ),
-                  );
-                }
-                final dept = filteredDepartments[index];
-                return DepartmentCard(
-                  department: dept,
-                  onEdit: () => _showEditDepartmentDialog(dept),
-                  onDelete: () => _confirmDelete(dept),
-                );
-              },
-            ),
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      double width = constraints.maxWidth;
+                      int crossAxisCount = width > 1200 ? 5 : (width > 900 ? 4 : (width > 600 ? 3 : 2));
+                      
+                      // Calculate aspect ratio based on width to ensure content fits
+                      double childAspectRatio = width > 600 ? 1.2 : 0.85;
+
+                      return GridView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(24),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          childAspectRatio: childAspectRatio,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: filteredDepartments.length + (_hasMorePages && searchController.text.isEmpty ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          // عنصر اللودينج في الآخر
+                          if (index == filteredDepartments.length) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16),
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primary,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            );
+                          }
+                          final dept = filteredDepartments[index];
+                          return DepartmentCard(
+                            department: dept,
+                            onEdit: () => _showEditDepartmentDialog(dept),
+                            onDelete: () => _confirmDelete(dept),
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),
