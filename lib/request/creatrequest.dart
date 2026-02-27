@@ -460,55 +460,58 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
           title: Text('Manage Request Types'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: nameController,
-                      decoration: InputDecoration(hintText: 'New type name'),
+          content: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: nameController,
+                        decoration: InputDecoration(hintText: 'New type name'),
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.add_circle, color: CreateRequestColors.primary),
-                    onPressed: () {
-                      if (nameController.text.trim().isNotEmpty) {
-                        _createNewRequestType(nameController.text.trim());
-                        nameController.clear();
-                        Navigator.pop(context);
-                      }
+                    IconButton(
+                      icon: Icon(Icons.add_circle, color: CreateRequestColors.primary),
+                      onPressed: () {
+                        if (nameController.text.trim().isNotEmpty) {
+                          _createNewRequestType(nameController.text.trim());
+                          nameController.clear();
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                Divider(),
+                SizedBox(
+                  height: 200,
+                  width: double.maxFinite,
+                  child: _isLoadingTypes
+                      ? Center(child: CircularProgressIndicator(color: CreateRequestColors.primary))
+                      : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _requestTypesData.length,
+                    itemBuilder: (context, index) {
+                      final type = _requestTypesData[index];
+                      return ListTile(
+                        title: Text(type.name),
+                        subtitle: Text('By: ${type.creatorName}', style: TextStyle(fontSize: 10)),
+                        trailing: IconButton(
+                          icon: Icon(Icons.delete_outline, color: CreateRequestColors.accentRed, size: 20),
+                          onPressed: () {
+                            _deleteRequestType(type.name);
+                            Navigator.pop(context);
+                          },
+                        ),
+                      );
                     },
                   ),
-                ],
-              ),
-              Divider(),
-              SizedBox(
-                height: 200,
-                width: double.maxFinite,
-                child: _isLoadingTypes
-                    ? Center(child: CircularProgressIndicator(color: CreateRequestColors.primary))
-                    : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _requestTypesData.length,
-                  itemBuilder: (context, index) {
-                    final type = _requestTypesData[index];
-                    return ListTile(
-                      title: Text(type.name),
-                      subtitle: Text('By: ${type.creatorName}', style: TextStyle(fontSize: 10)),
-                      trailing: IconButton(
-                        icon: Icon(Icons.delete_outline, color: CreateRequestColors.accentRed, size: 20),
-                        onPressed: () {
-                          _deleteRequestType(type.name);
-                          Navigator.pop(context);
-                        },
-                      ),
-                    );
-                  },
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: Text('Close')),
