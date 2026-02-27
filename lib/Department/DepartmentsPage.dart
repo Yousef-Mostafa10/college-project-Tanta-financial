@@ -1160,19 +1160,20 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                 : LayoutBuilder(
                     builder: (context, constraints) {
                       double width = constraints.maxWidth;
+                      bool isSmallMobile = width < 360;
                       int crossAxisCount = width > 1200 ? 5 : (width > 900 ? 4 : (width > 600 ? 3 : 2));
                       
                       // Calculate aspect ratio based on width to ensure content fits
-                      double childAspectRatio = width > 600 ? 1.2 : 0.85;
+                      double childAspectRatio = width > 600 ? 1.2 : (isSmallMobile ? 0.8 : 0.95);
 
                       return GridView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.all(24),
+                        padding: EdgeInsets.all(isSmallMobile ? 12 : 24),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
                           childAspectRatio: childAspectRatio,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
+                          crossAxisSpacing: isSmallMobile ? 12 : 16,
+                          mainAxisSpacing: isSmallMobile ? 12 : 16,
                         ),
                         itemCount: filteredDepartments.length + (_hasMorePages && searchController.text.isEmpty ? 1 : 0),
                         itemBuilder: (context, index) {
@@ -1229,6 +1230,9 @@ class DepartmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBg,
@@ -1245,43 +1249,43 @@ class DepartmentCard extends StatelessWidget {
         children: [
           // Content
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(isMobile ? 12 : 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Department Icon
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(isMobile ? 8 : 12),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.business,
                     color: AppColors.primary,
-                    size: 32,
+                    size: isMobile ? 24 : 32,
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: isMobile ? 8 : 16),
                 // Department Name
                 Text(
                   department['name'] ?? AppLocalizations.of(context)!.translate('untitled_dept'),
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: TextStyle(
+                    fontSize: isMobile ? 14 : 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: isMobile ? 4 : 8),
                 // Manager ID
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.person_outline,
-                      size: 14,
+                      size: isMobile ? 12 : 14,
                       color: AppColors.textMuted,
                     ),
                     const SizedBox(width: 4),
@@ -1290,8 +1294,8 @@ class DepartmentCard extends StatelessWidget {
                         department['managerId'] != null 
                             ? AppLocalizations.of(context)!.translate('manager_id_label').replaceAll('{id}', '${department['managerId']}')
                             : AppLocalizations.of(context)!.translate('no_manager_assigned'),
-                        style: const TextStyle(
-                          fontSize: 13,
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 13,
                           color: AppColors.textSecondary,
                         ),
                         maxLines: 1,
