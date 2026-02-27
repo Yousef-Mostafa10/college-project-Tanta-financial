@@ -421,12 +421,23 @@ class UsersApiService {
     );
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      // حل الـ userId من الاسم
+      final responseData = jsonDecode(response.body);
+      List<dynamic> documents = [];
+      
+      if (responseData is Map) {
+        documents = responseData['data'] ?? [];
+      } else if (responseData is List) {
+        documents = responseData;
+      }
+
       final userId = await _resolveUserId(userName);
-      // تصفية النتائج: دعم كلا الحقلين uploaderName (قديم) و uploaderId (جديد)
-      return data
-          .where((doc) => doc['uploaderName'] == userName || (userId != null && doc['uploaderId'] == userId))
+      
+      return documents
+          .where((doc) {
+            if (doc is! Map) return false;
+            return doc['uploaderName'] == userName || 
+                   (userId != null && doc['uploaderId'] == userId);
+          })
           .map((doc) => doc as Map<String, dynamic>)
           .toList();
     } else if (response.statusCode == 401) {
