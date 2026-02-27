@@ -34,7 +34,7 @@ class UsersApiService {
       urlString += "&role=${role.toUpperCase()}";
     }
     if (department != null && department != 'all') {
-      urlString += "&departmentName=${Uri.encodeComponent(department)}";
+      urlString += "&department=${Uri.encodeComponent(department)}";
     }
     if (active != null) {
       urlString += "&active=$active";
