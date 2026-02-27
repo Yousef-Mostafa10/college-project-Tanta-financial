@@ -674,6 +674,8 @@ class _AdministrativeDashboardPageState
         const SizedBox(height: 2),
         Text(
           AppLocalizations.of(context)?.translate(label.toLowerCase().replaceAll(' ', '_')) ?? label,
+          softWrap: false,
+          maxLines: 1,
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w500,

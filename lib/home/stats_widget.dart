@@ -94,19 +94,14 @@ class StatsWidget extends StatelessWidget {
           ),
         ),
         SizedBox(height: isMobile ? 2 : 6),
-        Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              label,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: isMobile ? 9 : 13,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textSecondary,
-              ),
-            ),
+        Text(
+          label,
+          softWrap: false,
+          maxLines: 1,
+          style: TextStyle(
+            fontSize: isMobile ? 10 : 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary,
           ),
         ),
       ],
