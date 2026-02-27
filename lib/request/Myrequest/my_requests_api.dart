@@ -379,16 +379,19 @@ class MyRequestsApi {
           'admin';
 
       final token = prefs.getString('token');
+      final role = prefs.getString('user_role') ?? prefs.getString('user_group') ?? 'user';
 
       return {
         'userName': userName,
         'token': token,
+        'role': role,
       };
     } catch (e) {
       print("❌ Error getting user info: $e");
       return {
         'userName': 'admin',
         'token': null,
+        'role': 'user',
       };
     }
   }

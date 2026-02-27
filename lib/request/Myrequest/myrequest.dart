@@ -16,8 +16,9 @@ import 'my_requests_stats_widget.dart';
 import 'my_requests_empty_state.dart';
 import 'my_requests_header.dart';
 
-import '../Ditalis_Request/ditalis_request.dart';
 import '../editerequest.dart';
+import '../../drawer.dart';
+import '../../Auth/login.dart';
 
 class MyRequestsPage extends StatefulWidget {
   const MyRequestsPage({super.key});
@@ -41,6 +42,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   String? _errorMessage;
   String? _userName;
   String? _userToken;
+  String? _userRole;
 
   // إحصائيات من الـ API Summary
   int _totalCount = 0;
@@ -48,6 +50,17 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   int _approvedCount = 0;
   int _rejectedCount = 0;
   int _needsEditingCount = 0;
+
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    }
+  }
 
   // الفلاتر
   String _selectedStatus = "All";
@@ -108,6 +121,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       setState(() {
         _userName = userInfo['userName'];
         _userToken = userInfo['token'];
+        _userRole = userInfo['role'];
       });
     } catch (e) {
       print("❌ Error getting user info: $e");
@@ -626,6 +640,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
           ),
         ],
       ),
+      drawer: (_userRole?.toLowerCase() != 'admin') ? CustomDrawer(onLogout: _logout) : null,
       body: _isLoading
           ? buildLoadingState(isMobile)
           : Stack(

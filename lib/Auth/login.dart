@@ -7,6 +7,7 @@ import '../home/dashboard.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
 import 'auth_service.dart';
+import '../request/Myrequest/myrequest.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -56,12 +57,21 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const AdministrativeDashboardPage(),
-          ),
-        );
+        if (userRole.toUpperCase() == 'ADMIN') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AdministrativeDashboardPage(),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const MyRequestsPage(),
+            ),
+          );
+        }
       } else {
         final errorMessage = result['error'] ?? AppLocalizations.of(context)!.translate('login_failed');
         ScaffoldMessenger.of(context).showSnackBar(
