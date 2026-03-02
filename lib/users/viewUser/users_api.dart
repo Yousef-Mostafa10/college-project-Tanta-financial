@@ -1,12 +1,14 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../app_config.dart';
 import 'user_model.dart';
+import '../../Auth/authenticated_http_client.dart';
 
 class UsersApiService {
   final String baseUrl = AppConfig.baseUrl;
+  final AuthenticatedHttpClient _httpClient = AuthenticatedHttpClient();
 
+  // Helper method for legacy compatibility if needed
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('token');
@@ -21,11 +23,6 @@ class UsersApiService {
     String? department,
     bool? active,
   }) async {
-    final token = await _getToken();
-    if (token == null) {
-      throw Exception('no_token_error');
-    }
-
     String urlString = "$baseUrl/users?page=$page&perPage=$perPage";
     if (name != null && name.isNotEmpty) {
       urlString += "&name=${Uri.encodeComponent(name)}";
@@ -42,11 +39,9 @@ class UsersApiService {
 
     final url = Uri.parse(urlString);
 
-    final response = await http.get(
+    final response = await _httpClient.get(
       url,
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
         "Accept": "application/json",
       },
     );
@@ -108,18 +103,11 @@ class UsersApiService {
 
   // ✅ جلب تفاصيل مستخدم معين بالـ ID
   Future<User> getUserDetailsById(int userId) async {
-    final token = await _getToken();
-    if (token == null) {
-      throw Exception('no_token_error');
-    }
-
     final url = Uri.parse("$baseUrl/users/$userId");
 
-    final response = await http.get(
+    final response = await _httpClient.get(
       url,
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
         "Accept": "application/json",
       },
     );
@@ -153,11 +141,6 @@ class UsersApiService {
     String? newName,
     String? departmentName,
   }) async {
-    final token = await _getToken();
-    if (token == null) {
-      throw Exception('no_token_error');
-    }
-
     final url = Uri.parse("$baseUrl/users/$userId");
 
     Map<String, dynamic> updateData = {};
@@ -182,11 +165,9 @@ class UsersApiService {
       throw Exception('no_changes_provided');
     }
 
-    final response = await http.patch(
+    final response = await _httpClient.patch(
       url,
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
         "Accept": "application/json",
       },
       body: jsonEncode(updateData),
@@ -231,17 +212,11 @@ class UsersApiService {
 
   // ✅ جلب قائمة الأقسام مع Pagination
   Future<Map<String, dynamic>> fetchDepartmentsPaginated({int page = 1, int perPage = 10}) async {
-    final token = await _getToken();
-    if (token == null) {
-      throw Exception('no_token_error');
-    }
-
     final url = Uri.parse("$baseUrl/departments?page=$page&perPage=$perPage");
 
-    final response = await http.get(
+    final response = await _httpClient.get(
       url,
       headers: {
-        "Authorization": "Bearer $token",
         "Accept": "application/json",
       },
     );
@@ -293,17 +268,11 @@ class UsersApiService {
 
   // ✅ حذف مستخدم بالـ ID مباشرة
   Future<void> deleteUserById(int userId) async {
-    final token = await _getToken();
-    if (token == null) {
-      throw Exception('no_token_error');
-    }
-
     final url = Uri.parse("$baseUrl/users/$userId");
 
-    final response = await http.delete(
+    final response = await _httpClient.delete(
       url,
       headers: {
-        "Authorization": "Bearer $token",
         "Accept": "application/json",
       },
     );
@@ -338,11 +307,6 @@ class UsersApiService {
     String? departmentName,
     bool active = true,
   }) async {
-    final token = await _getToken();
-    if (token == null) {
-      throw Exception('no_token_error');
-    }
-
     final url = Uri.parse("$baseUrl/users");
 
     final userData = {
@@ -353,11 +317,9 @@ class UsersApiService {
       if (departmentName != null) "departmentName": departmentName,
     };
 
-    final response = await http.post(
+    final response = await _httpClient.post(
       url,
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
         "Accept": "application/json",
       },
       body: jsonEncode(userData),
@@ -404,18 +366,11 @@ class UsersApiService {
 
   // ✅ جلب ملفات المستخدم (الـ API الجديد يستخدم uploaderId بدلاً من uploaderName)
   Future<List<Map<String, dynamic>>> getUserUploadedDocuments(String userName) async {
-    final token = await _getToken();
-    if (token == null) {
-      throw Exception('no_token_error');
-    }
-
     final url = Uri.parse("$baseUrl/documents/uploaded");
 
-    final response = await http.get(
+    final response = await _httpClient.get(
       url,
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
         "Accept": "application/json",
       },
     );

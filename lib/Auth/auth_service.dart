@@ -111,29 +111,36 @@ class AuthService {
   Future<void> _saveAuthData(Map<String, dynamic> data) async {
     final prefs = await SharedPreferences.getInstance();
     
-    // حفظ التوكنات
-    if (data.containsKey('access_token')) {
-      await prefs.setString('token', data['access_token']);
+    // حفظ التوكنات (دعم لكلا التنسيقين camelCase و snake_case)
+    final accessToken = data['access_token'] ?? data['accessToken'] ?? data['token'];
+    final refreshToken = data['refresh_token'] ?? data['refreshToken'];
+
+    if (accessToken != null) {
+      await prefs.setString('token', accessToken);
     }
-    if (data.containsKey('refresh_token')) {
-      await prefs.setString('refresh_token', data['refresh_token']);
+    if (refreshToken != null) {
+      await prefs.setString('refresh_token', refreshToken);
     }
     
     // حفظ بيانات المستخدم
-    if (data.containsKey('user')) {
-      final user = data['user'];
-      await prefs.setString('username', user['name'] ?? '');
-      await prefs.setString('user_role', user['role'] ?? 'user');
-      await prefs.setString('user_group', user['role'] ?? 'user'); // للتوافق العكسي
+    final userData = data['user'] ?? data; // في حالة كانت البيانات في الجذر
+    if (userData is Map && (userData.containsKey('id') || userData.containsKey('name'))) {
+      await prefs.setString('username', userData['name'] ?? '');
+      await prefs.setString('user_role', userData['role'] ?? 'user');
+      await prefs.setString('user_group', userData['role'] ?? 'user'); // للتوافق العكسي
       
-      if (user['id'] != null) {
-        await prefs.setInt('user_id', user['id']);
+      if (userData['id'] != null) {
+        if (userData['id'] is int) {
+          await prefs.setInt('user_id', userData['id']);
+        } else {
+          await prefs.setInt('user_id', int.tryParse(userData['id'].toString()) ?? 0);
+        }
       }
-      if (user['departmentName'] != null) {
-        await prefs.setString('department_name', user['departmentName']);
+      if (userData['departmentName'] != null) {
+        await prefs.setString('department_name', userData['departmentName']);
       }
-      if (user['active'] != null) {
-        await prefs.setBool('user_active', user['active']);
+      if (userData['active'] != null) {
+        await prefs.setBool('user_active', userData['active'] == true);
       }
     }
   }
@@ -177,7 +184,8 @@ class AuthService {
       // محاولة تحديث الـ token
       final result = await refreshAccessToken();
       if (result['success'] == true) {
-        token = result['data']['access_token'];
+        // نأخذ التوكن المحدث من التخزين لضمان الحصول على القيمة الصحيحة
+        token = prefs.getString('token');
       }
     }
 

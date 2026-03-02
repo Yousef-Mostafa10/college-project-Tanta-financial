@@ -3,46 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/core/app_colors.dart';
 import '../app_config.dart';
 
-// 🎨 COLOR PALETTE - Consistent with the whole application
-class AppColors {
-  // Primary Colors
-  static const Color primary = Color(0xFF00695C);
-  static const Color primaryLight = Color(0xFF00796B);
-
-  // Background Colors
-  static const Color bodyBg = Color(0xFFF5F6FA);
-  static const Color cardBg = Color(0xFFFFFFFF);
-
-  // Text Colors
-  static const Color textPrimary = Color(0xFF2C3E50);
-  static const Color textSecondary = Color(0xFF7F8C8D);
-  static const Color textMuted = Color(0xFFB0B0B0);
-
-  // Accent Colors
-  static const Color accentRed = Color(0xFFE74C3C);
-  static const Color accentGreen = Color(0xFF27AE60);
-  static const Color accentBlue = Color(0xFF1E88E5);
-  static const Color accentYellow = Color(0xFFFFB74D);
-
-  // Status Colors
-  static const Color statusApproved = Color(0xFF27AE60);
-  static const Color statusRejected = Color(0xFFE74C3C);
-  static const Color statusWaiting = Color(0xFF1E88E5);
-
-  // Border Colors
-  static const Color borderColor = Color(0xFFE0E0E0);
-  static const Color focusBorderColor = Color(0xFF00695C);
-
-  // Gradient Colors
-  static const Color gradientStart = Color(0xFFE0F2F1);
-  static const Color gradientEnd = Color(0xFFB2DFDB);
-
-  // Selection Colors
-  static const Color selectionBg = Color(0xFFE0F2F1);
-  static const Color selectionBorder = Color(0xFF00695C);
-}
 
 class AddUserPage extends StatefulWidget {
   const AddUserPage({super.key});
