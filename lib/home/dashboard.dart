@@ -62,6 +62,7 @@ class _AdministrativeDashboardPageState
   List<String> priorities = ['All', 'High', 'Medium', 'Low'];
   List<String> typeNames = ['All Types'];
   List<String> statuses = ['All', 'Waiting', 'Approved', 'Rejected', 'Fulfilled', 'Needs Change'];
+  bool _showBackToTop = false;
 
   @override
   void initState() {
@@ -72,10 +73,24 @@ class _AdministrativeDashboardPageState
   }
 
   void _onScroll() {
+    if (_scrollController.position.pixels >= 200) {
+      if (!_showBackToTop) setState(() => _showBackToTop = true);
+    } else {
+      if (_showBackToTop) setState(() => _showBackToTop = false);
+    }
+
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       _loadMore();
     }
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
@@ -381,6 +396,16 @@ class _AdministrativeDashboardPageState
                   ),
               ],
             ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: _showBackToTop
+          ? FloatingActionButton(
+              heroTag: 'dashboard_scroll_top',
+              mini: true,
+              onPressed: _scrollToTop,
+              backgroundColor: AppColors.primary.withOpacity(0.8),
+              child: const Icon(Icons.arrow_upward, color: Colors.white),
+            )
+          : null,
     );
   }
 
@@ -962,6 +987,7 @@ class _AdministrativeDashboardPageState
         return false;
       },
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         // +1 عشان نضيف loading indicator في الأسفل
         itemCount: paginatedRequests.length + (_hasMorePages ? 1 : 0),

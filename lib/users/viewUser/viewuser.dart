@@ -34,6 +34,7 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
   int _totalUsers = 0;
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
+  bool _showBackToTop = false;
 
   @override
   void initState() {
@@ -42,6 +43,12 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
 
     // Scroll listener للتحميل التدريجي
     _scrollController.addListener(() {
+      if (_scrollController.offset >= 200) {
+        if (!_showBackToTop) setState(() => _showBackToTop = true);
+      } else {
+        if (_showBackToTop) setState(() => _showBackToTop = false);
+      }
+
       if (_scrollController.position.pixels >=
               _scrollController.position.maxScrollExtent - 300 &&
           !_isLoadingMore &&
@@ -49,6 +56,14 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
         _loadMoreUsers();
       }
     });
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
   }
 
   Future<void> _loadInitialData() async {
@@ -295,6 +310,21 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
           ),
         ],
       ),
+      floatingActionButton: _showBackToTop
+          ? SizedBox(
+              width: MediaQuery.of(context).size.width,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: FloatingActionButton(
+                  heroTag: 'users_scroll_top',
+                  mini: true,
+                  onPressed: _scrollToTop,
+                  backgroundColor: AppColors.primary.withOpacity(0.8),
+                  child: const Icon(Icons.arrow_upward, color: Colors.white),
+                ),
+              ),
+            )
+          : null,
     );
   }
 }

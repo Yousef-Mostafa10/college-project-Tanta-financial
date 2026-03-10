@@ -33,6 +33,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   bool _isLoadingMore = false;
   int _totalDepartments = 0;
   final ScrollController _scrollController = ScrollController();
+  bool _showBackToTop = false;
 
   @override
   void initState() {
@@ -42,6 +43,12 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
 
     // Scroll listener للتحميل التدريجي
     _scrollController.addListener(() {
+      if (_scrollController.offset >= 200) {
+        if (!_showBackToTop) setState(() => _showBackToTop = true);
+      } else {
+        if (_showBackToTop) setState(() => _showBackToTop = false);
+      }
+
       if (_scrollController.position.pixels >=
               _scrollController.position.maxScrollExtent - 200 &&
           !_isLoadingMore &&
@@ -50,6 +57,14 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         _loadMoreDepartments();
       }
     });
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
@@ -1202,13 +1217,39 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDepartmentDialog,
-        backgroundColor: AppColors.accentYellow,
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-          size: 28,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: SizedBox(
+        width: MediaQuery.of(context).size.width,
+        child: Stack(
+          children: [
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: FloatingActionButton(
+                  heroTag: 'dept_add_btn',
+                  onPressed: _showAddDepartmentDialog,
+                  backgroundColor: AppColors.accentYellow,
+                  child: const Icon(
+                    Icons.add,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+              ),
+            ),
+            if (_showBackToTop)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: FloatingActionButton(
+                  heroTag: 'dept_scroll_top',
+                  mini: true,
+                  onPressed: _scrollToTop,
+                  backgroundColor: AppColors.primary.withOpacity(0.8),
+                  child: const Icon(Icons.arrow_upward, color: Colors.white),
+                ),
+              ),
+          ],
         ),
       ),
     );

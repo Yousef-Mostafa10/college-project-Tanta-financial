@@ -675,40 +675,43 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
               ],
             ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Stack(
-        children: [
-          // زر إضافة طلب - أصبح الآن في جهة اليمين مع مسافة بسيطة عن الحافة
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16.0),
-              child: FloatingActionButton(
-                heroTag: 'add_request_btn',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => CreateRequestPage()),
-                  );
-                },
-                backgroundColor: MyRequestsColors.primary,
-                tooltip: AppLocalizations.of(context)!.translate('create_request') ?? 'Create Request',
-                child: const Icon(Icons.add, color: Colors.white),
-              ),
-            ),
-          ),
-          // زر الصعود للأعلى - أصبح الآن في المنتصف ويظهر عند السكرول
-          if (_showBackToTop)
+      floatingActionButton: SizedBox(
+        width: MediaQuery.of(context).size.width,
+        child: Stack(
+          children: [
+            // زر إضافة طلب - أصبح الآن في جهة اليمين مع مسافة بسيطة عن الحافة
             Align(
-              alignment: Alignment.bottomCenter,
-              child: FloatingActionButton(
-                heroTag: 'scroll_to_top_btn',
-                mini: true,
-                onPressed: _scrollToTop,
-                backgroundColor: MyRequestsColors.primary.withOpacity(0.8),
-                child: const Icon(Icons.arrow_upward, color: Colors.white),
+              alignment: Alignment.bottomRight,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: FloatingActionButton(
+                  heroTag: 'add_request_btn',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => CreateRequestPage()),
+                    );
+                  },
+                  backgroundColor: MyRequestsColors.primary,
+                  tooltip: AppLocalizations.of(context)!.translate('create_request') ?? 'Create Request',
+                  child: const Icon(Icons.add, color: Colors.white),
+                ),
               ),
             ),
-        ],
+            // زر الصعود للأعلى - أصبح الآن في المنتصف ويظهر عند السكرول
+            if (_showBackToTop)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: FloatingActionButton(
+                  heroTag: 'scroll_to_top_btn',
+                  mini: true,
+                  onPressed: _scrollToTop,
+                  backgroundColor: MyRequestsColors.primary.withOpacity(0.8),
+                  child: const Icon(Icons.arrow_upward, color: Colors.white),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

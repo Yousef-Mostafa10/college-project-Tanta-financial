@@ -29,6 +29,7 @@ class InboxPage extends StatefulWidget {
 class _InboxPageState extends State<InboxPage> {
   final InboxApi _apiService = InboxApi();
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   Timer? _searchTimer;
 
   List<dynamic> _requests = [];
@@ -57,6 +58,7 @@ class _InboxPageState extends State<InboxPage> {
   String _selectedStatus = "All";
   String _selectedType = "All Types";
   String _selectedPriority = "All";
+  bool _showBackToTop = false;
 
   // أنواع الطلبات
   List<String> typeNames = ['All Types'];
@@ -72,11 +74,29 @@ class _InboxPageState extends State<InboxPage> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _initializeData();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= 200) {
+      if (!_showBackToTop) setState(() => _showBackToTop = true);
+    } else {
+      if (_showBackToTop) setState(() => _showBackToTop = false);
+    }
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _searchTimer?.cancel();
     _searchController.dispose();
     super.dispose();
@@ -1646,6 +1666,7 @@ class _InboxPageState extends State<InboxPage> {
           return false;
         },
         child: ListView.builder(
+          controller: _scrollController,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           itemCount: _filteredRequests.length + (_hasMorePages ? 1 : 0),
           itemBuilder: (context, index) {
@@ -1904,6 +1925,7 @@ class _InboxPageState extends State<InboxPage> {
         return false;
       },
       child: SingleChildScrollView(
+        controller: _scrollController,
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -2051,6 +2073,21 @@ class _InboxPageState extends State<InboxPage> {
           : isMobile
           ? _buildMobileOptimizedBody()
           : _buildDesktopBody(),
+      floatingActionButton: _showBackToTop
+          ? SizedBox(
+              width: MediaQuery.of(context).size.width,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: FloatingActionButton(
+                  heroTag: 'inbox_scroll_top',
+                  mini: true,
+                  onPressed: _scrollToTop,
+                  backgroundColor: InboxColors.primary.withOpacity(0.8),
+                  child: const Icon(Icons.arrow_upward, color: Colors.white),
+                ),
+              ),
+            )
+          : null,
     );
   }
 }

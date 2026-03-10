@@ -38,6 +38,7 @@ class _ArchivePageState extends State<ArchivePage> {
   String? _errorMessage;
   String? _userToken;
   Timer? _searchDebounce;
+  bool _showBackToTop = false;
 
   // إحصائيات من الـ API Summary
   int _totalCount = 0;
@@ -74,6 +75,12 @@ class _ArchivePageState extends State<ArchivePage> {
   }
 
   void _onScroll() {
+    if (_scrollController.position.pixels >= 200) {
+      if (!_showBackToTop) setState(() => _showBackToTop = true);
+    } else {
+      if (_showBackToTop) setState(() => _showBackToTop = false);
+    }
+    
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
       _loadMore();
     }
@@ -224,6 +231,14 @@ class _ArchivePageState extends State<ArchivePage> {
     if (mounted) setState(() => _isLoadingMore = false);
   }
 
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
+  }
+
   // 🔹 تحديث القائمة (النتائج قادمة من السيرفر جاهزة)
   void _applyFilters() {
     setState(() {
@@ -371,6 +386,16 @@ class _ArchivePageState extends State<ArchivePage> {
                   ),
               ],
             ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: _showBackToTop
+          ? FloatingActionButton(
+              heroTag: 'archive_scroll_top',
+              mini: true,
+              onPressed: _scrollToTop,
+              backgroundColor: ArchiveColors.primary.withOpacity(0.8),
+              child: const Icon(Icons.arrow_upward, color: Colors.white),
+            )
+          : null,
     );
   }
 
