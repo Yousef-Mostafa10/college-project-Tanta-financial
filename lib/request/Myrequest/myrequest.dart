@@ -17,6 +17,7 @@ import 'my_requests_empty_state.dart';
 import 'my_requests_header.dart';
 
 import '../editerequest.dart';
+import '../creatrequest.dart';
 import '../../drawer.dart';
 import '../../Auth/login.dart';
 
@@ -658,6 +659,18 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                   ),
               ],
             ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => CreateRequestPage()),
+          );
+        },
+        backgroundColor: MyRequestsColors.primary,
+        tooltip: AppLocalizations.of(context)!.translate('create_request') ?? 'Create Request',
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
   }
 
