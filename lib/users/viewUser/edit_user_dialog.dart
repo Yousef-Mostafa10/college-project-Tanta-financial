@@ -153,6 +153,10 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     value: 'ADMIN',
                     child: Text(AppLocalizations.of(context)!.translate('administrator')),
                   ),
+                  DropdownMenuItem(
+                    value: 'ACCOUNTANT',
+                    child: Text(AppLocalizations.of(context)!.translate('accountant')),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _selectedRole = v!),
               ),

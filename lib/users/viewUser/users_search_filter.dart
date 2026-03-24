@@ -148,6 +148,7 @@ class _UsersSearchFilterState extends State<UsersSearchFilter> {
             DropdownMenuItem(value: 'all', child: Text(AppLocalizations.of(context)!.translate('all'))),
             DropdownMenuItem(value: 'admin', child: Text(AppLocalizations.of(context)!.translate('administrator'))),
             DropdownMenuItem(value: 'user', child: Text(AppLocalizations.of(context)!.translate('regular_user'))),
+            DropdownMenuItem(value: 'accountant', child: Text(AppLocalizations.of(context)!.translate('accountant'))),
           ],
           onChanged: (val) => widget.onRoleChanged(val!),
         ),

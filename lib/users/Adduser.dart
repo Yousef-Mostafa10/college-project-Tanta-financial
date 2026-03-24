@@ -641,32 +641,74 @@ class _AddUserPageState extends State<AddUserPage> {
             borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
             child: Container(
               color: AppColors.cardBg,
-              child: Row(
-                children: [
-                  // Admin Option
-                  Expanded(
-                    child: _buildRoleOption(
-                      title: AppLocalizations.of(context)!.translate('administrator'),
-                      subtitle: AppLocalizations.of(context)!.translate('full_access'),
-                      value: 'ADMIN',
-                      icon: Icons.admin_panel_settings,
-                      isSelected: _selectedRole == 'ADMIN',
-                      isMobile: isMobile,
+              child: isMobile
+                  ? Column(
+                      children: [
+                        _buildRoleOption(
+                          title: AppLocalizations.of(context)!.translate('administrator'),
+                          subtitle: AppLocalizations.of(context)!.translate('full_access'),
+                          value: 'ADMIN',
+                          icon: Icons.admin_panel_settings,
+                          isSelected: _selectedRole == 'ADMIN',
+                          isMobile: isMobile,
+                        ),
+                        const Divider(height: 1, thickness: 1),
+                        _buildRoleOption(
+                          title: AppLocalizations.of(context)!.translate('regular_user'),
+                          subtitle: AppLocalizations.of(context)!.translate('limited_access'),
+                          value: 'USER',
+                          icon: Icons.person,
+                          isSelected: _selectedRole == 'USER',
+                          isMobile: isMobile,
+                        ),
+                        const Divider(height: 1, thickness: 1),
+                        _buildRoleOption(
+                          title: AppLocalizations.of(context)!.translate('accountant'),
+                          subtitle: AppLocalizations.of(context)!.translate('accounting_access'),
+                          value: 'ACCOUNTANT',
+                          icon: Icons.account_balance,
+                          isSelected: _selectedRole == 'ACCOUNTANT',
+                          isMobile: isMobile,
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        // Admin Option
+                        Expanded(
+                          child: _buildRoleOption(
+                            title: AppLocalizations.of(context)!.translate('administrator'),
+                            subtitle: AppLocalizations.of(context)!.translate('full_access'),
+                            value: 'ADMIN',
+                            icon: Icons.admin_panel_settings,
+                            isSelected: _selectedRole == 'ADMIN',
+                            isMobile: isMobile,
+                          ),
+                        ),
+                        // User Option
+                        Expanded(
+                          child: _buildRoleOption(
+                            title: AppLocalizations.of(context)!.translate('regular_user'),
+                            subtitle: AppLocalizations.of(context)!.translate('limited_access'),
+                            value: 'USER',
+                            icon: Icons.person,
+                            isSelected: _selectedRole == 'USER',
+                            isMobile: isMobile,
+                          ),
+                        ),
+                        // Accountant Option
+                        Expanded(
+                          child: _buildRoleOption(
+                            title: AppLocalizations.of(context)!.translate('accountant'),
+                            subtitle: AppLocalizations.of(context)!.translate('accounting_access'),
+                            value: 'ACCOUNTANT',
+                            icon: Icons.account_balance,
+                            isSelected: _selectedRole == 'ACCOUNTANT',
+                            isMobile: isMobile,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  // User Option
-                  Expanded(
-                    child: _buildRoleOption(
-                      title: AppLocalizations.of(context)!.translate('regular_user'),
-                      subtitle: AppLocalizations.of(context)!.translate('limited_access'),
-                      value: 'USER',
-                      icon: Icons.person,
-                      isSelected: _selectedRole == 'USER',
-                      isMobile: isMobile,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ),

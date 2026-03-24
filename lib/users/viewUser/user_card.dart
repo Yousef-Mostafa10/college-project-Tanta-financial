@@ -114,7 +114,9 @@ class UserCard extends StatelessWidget {
                   child: Text(
                     user.role.toLowerCase() == 'admin'
                         ? AppLocalizations.of(context)!.translate('administrator')
-                        : AppLocalizations.of(context)!.translate('regular_user'),
+                        : user.role.toLowerCase() == 'accountant'
+                            ? AppLocalizations.of(context)!.translate('accountant')
+                            : AppLocalizations.of(context)!.translate('regular_user'),
                     style: TextStyle(
                       fontSize: isMobile ? 9 : 10,
                       fontWeight: FontWeight.w600,

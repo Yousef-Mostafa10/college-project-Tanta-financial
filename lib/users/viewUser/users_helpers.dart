@@ -23,6 +23,8 @@ class UsersHelpers {
         return AppColors.roleAdmin;
       case 'user':
         return AppColors.roleUser;
+      case 'accountant':
+        return AppColors.roleAccountant;
       default:
         return AppColors.textSecondary;
     }

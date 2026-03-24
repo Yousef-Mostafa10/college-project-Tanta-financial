@@ -24,6 +24,8 @@ class AppLocalizations {
       'view_users': 'View Users',
       'departments': 'Departments',
       'requests': 'Requests',
+      'budget_name': 'Budget Name',
+      'budget_allocation': 'Budget Allocation',
 
       // Create Request
       'create_new_request': 'Create New Request',
@@ -293,8 +295,10 @@ class AppLocalizations {
       'user_type': 'User Type',
       'administrator': 'Administrator',
       'regular_user': 'Regular User',
+      'accountant': 'Accountant',
       'full_access': 'Full access',
       'limited_access': 'Limited access',
+      'accounting_access': 'Accounting access',
       'user_added_success': 'User added successfully!',
       'user_exists_error': 'User already exists with this name',
       'permission_error': "You don't have permission to create users",
@@ -510,6 +514,8 @@ class AppLocalizations {
       'view_users': 'عرض المستخدمين',
       'departments': 'الأقسام',
       'requests': 'الطلبات',
+      'budget_name': 'اسم الميزانية',
+      'budget_allocation': 'تخصيص الميزانية',
 
       // Create Request
       'create_new_request': 'إنشاء طلب جديد',
@@ -777,8 +783,10 @@ class AppLocalizations {
       'user_type': 'نوع المستخدم',
       'administrator': 'مسؤول',
       'regular_user': 'مستخدم عادي',
+      'accountant': 'محاسب',
       'full_access': 'صلاحيات كاملة',
       'limited_access': 'صلاحيات محدودة',
+      'accounting_access': 'صلاحيات محاسبية',
       'user_added_success': 'تم إضافة المستخدم بنجاح!',
       'user_exists_error': 'اسم المستخدم موجود بالفعل',
       'permission_error': "ليس لديك صلاحية لإنشاء مستخدمين",

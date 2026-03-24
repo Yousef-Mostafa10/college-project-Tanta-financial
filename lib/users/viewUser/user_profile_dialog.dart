@@ -97,7 +97,9 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
               AppLocalizations.of(context)!.translate('user_type'),
               _userData!.role.toLowerCase() == 'admin'
                   ? AppLocalizations.of(context)!.translate('administrator')
-                  : AppLocalizations.of(context)!.translate('regular_user'),
+                  : _userData!.role.toLowerCase() == 'accountant'
+                      ? AppLocalizations.of(context)!.translate('accountant')
+                      : AppLocalizations.of(context)!.translate('regular_user'),
               Icons.group_rounded,
             ),
 
