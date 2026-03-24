@@ -93,6 +93,10 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   int? _currentUserId;
   String? _userRole;
 
+  // ✅ متغيرات الميزانية
+  List<Map<String, dynamic>> _budgets = [];
+  bool _isLoadingBudgets = false;
+
   @override
   void initState() {
     super.initState();
@@ -111,6 +115,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         _userRole = userRole;
       });
       await _fetchRequestData();
+      await _fetchBudgets();
     } catch (e) {
       setState(() {
         _errorMessage = AppLocalizations.of(context)!.translate('error_loading_data_msg');
@@ -306,6 +311,44 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       debugPrint('❌ Error loading more forwards: $e');
     } finally {
       if (mounted) setState(() => _isLoadingMoreForwards = false);
+    }
+  }
+
+  // ✅ جلب فئات الميزانية
+  Future<void> _fetchBudgets() async {
+    if (_userToken == null) return;
+    
+    setState(() => _isLoadingBudgets = true);
+    
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/budget-categories?page=1&perPage=100"),
+        headers: {
+          'accept': 'application/json',
+          'Authorization': 'Bearer $_userToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        List<dynamic> categories = [];
+        if (data is List) {
+          categories = data;
+        } else if (data is Map) {
+          categories = data['data'] ?? [];
+        }
+        
+        setState(() {
+          _budgets = categories.map((c) => {
+            'name': c['name']?.toString() ?? '',
+            'available': (c['available'] as num?)?.toDouble() ?? 0.0,
+          }).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching budgets: $e');
+    } finally {
+      setState(() => _isLoadingBudgets = false);
     }
   }
 
@@ -546,20 +589,30 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     }
   }
 
-  // ✅ دالة لتمييز المعاملة كمكتملة (Fulfilled)
-  Future<void> _markAsFulfilled() async {
+  // ✅ دالة لتمييز المعاملة كمكتملة (Fulfilled) - تم تحديثها لتشمل الميزانية
+  Future<void> _markAsFulfilled(String budgetName, double budgetAllocation) async {
     if (_userToken == null || _isProcessing) return;
 
     setState(() => _isProcessing = true);
 
     try {
+      final body = {
+        "title": _requestData?["title"] ?? "",
+        "description": _requestData?["description"] ?? "",
+        "typeName": _requestData?["typeName"] ?? "",
+        "priority": _requestData?["priority"] ?? "LOW",
+        "fulfilled": true,
+        "budgetName": budgetName,
+        "budgetAllocation": budgetAllocation,
+      };
+
       final response = await http.patch(
         Uri.parse("$_baseUrl/transactions/${widget.requestId}"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_userToken',
         },
-        body: jsonEncode({"fulfilled": true}),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -572,6 +625,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           );
           // إعادة جلب البيانات لتحديث واجهة المستخدم
           _fetchRequestData();
+          _fetchBudgets();
         }
       } else {
         throw Exception("Status code: ${response.statusCode}");
@@ -590,6 +644,184 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     }
   }
 
+  // ✅ نافذة اختيار الميزانية وتأكيد الإنجاز
+  void _showFulfillmentDialog() {
+    String? selectedBudget;
+    final TextEditingController amountController = TextEditingController();
+    
+    // إذا لم يتم تحميل الميزانيات بعد، نحاول تحميلها
+    if (_budgets.isEmpty && !_isLoadingBudgets) {
+      _fetchBudgets();
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 10))
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentGreen.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.check_circle_rounded, color: AppColors.accentGreen, size: 28),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'تأكيد اكتمال الطلب',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'الميزانية المستخدمة',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: _isLoadingBudgets
+                          ? Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                children: [
+                                  SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
+                                  const SizedBox(width: 12),
+                                  const Text('جاري تحميل الميزانيات...'),
+                                ],
+                              ),
+                            )
+                          : DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: selectedBudget,
+                                hint: const Text('اختر الميزانية'),
+                                isExpanded: true,
+                                icon: Icon(Icons.account_balance_wallet_outlined, color: AppColors.primary),
+                                items: _budgets.map((budget) {
+                                  return DropdownMenuItem<String>(
+                                    value: budget['name'],
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(budget['name'], style: const TextStyle(fontSize: 14)),
+                                        Text('${budget['available']} متبقي', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setDialogState(() => selectedBudget = value);
+                                },
+                              ),
+                            ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'المبلغ المراد تخصيصه',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: amountController,
+                      keyboardType: TextInputType.number,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: 'أدخل المبلغ هنا',
+                        prefixIcon: Icon(Icons.monetization_on_outlined, color: AppColors.accentGreen),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.accentGreen)),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey[200],
+                              foregroundColor: AppColors.textPrimary,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('إلغاء', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (selectedBudget == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('يرجى اختيار الميزانية'), backgroundColor: Colors.orange),
+                                );
+                                return;
+                              }
+                              final amount = double.tryParse(amountController.text) ?? 0.0;
+                              if (amount <= 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('يرجى إدخال مبلغ صحيح'), backgroundColor: Colors.orange),
+                                );
+                                return;
+                              }
+                              Navigator.pop(context);
+                              _markAsFulfilled(selectedBudget!, amount);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.accentGreen,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('تأكيد واكمال', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildFulfilledButton(bool isMobile) {
     if (_isLoading || _requestData == null) return const SizedBox.shrink();
     
@@ -599,10 +831,10 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     final int? creatorId = rawCreatorId is int ? rawCreatorId : (rawCreatorId != null ? int.tryParse(rawCreatorId.toString()) : null);
     
     final bool isAdmin = _userRole?.toUpperCase() == 'ADMIN';
-    final bool isCreator = _currentUserId != null && creatorId != null && _currentUserId == creatorId;
+    final bool isAccountant = _userRole?.toUpperCase() == 'ACCOUNTANT';
 
-    // يظهر الزر فقط للأدمن أو صاحب الطلب إذا لم تكن مكتملة بعد
-    if (!(isAdmin || isCreator) || fulfilled) {
+    // يظهر الزر فقط للأدمن أو المحاسب إذا لم تكن مكتملة بعد
+    if (!(isAdmin || isAccountant) || fulfilled) {
       return const SizedBox.shrink();
     }
 
@@ -627,7 +859,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           ],
         ),
         child: ElevatedButton.icon(
-          onPressed: _isProcessing ? null : _markAsFulfilled,
+          onPressed: _isProcessing ? null : _showFulfillmentDialog,
           icon: _isProcessing 
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
               : const Icon(Icons.check_circle_outline, color: Colors.white, size: 22),
@@ -804,7 +1036,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         children: [
           _buildMainInfoCard(title, status, statusColor, creator, createdAt, isMobile),
           SizedBox(height: isMobile ? 16 : 20),
-          _buildDetailsCard(type, priority, description, isMobile),
+          _buildDetailsCard(type, priority, description, data, isMobile),
           SizedBox(height: isMobile ? 16 : 20),
           if (documents.isNotEmpty) ...[
             _buildAttachmentsCard(documents, isMobile),
@@ -912,9 +1144,14 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     );
   }
 
-  Widget _buildDetailsCard(String type, String priority, String description, bool isMobile) {
+  Widget _buildDetailsCard(String type, String priority, String description, Map<String, dynamic> data, bool isMobile) {
     final priorityColor = _getPriorityColor(priority);
     final priorityIcon = _getPriorityIcon(priority);
+
+    // ✅ التحقق من وجود ميزانية بأكثر من مفتاح محتمل وصلاحية المستخدم
+    final bName = data["budgetName"] ?? data["budget_name"];
+    final bAlloc = data["budgetAllocation"] ?? data["budget_allocation"];
+    final bool isAdminOrAccountant = _userRole?.toUpperCase() == 'ADMIN' || _userRole?.toUpperCase() == 'ACCOUNTANT';
 
     return Card(
       elevation: 2,
@@ -936,7 +1173,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
               ),
             ),
             SizedBox(height: isMobile ? 12 : 16),
-            Wrap(
+              Wrap(
               spacing: isMobile ? 8 : 12,
               runSpacing: isMobile ? 8 : 12,
               children: [
@@ -944,6 +1181,21 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                 _buildDetailChip('${AppLocalizations.of(context)!.translate('priority')}: $priority', priorityIcon, priorityColor, isMobile),
               ],
             ),
+            // ✅ عرض بيانات الميزانية للأدمن والمحاسب فقط
+
+            if (isAdminOrAccountant && ((bName != null && bName.toString().isNotEmpty) || (bAlloc != null && bAlloc != 0))) ...[
+              SizedBox(height: isMobile ? 12 : 16),
+              Wrap(
+                spacing: isMobile ? 8 : 12,
+                runSpacing: isMobile ? 8 : 12,
+                children: [
+                   if (bName != null && bName.toString().isNotEmpty)
+                     _buildDetailChip('${AppLocalizations.of(context)!.translate('budget_name')}: $bName', Icons.account_balance_wallet_rounded, AppColors.accentBlue, isMobile),
+                   if (bAlloc != null && bAlloc != 0)
+                     _buildDetailChip('${AppLocalizations.of(context)!.translate('budget_allocation')}: $bAlloc', Icons.attach_money_rounded, AppColors.accentGreen, isMobile),
+                ],
+              ),
+            ],
             SizedBox(height: isMobile ? 12 : 16),
             Text(
               AppLocalizations.of(context)!.translate('description_label'),
