@@ -71,6 +71,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   List<Map<String, dynamic>> _selectedPreviousDocuments = [];
 
   bool _isLoadingTypes = true;
+  bool _isLoadingMoreTypes = false;
+  bool _typesHasMore = true;
+  int _typesCurrentPage = 1;
   bool _isSubmitting = false;
 
   Timer? _userSearchTimer;
@@ -222,20 +225,23 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   }
 
   Future<void> fetchRequestTypes() async {
+    setState(() {
+      _isLoadingTypes = true;
+      _requestTypesData = [];
+      _typesCurrentPage = 1;
+      _typesHasMore = true;
+    });
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token') ?? '';
 
-      List<TransactionType> allTypes = [];
-      int page = 1;
-      bool hasMore = true;
+      final response = await http.get(
+        Uri.parse('$_documentApiUrl/transactions/types?page=1&perPage=10'),
+        headers: {"Authorization": "Bearer $token"},
+      );
 
-      while (hasMore) {
-        final response = await http.get(
-          Uri.parse('$_documentApiUrl/transactions/types?page=$page&perPage=10'),
-          headers: {"Authorization": "Bearer $token"},
-        );
-
+      if (mounted) {
         if (response.statusCode == 200) {
           final responseData = json.decode(response.body);
           List<dynamic> typesList = [];
@@ -248,36 +254,80 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             typesList = responseData;
           }
 
-          for (var item in typesList) {
-            allTypes.add(TransactionType.fromJson(item));
-          }
+          List<TransactionType> types = typesList.map((item) => TransactionType.fromJson(item)).toList();
 
-          if (pagination != null && pagination['next'] != null) {
-            page = pagination['next'];
-          } else {
-            hasMore = false;
-          }
+          setState(() {
+            _requestTypesData = types;
+            final typeNames = types.map((t) => t.name).toList();
+            _requestTypes = ['Request Type', ...typeNames];
+            
+            _typesCurrentPage = pagination?['currentPage'] ?? 1;
+            _typesHasMore = pagination?['next'] != null;
+            _isLoadingTypes = false;
+          });
         } else {
-          hasMore = false;
+          setState(() {
+            _isLoadingTypes = false;
+          });
         }
-      }
-
-      if (mounted) {
-        setState(() {
-          _requestTypesData = allTypes;
-          final typeNames = allTypes.map((t) => t.name).toSet().toList();
-          _requestTypes = ['Request Type', ...typeNames];
-          if (_selectedRequestType == 'Request Type' && _requestTypes.length > 1) {
-            _selectedRequestType = _requestTypes[1];
-          }
-          _isLoadingTypes = false;
-        });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoadingTypes = false;
         });
+      }
+    }
+  }
+
+  Future<void> _loadMoreTypes({void Function(void Function())? setStateDialog}) async {
+    if (_isLoadingMoreTypes || !_typesHasMore) return;
+
+    setState(() => _isLoadingMoreTypes = true);
+    setStateDialog?.call(() {});
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final nextPage = _typesCurrentPage + 1;
+
+      final response = await http.get(
+        Uri.parse('$_documentApiUrl/transactions/types?page=$nextPage&perPage=10'),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (mounted && response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        List<dynamic> typesList = [];
+        Map<String, dynamic>? pagination;
+
+        if (responseData is Map) {
+          typesList = responseData['data'] ?? responseData['transactionTypes'] ?? [];
+          pagination = responseData['pagination'];
+        } else if (responseData is List) {
+          typesList = responseData;
+        }
+
+        final newTypes = typesList.map((item) => TransactionType.fromJson(item)).toList();
+        
+        setState(() {
+          _requestTypesData.addAll(newTypes);
+          final typeNames = newTypes.map((t) => t.name).toList();
+          _requestTypes.addAll(typeNames);
+          
+          _typesCurrentPage = pagination?['currentPage'] ?? nextPage;
+          _typesHasMore = pagination?['next'] != null;
+          _isLoadingMoreTypes = false;
+        });
+        setStateDialog?.call(() {});
+      } else {
+        setState(() => _isLoadingMoreTypes = false);
+        setStateDialog?.call(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMoreTypes = false);
+        setStateDialog?.call(() {});
       }
     }
   }
@@ -1027,7 +1077,146 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     }
   }
 
-    void _showUserSelectionDialog() {
+  void _showTypeSelectionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.9,
+                constraints: BoxConstraints(maxHeight: 500),
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.list_alt_rounded,
+                          color: CreateRequestColors.primary,
+                          size: 24,
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Select Request Type',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: CreateRequestColors.primary,
+                          ),
+                        ),
+                        Spacer(),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    Expanded(
+                      child: _isLoadingTypes
+                          ? Center(child: CircularProgressIndicator(color: CreateRequestColors.primary))
+                          : NotificationListener<ScrollNotification>(
+                              onNotification: (scrollInfo) {
+                                if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 100 &&
+                                    !_isLoadingMoreTypes && _typesHasMore) {
+                                  _loadMoreTypes(setStateDialog: setStateDialog);
+                                }
+                                return false;
+                              },
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: _requestTypesData.length + (_typesHasMore ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (index >= _requestTypesData.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Center(
+                                        child: _isLoadingMoreTypes
+                                            ? SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child: CircularProgressIndicator(
+                                                  color: CreateRequestColors.primary,
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : Text(
+                                                'Scroll for more...',
+                                                style: TextStyle(
+                                                  color: CreateRequestColors.textMuted,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                      ),
+                                    );
+                                  }
+
+                                  final type = _requestTypesData[index];
+                                  final isSelected = type.name == _selectedRequestType;
+                                  return ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: isSelected
+                                          ? CreateRequestColors.primary.withOpacity(0.2)
+                                          : CreateRequestColors.primary.withOpacity(0.1),
+                                      child: Icon(
+                                        Icons.description_outlined,
+                                        color: isSelected
+                                            ? CreateRequestColors.primary
+                                            : CreateRequestColors.textSecondary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      type.name,
+                                      style: TextStyle(
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected
+                                            ? CreateRequestColors.primary
+                                            : CreateRequestColors.textPrimary,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    subtitle: (type.creatorName != 'System' && type.creatorName != '')
+                                        ? Text(
+                                            'Created by: ${type.creatorName}',
+                                            style: TextStyle(fontSize: 11, color: CreateRequestColors.textMuted),
+                                          )
+                                        : null,
+                                    trailing: isSelected
+                                        ? Icon(
+                                            Icons.check_circle_rounded,
+                                            color: CreateRequestColors.primary,
+                                          )
+                                        : null,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedRequestType = type.name;
+                                      });
+                                      Navigator.pop(context);
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showUserSelectionDialog() {
     showDialog(
       context: context,
       builder: (context) {
@@ -1385,114 +1574,71 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             ),
             SizedBox(height: 8),
 
-            _isLoadingTypes
-                ? Container(
-              height: 70,
-              decoration: BoxDecoration(
-                border: Border.all(color: CreateRequestColors.borderColor),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
-                children: [
-                  SizedBox(width: 12),
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: CreateRequestColors.primary,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'Loading request types...',
-                    style: TextStyle(color: CreateRequestColors.textMuted),
-                  ),
-                ],
-              ),
-            )
-                : DropdownButtonFormField<String>(
-              isExpanded: true,
-              itemHeight: 75,
-              value: _selectedRequestType,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 2),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: isMobile ? 12 : 16,
-                ),
-              ),
-              selectedItemBuilder: (BuildContext context) {
-                return _requestTypes.map<Widget>((String item) {
-                  return Text(
-                    item == 'Request Type'
-                        ? AppLocalizations.of(context)!.translate('request_type_hint')
-                        : item,
-                    style: TextStyle(
-                      fontWeight: item == 'Request Type' ? FontWeight.normal : FontWeight.w600,
-                      color: item == 'Request Type'
-                          ? CreateRequestColors.textMuted
-                          : CreateRequestColors.textPrimary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  );
-                }).toList();
-              },
-              items: _requestTypes.map((v) {
-                final typeData = _requestTypesData.firstWhere(
-                      (t) => t.name == v,
-                  orElse: () => TransactionType(name: v, creatorName: ''),
-                );
-
-                return DropdownMenuItem(
-                  value: v,
-                  child: Container(
-                    constraints: BoxConstraints(
-                      minHeight: 40,
-                      maxHeight: 60,
-                    ),
-                    alignment: Alignment.centerLeft,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          v == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : v,
-                          style: TextStyle(
-                            fontWeight: v == 'Request Type' ? FontWeight.normal : FontWeight.w600,
-                            color: v == 'Request Type' ? CreateRequestColors.textMuted : CreateRequestColors.textPrimary,
-                          ),
-                        ),
-                        if (v != 'Request Type' && typeData.creatorName != 'System' && typeData.creatorName != '')
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              'Created by: ${typeData.creatorName}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: CreateRequestColors.textSecondary,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: (v) => setState(() => _selectedRequestType = v!),
-              validator: (v) => v == 'Request Type'
+            FormField<String>(
+              initialValue: _selectedRequestType,
+              validator: (v) => _selectedRequestType == 'Request Type'
                   ? AppLocalizations.of(context)!.translate('request_type_hint')
                   : null,
+              builder: (state) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    InkWell(
+                      onTap: () async {
+                        _showTypeSelectionDialog();
+                        // We need a way to trigger validation after selection
+                        // This is handled by the fact that the dialog sets state and we can manually call validate or just check during submit.
+                        // Actually, the simplest is to update the form field state.
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(color: state.hasError ? CreateRequestColors.accentRed : CreateRequestColors.borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: state.hasError ? CreateRequestColors.accentRed : CreateRequestColors.borderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: state.hasError ? CreateRequestColors.accentRed : CreateRequestColors.focusBorderColor, width: 2),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: isMobile ? 12 : 16,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _selectedRequestType == 'Request Type'
+                                    ? AppLocalizations.of(context)!.translate('request_type_hint')
+                                    : _selectedRequestType,
+                                style: TextStyle(
+                                  fontWeight: _selectedRequestType == 'Request Type' ? FontWeight.normal : FontWeight.w600,
+                                  color: _selectedRequestType == 'Request Type'
+                                      ? CreateRequestColors.textMuted
+                                      : CreateRequestColors.textPrimary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Icon(Icons.arrow_drop_down, color: CreateRequestColors.textSecondary),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (state.hasError)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, left: 12),
+                        child: Text(
+                          state.errorText!,
+                          style: TextStyle(color: CreateRequestColors.accentRed, fontSize: 12),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
             SizedBox(height: isMobile ? 12 : 16),
 

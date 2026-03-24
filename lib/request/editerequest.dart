@@ -79,6 +79,10 @@ class _EditRequestPageState extends State<EditRequestPage> {
   bool _isLoading = true;
   bool _isUpdating = false;
   bool _isUploadingFile = false;
+  bool _isLoadingTypes = true;
+  bool _isLoadingMoreTypes = false;
+  bool _typesHasMore = true;
+  int _typesCurrentPage = 1;
   bool _isCreator = false; // 🔥 الافتراضي هو false للبدء بفصح الصلاحيات
 
   final String _baseUrl = AppConfig.baseUrl;
@@ -162,17 +166,20 @@ class _EditRequestPageState extends State<EditRequestPage> {
   }
 
   Future<void> _fetchRequestTypes() async {
+    setState(() {
+      _isLoadingTypes = true;
+      _requestTypesData = [];
+      _typesCurrentPage = 1;
+      _typesHasMore = true;
+    });
+
     try {
-      final List<TransactionType> allTypes = [];
-      int page = 1;
-      bool hasMore = true;
+      final response = await http.get(
+        Uri.parse('$_documentApiUrl/transactions/types?page=1&perPage=10'),
+        headers: {'Authorization': 'Bearer $_userToken'},
+      );
 
-      while (hasMore) {
-        final response = await http.get(
-          Uri.parse('$_documentApiUrl/transactions/types?page=$page&perPage=10'),
-          headers: {'Authorization': 'Bearer $_userToken'},
-        );
-
+      if (mounted) {
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
 
@@ -186,33 +193,80 @@ class _EditRequestPageState extends State<EditRequestPage> {
             typesList = data;
           }
 
-          for (var item in typesList) {
-            allTypes.add(TransactionType.fromJson(item));
-          }
+          List<TransactionType> types = typesList.map((item) => TransactionType.fromJson(item)).toList();
 
-          if (pagination != null && pagination['next'] != null) {
-            page = pagination['next'];
-          } else {
-            hasMore = false;
-          }
+          setState(() {
+            _requestTypesData = types;
+            _requestTypes = ['Request Type', ...types.map((t) => t.name)];
+            
+            _typesCurrentPage = pagination?['currentPage'] ?? 1;
+            _typesHasMore = pagination?['next'] != null;
+            _isLoadingTypes = false;
+          });
         } else {
-          debugPrint('Error fetching types: ${response.statusCode}');
-          hasMore = false;
+          setState(() {
+            _isLoadingTypes = false;
+          });
         }
       }
-
-      // إزالة المكررات
-      final uniqueTypes = <String, TransactionType>{};
-      for (var t in allTypes) {
-        uniqueTypes[t.name] = t;
-      }
-
-      setState(() {
-        _requestTypesData = uniqueTypes.values.toList();
-        _requestTypes = ['Request Type', ..._requestTypesData.map((t) => t.name)];
-      });
     } catch (e) {
       debugPrint('Error fetching types: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingTypes = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadMoreTypes({void Function(void Function())? setStateDialog}) async {
+    if (_isLoadingMoreTypes || !_typesHasMore) return;
+
+    setState(() => _isLoadingMoreTypes = true);
+    setStateDialog?.call(() {});
+
+    try {
+      final nextPage = _typesCurrentPage + 1;
+
+      final response = await http.get(
+        Uri.parse('$_documentApiUrl/transactions/types?page=$nextPage&perPage=10'),
+        headers: {'Authorization': 'Bearer $_userToken'},
+      );
+
+      if (mounted && response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        List<dynamic> typesList = [];
+        Map<String, dynamic>? pagination;
+
+        if (data is Map) {
+          typesList = data['data'] ?? data['transactionTypes'] ?? [];
+          pagination = data['pagination'];
+        } else if (data is List) {
+          typesList = data;
+        }
+
+        final newTypes = typesList.map((item) => TransactionType.fromJson(item)).toList();
+        
+        setState(() {
+          _requestTypesData.addAll(newTypes);
+          _requestTypes.addAll(newTypes.map((t) => t.name));
+          
+          _typesCurrentPage = pagination?['currentPage'] ?? nextPage;
+          _typesHasMore = pagination?['next'] != null;
+          _isLoadingMoreTypes = false;
+        });
+        setStateDialog?.call(() {});
+      } else {
+        setState(() => _isLoadingMoreTypes = false);
+        setStateDialog?.call(() {});
+      }
+    } catch (e) {
+      debugPrint('Error loading more types: $e');
+      if (mounted) {
+        setState(() => _isLoadingMoreTypes = false);
+        setStateDialog?.call(() {});
+      }
     }
   }
 
@@ -257,6 +311,145 @@ class _EditRequestPageState extends State<EditRequestPage> {
     } catch (e) {
       _showErrorSnackBar('Error: $e');
     }
+  }
+
+  void _showTypeSelectionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.9,
+                constraints: BoxConstraints(maxHeight: 500),
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.list_alt_rounded,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          AppLocalizations.of(context)!.translate('select_request_type') ?? 'Select Request Type',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        Spacer(),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    Expanded(
+                      child: _isLoadingTypes
+                          ? Center(child: CircularProgressIndicator(color: AppColors.primary))
+                          : NotificationListener<ScrollNotification>(
+                              onNotification: (scrollInfo) {
+                                if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 100 &&
+                                    !_isLoadingMoreTypes && _typesHasMore) {
+                                  _loadMoreTypes(setStateDialog: setStateDialog);
+                                }
+                                return false;
+                              },
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: _requestTypesData.length + (_typesHasMore ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (index >= _requestTypesData.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Center(
+                                        child: _isLoadingMoreTypes
+                                            ? SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child: CircularProgressIndicator(
+                                                  color: AppColors.primary,
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : Text(
+                                                AppLocalizations.of(context)!.translate('scroll_for_more') ?? 'Scroll for more...',
+                                                style: TextStyle(
+                                                  color: AppColors.textMuted,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                      ),
+                                    );
+                                  }
+
+                                  final type = _requestTypesData[index];
+                                  final isSelected = type.name == _selectedRequestType;
+                                  return ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: isSelected
+                                          ? AppColors.primary.withOpacity(0.2)
+                                          : AppColors.primary.withOpacity(0.1),
+                                      child: Icon(
+                                        Icons.description_outlined,
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : AppColors.textSecondary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      type.name,
+                                      style: TextStyle(
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : AppColors.textPrimary,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    subtitle: (type.creatorName != 'System' && type.creatorName != '')
+                                        ? Text(
+                                            AppLocalizations.of(context)!.translate('created_by').replaceFirst('{name}', type.creatorName),
+                                            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                          )
+                                        : null,
+                                    trailing: isSelected
+                                        ? Icon(
+                                            Icons.check_circle_rounded,
+                                            color: AppColors.primary,
+                                          )
+                                        : null,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedRequestType = type.name;
+                                      });
+                                      Navigator.pop(context);
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showManageTypesDialog() {
@@ -1607,62 +1800,59 @@ class _EditRequestPageState extends State<EditRequestPage> {
               ],
             ),
             SizedBox(height: isMobile ? 6 : 8),
-            DropdownButtonFormField<String>(
-              isExpanded: true,
-              value: _selectedRequestType,
-              decoration: _buildInputDecoration(),
-              selectedItemBuilder: (BuildContext context) {
-                return _requestTypes.map<Widget>((String item) {
-                  return Container(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      item == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : item,
-                      style: TextStyle(
-                        color: item == 'Request Type' ? AppColors.textMuted : AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                }).toList();
-              },
-              items: _requestTypes.map((v) {
-                final typeData = _requestTypesData.firstWhere(
-                      (t) => t.name == v,
-                  orElse: () => TransactionType(name: v, creatorName: ''),
-                );
-
-                return DropdownMenuItem(
-                  value: v,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        v == 'Request Type' ? AppLocalizations.of(context)!.translate('request_type_hint') : v,
-                        style: TextStyle(
-                          color: v == 'Request Type' ? AppColors.textMuted : AppColors.textPrimary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (v != 'Request Type' && typeData.creatorName != 'System' && typeData.creatorName != '')
-                        Text(
-                          AppLocalizations.of(context)!.translate('created_by').replaceFirst('{name}', typeData.creatorName),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textSecondary,
-                            fontStyle: FontStyle.italic,
+            FormField<String>(
+              initialValue: _selectedRequestType,
+              validator: (v) => (_selectedRequestType == 'Request Type') ? AppLocalizations.of(context)!.translate('request_type_hint') : null,
+              builder: (state) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    InkWell(
+                      onTap: _isCreator ? _showTypeSelectionDialog : null,
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.borderColor),
                           ),
-                          overflow: TextOverflow.ellipsis,
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.borderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.focusBorderColor, width: 2),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         ),
-                    ],
-                  ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _selectedRequestType == 'Request Type'
+                                    ? AppLocalizations.of(context)!.translate('request_type_hint')
+                                    : _selectedRequestType,
+                                style: TextStyle(
+                                  color: _selectedRequestType == 'Request Type' ? AppColors.textMuted : AppColors.textPrimary,
+                                  fontWeight: _selectedRequestType == 'Request Type' ? FontWeight.normal : FontWeight.w600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (state.hasError)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, left: 12),
+                        child: Text(
+                          state.errorText!,
+                          style: TextStyle(color: AppColors.accentRed, fontSize: 12),
+                        ),
+                      ),
+                  ],
                 );
-              }).toList(),
-              onChanged: _isCreator ? (newValue) {
-                setState(() { _selectedRequestType = newValue!; });
-              } : null,
-              validator: (value) => (value == 'Request Type') ? AppLocalizations.of(context)!.translate('request_type_hint') : null,
+              },
             ),
             SizedBox(height: isMobile ? 16 : 20),
 
