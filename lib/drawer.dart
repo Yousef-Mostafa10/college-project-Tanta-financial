@@ -11,6 +11,7 @@ import 'package:college_project/providers/language_provider.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 
 import 'Department/DepartmentsPage.dart';
+import 'Budget/BudgetPage.dart';
 
 // 🎨 COLOR PALETTE - Consistent with the whole application
 class AppColors {
@@ -164,7 +165,19 @@ class _CustomDrawerState extends State<CustomDrawer> {
                 isMobile: isMobile,
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) =>  DepartmentsPage()),
+                    MaterialPageRoute(builder: (context) => DepartmentsPage()),
+                  );
+                },
+              ),
+
+              _buildMenuItem(
+                icon: Icons.account_balance_wallet_rounded,
+                title: 'فئات الميزانية',
+                color: AppColors.accentYellow,
+                isMobile: isMobile,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const BudgetPage()),
                   );
                 },
               ),

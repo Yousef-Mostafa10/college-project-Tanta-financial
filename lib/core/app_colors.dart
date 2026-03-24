@@ -57,6 +57,7 @@ class AppColors {
   // ─── Role Colors ──────────────────────────────────────────────
   static const Color roleAdmin = Color(0xFFE74C3C);
   static const Color roleUser = Color(0xFF27AE60);
+  static const Color roleAccountant = Color(0xFF1E88E5);
 
   // ─── Filter Colors ────────────────────────────────────────────
   static const Color filterSelectedBg = Color(0xFFE0F2F1);
