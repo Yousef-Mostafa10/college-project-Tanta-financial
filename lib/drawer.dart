@@ -172,7 +172,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
               _buildMenuItem(
                 icon: Icons.account_balance_wallet_rounded,
-                title: 'فئات الميزانية',
+                title: AppLocalizations.of(context)!.translate('budget_categories'),
                 color: AppColors.accentYellow,
                 isMobile: isMobile,
                 onTap: () {
