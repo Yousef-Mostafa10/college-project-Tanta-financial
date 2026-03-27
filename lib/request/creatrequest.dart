@@ -368,8 +368,16 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             users = responseData;
           }
 
+          final currentUserId = prefs.getInt('user_id');
+
           setState(() {
-            _usersData = List<Map<String, dynamic>>.from(users);
+            _usersData = users
+                .where((u) {
+              final id = u['id'] is int ? u['id'] : int.tryParse(u['id'].toString());
+              return id != currentUserId;
+            })
+                .map((u) => Map<String, dynamic>.from(u))
+                .toList();
             _filteredUsersData = List.from(_usersData);
             _usersCurrentPage = pagination?['currentPage'] ?? 1;
             _usersHasMore = pagination?['next'] != null;
@@ -424,7 +432,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           users = responseData;
         }
 
-        final newUsers = List<Map<String, dynamic>>.from(users);
+        final newUsersRaw = List<Map<String, dynamic>>.from(users);
+        final currentUserId = prefs.getInt('user_id');
+        final newUsers = newUsersRaw.where((u) {
+          final id = u['id'] is int ? u['id'] : int.tryParse(u['id'].toString());
+          return id != currentUserId;
+        }).toList();
+
         setState(() {
           _usersData.addAll(newUsers);
           _usersCurrentPage = pagination?['currentPage'] ?? nextPage;

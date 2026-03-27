@@ -45,6 +45,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   String? _userName;
   String? _userToken;
   String? _userRole;
+  String? _userId;
 
   // إحصائيات من الـ API Summary
   int _totalCount = 0;
@@ -138,6 +139,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         _userName = userInfo['userName'];
         _userToken = userInfo['token'];
         _userRole = userInfo['role'];
+        _userId = userInfo['userId'];
       });
     } catch (e) {
       print("❌ Error getting user info: $e");
@@ -422,7 +424,9 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
             final query = searchController.text.toLowerCase();
             final filteredUsers = allLoadedUsers.where((user) {
               final name = (user['name'] ?? "").toString().toLowerCase();
-              return name.contains(query);
+              final id = user['id']?.toString();
+              final isCurrentUser = (id != null && _userId != null && id == _userId) || (name == _userName?.toLowerCase());
+              return name.contains(query) && !isCurrentUser;
             }).toList();
 
             return Dialog(

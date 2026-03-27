@@ -14,11 +14,12 @@ class InboxApi {
       final userName =
           prefs.getString('userName') ?? prefs.getString('username') ?? 'admin';
       final token = prefs.getString('token');
+      final userId = prefs.getInt('user_id')?.toString();
 
-      return {'userName': userName, 'token': token};
+      return {'userName': userName, 'token': token, 'userId': userId};
     } catch (e) {
       print("❌ Error getting user info: $e");
-      return {'userName': 'admin', 'token': null};
+      return {'userName': 'admin', 'token': null, 'userId': null};
     }
   }
 

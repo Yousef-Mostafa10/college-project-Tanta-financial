@@ -40,6 +40,7 @@ class _InboxPageState extends State<InboxPage> {
   String? _errorMessage;
   String? _userName;
   String? _userToken;
+  String? _userId;
 
   // ✅ Pagination
   int _currentPage = 1;
@@ -109,6 +110,7 @@ class _InboxPageState extends State<InboxPage> {
     setState(() {
       _userName = userInfo['userName'];
       _userToken = userInfo['token'];
+      _userId = userInfo['userId'];
     });
 
     print('👤 User Info - Name: $_userName, Token: ${_userToken != null ? "Exists" : "NULL"}');
@@ -964,11 +966,19 @@ class _InboxPageState extends State<InboxPage> {
             name: searchQuery,
           );
           
+          final rawUsers = result['users'] as List<dynamic>;
+          final filteredNewUsers = rawUsers.where((u) {
+            final id = u['id']?.toString();
+            final name = u['name']?.toString().toLowerCase();
+            return !((id != null && _userId != null && id == _userId) ||
+                     (name != null && _userName != null && name == _userName?.toLowerCase()));
+          }).toList();
+          
           setDialogState(() {
             if (reset) {
-              users = result['users'];
+              users = filteredNewUsers;
             } else {
-              users.addAll(result['users']);
+              users.addAll(filteredNewUsers);
             }
             usersPage = page;
             hasMoreUsers = result['next'] != null;
