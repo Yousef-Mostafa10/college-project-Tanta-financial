@@ -1492,7 +1492,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             ),
           )
               : Text(
-            AppLocalizations.of(context)!.translate('send_request_button'),
+            _selectedReceiver == 'Select User'
+                ? AppLocalizations.of(context)!.translate('create_request')
+                : AppLocalizations.of(context)!.translate('send_request_button'),
             style: TextStyle(
               color: Colors.white,
               fontSize: isMobile ? 14 : 16,
@@ -1744,7 +1746,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             _buildSectionHeader(AppLocalizations.of(context)!.translate('send_request_section')),
             SizedBox(height: isMobile ? 12 : 16),
 
-            _buildLabel('${AppLocalizations.of(context)!.translate('send_to_user_label')} *'),
+            _buildLabel('${AppLocalizations.of(context)!.translate('send_to_user_label')} ${AppLocalizations.of(context)!.locale.languageCode == 'ar' ? '(اختياري)' : '(Optional)'}'),
             SizedBox(height: 8),
 
             _isLoadingUsers
