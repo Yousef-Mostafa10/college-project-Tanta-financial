@@ -55,7 +55,7 @@ class _ArchivePageState extends State<ArchivePage> {
   // أنواع الطلبات
   List<String> typeNames = ['All Types'];
   List<String> priorities = ['All', 'High', 'Medium', 'Low'];
-  List<String> statuses = ['All', 'Waiting', 'Approved', 'Rejected', 'Needs Change'];
+  List<String> statuses = ['All', 'Waiting', 'Approved', 'Rejected', 'Needs Change', 'Fulfilled'];
 
   late ArchiveApi _api;
 
