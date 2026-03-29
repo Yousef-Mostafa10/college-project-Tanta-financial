@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_config.dart';
@@ -32,15 +33,31 @@ class AuthService {
           "data": data,
           "message": "Login successful"
         };
-      } else if (response.statusCode == 401) {
-        return {
-          "success": false,
-          "error": "Invalid credentials",
-        };
       } else {
+        // محاولة استخراج رسالة الخطأ من جسم الاستجابة
+        debugPrint('🔴 Login failed - Status: ${response.statusCode}');
+        debugPrint('🔴 Raw body: ${response.body}');
+        
+        String errorMsg = "Server error: ${response.statusCode}";
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData is Map) {
+            final rawMsg = errorData['message'] ?? errorData['error'];
+            if (rawMsg is String && rawMsg.isNotEmpty) {
+              errorMsg = rawMsg;
+            } else if (rawMsg is List) {
+              // السيرفر بيرجع الرسائل كـ List مثل: ["Too short name"]
+              errorMsg = rawMsg.map((e) => e.toString()).join(', ');
+            } else if (rawMsg is Map) {
+              errorMsg = rawMsg['key']?.toString() ?? rawMsg.values.first?.toString() ?? errorMsg;
+            }
+          }
+        } catch (_) {}
+        
+        debugPrint('🔴 Extracted error: $errorMsg');
         return {
           "success": false,
-          "error": "Server error: ${response.statusCode}",
+          "error": errorMsg,
         };
       }
     } catch (e) {

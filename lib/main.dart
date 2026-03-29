@@ -8,6 +8,7 @@ import 'providers/language_provider.dart';
 import 'Auth/login.dart';
 import 'home/dashboard.dart';
 import 'home/home.dart';
+import 'utils/session_manager.dart';
 
 void main() {
   runApp(
@@ -34,6 +35,7 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'College Project',
+          navigatorKey: SessionManager.navigatorKey, // ✅ ربط الـ key لإدارة الجلسة
           locale: languageProvider.currentLocale,
           supportedLocales: const [
             Locale('en', ''),

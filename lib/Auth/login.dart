@@ -73,20 +73,27 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       } else {
-        final errorMessage = result['error'] ?? AppLocalizations.of(context)!.translate('login_failed');
+        final errorMessage = result['error']?.toString() ?? 'Login failed';
+        debugPrint('🔴 Login error: $errorMessage');
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("❌ $errorMessage"),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("⚠️ ${AppLocalizations.of(context)!.translate('connection_error')}"),
+          content: Text("Error: ${e.toString()}"),
           backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
     } finally {

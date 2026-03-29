@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'auth_service.dart';
+import '../utils/session_manager.dart';
 
 /// HTTP Client Helper مع دعم تحديث Token تلقائي
 /// يمكن استخدامه بدلاً من http package مباشرة
@@ -125,14 +127,16 @@ class AuthenticatedHttpClient {
       final refreshResult = await _authService.refreshAccessToken();
 
       if (refreshResult['success'] == true) {
-        print('✅ Token refreshed, retrying request...');
+        debugPrint('✅ Token refreshed, retrying request...');
         // إعادة المحاولة مع الـ token الجديد
         response = await requestFn();
       } else {
-        print('❌ Token refresh failed: ${refreshResult['error']}');
+        debugPrint('❌ Token refresh failed: ${refreshResult['error']}');
         
         if (refreshResult['requiresLogin'] == true) {
-          // الـ refresh token منتهي - يجب تسجيل الدخول مرة أخرى
+          // الـ refresh token منتهي - تسجيل خروج تلقائي وتوجيه للـ login
+          debugPrint('⚠️ Session expired - redirecting to login...');
+          SessionManager.handleSessionExpired();
           throw SessionExpiredException('Session expired. Please login again.');
         }
       }
