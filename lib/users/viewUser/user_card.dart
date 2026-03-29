@@ -245,32 +245,47 @@ class UserCard extends StatelessWidget {
   }
 
   void _showDeleteConfirmation(BuildContext context) {
+    // ✅ حفظ الـ Context الخارجي (Scaffold) قبل فتح الـ Dialog
+    final scaffoldContext = context;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          AppLocalizations.of(context)!.translate('delete_user'),
+          AppLocalizations.of(dialogContext)!.translate('delete_user'),
           style: const TextStyle(color: AppColors.accentRed, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          "${AppLocalizations.of(context)!.translate('delete_confirmation')} ${user.name}?",
+          "${AppLocalizations.of(dialogContext)!.translate('delete_confirmation')} ${user.name}?",
           style: const TextStyle(color: AppColors.textPrimary),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context)!.translate('cancel')),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(AppLocalizations.of(dialogContext)!.translate('cancel')),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
+
               try {
                 await apiService.deleteUserById(user.id!);
-                if (onUpdate != null) onUpdate!();
-                UsersHelpers.showSuccessMessage(context, AppLocalizations.of(context)!.translate('user_deleted_success'));
+                if (onUpdate != null) {
+                  onUpdate!();
+                }
+                // ✅ استخدام scaffoldContext الخارجي بعد غلق الـ Dialog
+                if (scaffoldContext.mounted) {
+                  UsersHelpers.showSuccessMessage(
+                    scaffoldContext,
+                    AppLocalizations.of(scaffoldContext)!.translate('user_deleted_success'),
+                  );
+                }
               } catch (e) {
-                UsersHelpers.showErrorMessage(context, e.toString());
+                if (scaffoldContext.mounted) {
+                  UsersHelpers.showErrorMessage(scaffoldContext, e.toString());
+                }
+                debugPrint("Delete user error: $e");
               }
             },
             style: ElevatedButton.styleFrom(

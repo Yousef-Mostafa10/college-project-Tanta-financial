@@ -554,6 +554,7 @@ class AppLocalizations {
       'delete_entry_confirm': 'Are you sure you want to delete this record with value {amount} {currency}?',
       'delete_entry_success': 'Entry deleted successfully',
       'delete_entry_failed': 'Failed to delete entry: {error}',
+      'USER_ENGAGED_IN_SYSTEM': 'Cannot delete user: They are involved in system processes (active requests or managing a department).',
     },
     'ar': {
       // General & Navigation
@@ -1114,6 +1115,7 @@ class AppLocalizations {
       'delete_entry_confirm': 'هل أنت متأكد من حذف هذا السجل بقيمة {amount} {currency}؟',
       'delete_entry_success': 'تم حذف السجل بنجاح',
       'delete_entry_failed': 'فشل حذف السجل: {error}',
+      'USER_ENGAGED_IN_SYSTEM': 'لا يمكن حذف المستخدم: لأنه مشارك في عمليات قائمة (لديه طلبات أو يدير قسماً).',
     },
   };
 

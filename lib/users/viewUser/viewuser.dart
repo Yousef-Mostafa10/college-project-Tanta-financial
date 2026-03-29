@@ -233,6 +233,13 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
         ),
         backgroundColor: AppColors.primary,
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+            onPressed: _loadUsers,
+            tooltip: AppLocalizations.of(context)!.translate('refresh_tooltip'),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -310,19 +317,14 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
           ),
         ],
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _showBackToTop
-          ? SizedBox(
-              width: MediaQuery.of(context).size.width,
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: FloatingActionButton(
-                  heroTag: 'users_scroll_top',
-                  mini: true,
-                  onPressed: _scrollToTop,
-                  backgroundColor: AppColors.primary.withOpacity(0.8),
-                  child: const Icon(Icons.arrow_upward, color: Colors.white),
-                ),
-              ),
+          ? FloatingActionButton(
+              heroTag: 'users_scroll_top',
+              mini: true,
+              onPressed: _scrollToTop,
+              backgroundColor: AppColors.primary.withOpacity(0.8),
+              child: const Icon(Icons.arrow_upward, color: Colors.white),
             )
           : null,
     );

@@ -106,6 +106,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,6 +176,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   ),
                   hintText: AppLocalizations.of(context)!.translate('enter_password_hint'),
                 ),
+                validator: (v) => (v == null || v.isEmpty) 
+                    ? AppLocalizations.of(context)!.translate('required') 
+                    : (v.length < 6 && v != _currentPasswordPlaceholder)
+                        ? AppLocalizations.of(context)!.translate('password_length_error')
+                        : null,
                 onTap: () {
                   if (_passwordController.text == _currentPasswordPlaceholder) {
                     _passwordController.clear();
