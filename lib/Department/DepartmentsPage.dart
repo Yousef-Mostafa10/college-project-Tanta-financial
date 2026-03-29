@@ -39,7 +39,6 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   void initState() {
     super.initState();
     fetchAllDepartments();
-    searchController.addListener(_searchDepartments);
 
     // Scroll listener للتحميل التدريجي
     _scrollController.addListener(() {
@@ -182,7 +181,17 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
     }
   }
 
-  // 🔍 Search for a specific department
+  Timer? _searchDebounce;
+
+  // ✅ معالجة البحث مع Debounce لتحسين الأداء
+  void _onSearchChanged(String value) {
+    if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      _searchDepartments();
+    });
+  }
+
+  // 🔍 البحث عن الأقسام (باستخدام الاسم أو ID المدير)
   Future<void> _searchDepartments() async {
     String query = searchController.text.trim();
 
@@ -199,18 +208,31 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
 
     try {
       final headers = await _getAuthHeaders();
+      
+      // ✅ التحقق إذا كان البحث برقم (Manager ID) أو نص (Department Name)
+      String urlParams = 'page=1&perPage=20'; 
+      if (RegExp(r'^\d+$').hasMatch(query)) {
+        // إذا كان رقم، نبحث بـ managerId
+        urlParams += '&managerId=$query';
+      } else {
+        // إذا كان نص، نبحث بـ name
+        urlParams += '&name=${Uri.encodeComponent(query)}';
+      }
+
       final response = await _dio.get(
-        '/departments/$query',
+        '/departments?$urlParams',
         options: Options(headers: headers),
       );
 
       if (response.statusCode == 200) {
+        final responseData = response.data;
+        List<dynamic> data = responseData['data'] ?? [];
+        
         setState(() {
-          Map<String, dynamic> dept = response.data;
-          filteredDepartments = [{
+          filteredDepartments = data.map((dept) => {
             'name': dept['name'] ?? '',
             'managerId': dept['managerId'],
-          }];
+          }).toList();
           isLoading = false;
         });
       }
@@ -219,6 +241,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         filteredDepartments = [];
         isLoading = false;
       });
+      print('Search error: $e');
     }
   }
 
@@ -255,6 +278,19 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           );
         }
       }
+    } on DioException catch (e) {
+      String errorMessage = AppLocalizations.of(context)!.translate('dept_add_failed');
+      errorMessage = _parseApiError(e.response?.data, errorMessage);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
+      print('Error adding department: $e');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -266,6 +302,47 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
       }
       print('Error adding department: $e');
     }
+  }
+
+  // 🛠️ Robust Error Parser
+  String _parseApiError(dynamic data, String defaultMessage) {
+    if (data == null) return defaultMessage;
+    
+    try {
+      if (data is Map) {
+        // 1. Try common top-level error keys
+        var msg = data['message'] ?? data['error'] ?? data['errors'] ?? data['msg'];
+        
+        if (msg == null && data.isNotEmpty) {
+          // If no common keys, but the map has something, maybe it's localized?
+          final locale = AppLocalizations.of(context)!.locale.languageCode;
+          if (data.containsKey(locale)) return data[locale].toString();
+        }
+
+        if (msg != null) {
+          if (msg is String) return msg;
+          if (msg is List) return msg.map((e) => e.toString()).join(', ');
+          if (msg is Map) {
+            // Nested localized search or validation errors
+            final locale = AppLocalizations.of(context)!.locale.languageCode;
+            if (msg.containsKey(locale)) return msg[locale].toString();
+            if (msg.values.isNotEmpty) {
+              final firstVal = msg.values.first;
+              if (firstVal is List) return firstVal.join(', ');
+              return firstVal.toString();
+            }
+            return msg.toString();
+          }
+          return msg.toString();
+        }
+      } else if (data is String) {
+        return data;
+      }
+    } catch (e) {
+      print("Error parsing API error response: $e");
+    }
+    
+    return defaultMessage;
   }
 
   // ✏️ Update department
@@ -320,6 +397,19 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           );
         }
       }
+    } on DioException catch (e) {
+      String errorMessage = AppLocalizations.of(context)!.translate('dept_update_failed');
+      errorMessage = _parseApiError(e.response?.data, errorMessage);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
+      print('Error updating department: $e');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -352,7 +442,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(AppLocalizations.of(context)!.translate('dept_deleted_success').replaceAll('{name}', name)),
-              backgroundColor: AppColors.accentRed,
+              backgroundColor: AppColors.accentGreen,
             ),
           );
         }
@@ -368,7 +458,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         } else if (e.response!.statusCode == 404) {
           statusErrorMessage = AppLocalizations.of(context)!.translate('user_not_found'); // Assuming user/dept sharing same key or just 'not found'
         } else {
-          statusErrorMessage = 'Server error (${e.response!.statusCode})';
+          statusErrorMessage = _parseApiError(e.response?.data, 'Server error (${e.response!.statusCode})');
         }
       } else {
         statusErrorMessage = '${AppLocalizations.of(context)!.translate('connection_error')}: ${e.message}';
@@ -443,7 +533,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     // Manager Picker Field
                     GestureDetector(
                       onTap: () async {
-                        final result = await _showUserPickerDialog();
+                        final result = await _showUserPickerDialog(departmentName: nameController.text);
                         if (result != null) {
                           setDialogState(() {
                             selectedManagerId = result['id'];
@@ -578,7 +668,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     // Manager Picker Field
                     GestureDetector(
                       onTap: () async {
-                        final result = await _showUserPickerDialog();
+                        final result = await _showUserPickerDialog(departmentName: nameController.text);
                         if (result != null) {
                           setDialogState(() {
                             selectedManagerId = result['id'];
@@ -668,7 +758,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   }
 
   // 👤 User Picker Dialog - بحث حقيقي عبر الـ API
-  Future<Map<String, dynamic>?> _showUserPickerDialog() async {
+  Future<Map<String, dynamic>?> _showUserPickerDialog({String? departmentName}) async {
     List<Map<String, dynamic>> users = [];
     bool isLoadingUsers = true;
     bool isLoadingMoreUsers = false;
@@ -694,6 +784,9 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         String endpoint = '/users?page=$page&perPage=10';
         if (searchQuery.isNotEmpty) {
           endpoint += '&name=${Uri.encodeComponent(searchQuery)}';
+        }
+        if (departmentName != null && departmentName.isNotEmpty) {
+          endpoint += '&department=${Uri.encodeComponent(departmentName)}';
         }
 
         final response = await _dio.get(
@@ -844,12 +937,23 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                               child: CircularProgressIndicator(color: AppColors.primary),
                             )
                           : users.isEmpty
-                              ? Center(
-                                  child: Text(
-                                    AppLocalizations.of(context)!.translate('no_users_found'),
-                                    style: const TextStyle(color: AppColors.textMuted),
-                                  ),
-                                )
+                                  ? Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                                        child: Text(
+                                          (departmentName != null && departmentName.isNotEmpty)
+                                              ? (AppLocalizations.of(context)!.locale.languageCode == 'ar'
+                                                  ? "لم يتم العثور على مستخدمين لهذا القسم، يرجى إضافة مستخدمين للقسم أولاً"
+                                                  : "No users found for this department, please add users to the department first")
+                                              : AppLocalizations.of(context)!.translate('no_users_found'),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: AppColors.textMuted,
+                                            height: 1.5,
+                                          ),
+                                        ),
+                                      ),
+                                    )
                               : NotificationListener<ScrollNotification>(
                                   onNotification: (scrollInfo) {
                                     // Infinite scroll (يعمل في البحث والعادي)
@@ -1037,11 +1141,16 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         backgroundColor: AppColors.sidebarBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white), // 👈 Back arrow
-          onPressed: () {
-            Navigator.pop(context); // 👈 Go back to previous page
-          },
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: fetchAllDepartments,
+            tooltip: AppLocalizations.of(context)!.translate('refresh'),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -1062,6 +1171,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
               ),
               child: TextField(
                 controller: searchController,
+                onChanged: _onSearchChanged,
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context)!.translate('search_dept_hint'),
                   hintStyle: const TextStyle(color: AppColors.textMuted),
