@@ -272,7 +272,9 @@ class AppLocalizations {
       // View Users
       'users_management': 'Users Management',
       'search_users': 'Search users...',
+      'search_departments': 'Search departments...',
       'no_users_found': 'No users found',
+      'searching': 'Searching...',
       'no_admins_found': 'No admins found',
       'try_loading_more': 'Try loading more users or change filter',
       'showing': 'Showing',
@@ -815,7 +817,9 @@ class AppLocalizations {
       // View Users
       'users_management': 'إدارة المستخدمين',
       'search_users': 'البحث عن المستخدمين...',
+      'search_departments': 'البحث عن الأقسام...',
       'no_users_found': 'لا يوجد مستخدمين',
+      'searching': 'جاري البحث...',
       'no_admins_found': 'لا يوجد مشرفين',
       'try_loading_more': 'حاول تحميل المزيد من المستخدمين أو تغيير الفلتر',
       'showing': 'عرض',

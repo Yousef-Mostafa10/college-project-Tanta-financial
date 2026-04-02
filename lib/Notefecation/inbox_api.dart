@@ -879,7 +879,8 @@ class InboxApi {
         },
       );
 
-      return response.statusCode == 200;
+      // ✅ قبول أي كود 2xx كنجاح
+      return response.statusCode >= 200 && response.statusCode < 300;
     } catch (e) {
       print("❌ Error in cancelForward: $e");
       return false;

@@ -13,6 +13,30 @@ class DashboardAPI {
     return prefs.getString('token');
   }
 
+  /// استخراج رسالة خطأ قابلة للقراءة من أي شكل يرجعه الباك أند
+  String _extractErrorMessage(dynamic raw, String fallback) {
+    if (raw == null) return fallback;
+    if (raw is String && raw.isNotEmpty) return raw;
+    if (raw is Map) {
+      // لو فيه "ar" أو "en" يرجع النص
+      final ar = raw['ar'];
+      final en = raw['en'];
+      if (ar is String && ar.isNotEmpty) return ar;
+      if (en is String && en.isNotEmpty) return en;
+      // بعض الـ APIs بترجع {key: "ERROR_KEY"}
+      final key = raw['key'];
+      if (key is String && key.isNotEmpty) return key;
+      // أول قيمة String موجودة
+      for (final v in raw.values) {
+        if (v is String && v.isNotEmpty) return v;
+      }
+    }
+    if (raw is List && raw.isNotEmpty) {
+      return raw.map((e) => e.toString()).join(', ');
+    }
+    return fallback;
+  }
+
   // جلب أنواع المعاملات مع Pagination
   Future<List<String>> fetchTypes() async {
     final token = await _getToken();
@@ -235,12 +259,40 @@ class DashboardAPI {
       },
     );
 
-    if (response.statusCode == 200) {
-      final responseData = json.decode(response.body);
-      return responseData["status"] == "success";
+    // ✅ أي كود 2xx = نجاح
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) return true;
+      try {
+        final responseData = json.decode(response.body);
+        if (responseData is Map && responseData.containsKey("status")) {
+          return responseData["status"] == "success";
+        }
+        return true;
+      } catch (_) {
+        return true;
+      }
     }
 
-    return false;
+    // ❌ فشل - استخراج رسالة الخطأ من الباك أند
+    String errorMsg = "فشل الحذف (كود: ${response.statusCode})";
+    try {
+      if (response.body.isNotEmpty) {
+        final errorData = json.decode(response.body);
+        if (errorData is Map) {
+          // جرب المفاتيح الشائعة وادعم nested objects
+          final rawMsg = errorData["message"] ??
+              errorData["error"] ??
+              errorData["msg"];
+          errorMsg = _extractErrorMessage(rawMsg, errorMsg);
+        }
+      }
+    } catch (_) {
+      if (response.body.isNotEmpty && response.body.length < 300) {
+        errorMsg = response.body;
+      }
+    }
+
+    throw Exception(errorMsg);
   }
 
   // ✅ تعديل طلب (مكان للإضافة - اختياري)

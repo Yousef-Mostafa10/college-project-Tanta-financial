@@ -247,7 +247,7 @@ class DesktopRequestCard extends StatelessWidget {
   }
 
   Widget _buildDocumentsChip(BuildContext context) {
-    final color = documentsCount > 0 ? AppColors.primary : AppColors.textMuted;
+    final color = documentsCount > 0 ? AppColors.accentBlue : AppColors.textMuted;
     final text = documentsCount > 0
         ? '$documentsCount ${documentsCount == 1 ? AppLocalizations.of(context)!.translate('file') : AppLocalizations.of(context)!.translate('files')}'
         : AppLocalizations.of(context)!.translate('no_attachments');

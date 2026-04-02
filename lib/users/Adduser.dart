@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -28,6 +29,9 @@ class _AddUserPageState extends State<AddUserPage> {
   bool _hasMoreDepartments = true;
   bool _isLoadingMoreDepartments = false;
   final ScrollController _departmentScrollController = ScrollController();
+  final TextEditingController _departmentSearchController = TextEditingController();
+  Timer? _departmentSearchDebounce;
+  String _currentDepartmentSearchQuery = '';
 
   final String _apiUrl = AppConfig.baseUrl;
 
@@ -38,15 +42,17 @@ class _AddUserPageState extends State<AddUserPage> {
     _fetchDepartments();
   }
 
-  // ✅ دالة لتحميل الأقسام من الـ API مع Pagination
-  Future<void> _fetchDepartments({bool loadMore = false}) async {
-    if (_isLoadingMoreDepartments) return;
+  // ✅ دالة لتحميل الأقسام من الـ API مع Pagination ودعم البحث
+  Future<void> _fetchDepartments({bool loadMore = false, String searchQuery = ''}) async {
+    // نمنع الطلبات المتكررة فقط في حالة الـ loadMore لضمان عدم تداخل البحث
+    if (loadMore && _isLoadingMoreDepartments) return;
     if (loadMore && !_hasMoreDepartments) return;
 
     if (!loadMore) {
       _departmentPage = 1;
       _departments = [];
       _hasMoreDepartments = true;
+      _currentDepartmentSearchQuery = searchQuery;
     }
 
     setState(() => _isLoadingMoreDepartments = true);
@@ -60,16 +66,28 @@ class _AddUserPageState extends State<AddUserPage> {
         return;
       }
 
+      // ✅ بناء الرابط - مطابقة تماماً لما هو موجود في DepartmentsPage
+      String url = '$_apiUrl/departments?page=$_departmentPage&perPage=10';
+      if (_currentDepartmentSearchQuery.isNotEmpty) {
+        if (RegExp(r'^\d+$').hasMatch(_currentDepartmentSearchQuery)) {
+          // إذا كان البحث رقماً، نستخدم managerId
+          url += '&managerId=$_currentDepartmentSearchQuery';
+        } else {
+          // إذا كان نصاً، نستخدم name
+          url += '&name=${Uri.encodeComponent(_currentDepartmentSearchQuery)}';
+        }
+      }
+
       final response = await http.get(
-        Uri.parse('$_apiUrl/departments?page=$_departmentPage&perPage=10'),
+        Uri.parse(url),
         headers: {
           "Authorization": "Bearer $token",
           "accept": "application/json",
         },
       );
 
+      debugPrint("Departments Search URL: $url");
       debugPrint("Departments Status: ${response.statusCode}");
-      debugPrint("Departments Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -86,9 +104,12 @@ class _AddUserPageState extends State<AddUserPage> {
 
         setState(() {
           final newDepts = departmentsList.map((dept) => dept['name'].toString()).toList();
-          _departments.addAll(newDepts);
+          if (loadMore) {
+            _departments.addAll(newDepts);
+          } else {
+            _departments = newDepts;
+          }
 
-          // استخدام pagination.next لمعرفة لو فيه صفحة تانية
           if (pagination != null && pagination['next'] != null) {
             _departmentPage = pagination['next'];
             _hasMoreDepartments = true;
@@ -96,14 +117,13 @@ class _AddUserPageState extends State<AddUserPage> {
             _hasMoreDepartments = false;
           }
 
-          // اختيار أول قسم كقيمة افتراضية
-          if (_departments.isNotEmpty && _selectedDepartment == null) {
+          // اختيار أول قسم كقيمة افتراضية (فقط عند التحميل الأول وبدون بحث)
+          if (_departments.isNotEmpty && _selectedDepartment == null && _currentDepartmentSearchQuery.isEmpty) {
             _selectedDepartment = _departments.first;
           }
           _isLoadingMoreDepartments = false;
         });
       } else {
-        debugPrint("Failed to fetch departments: ${response.statusCode}");
         setState(() => _isLoadingMoreDepartments = false);
       }
     } catch (e) {
@@ -429,8 +449,17 @@ class _AddUserPageState extends State<AddUserPage> {
     );
   }
 
-  // ✅ فتح Bottom Sheet لاختيار القسم مع دعم التحميل التدريجي
+  // ✅ فتح Bottom Sheet لاختيار القسم مع دعم البحث والتحميل التدريجي
   void _showDepartmentBottomSheet(bool isMobile) {
+    // تصفير البحث عند الفتح لضمان عرض القائمة كاملة
+    _departmentSearchController.clear();
+    _currentDepartmentSearchQuery = '';
+    
+    // إذا كانت القائمة فارغة، قم بتحميلها
+    if (_departments.isEmpty) {
+      _fetchDepartments(searchQuery: '');
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -439,19 +468,12 @@ class _AddUserPageState extends State<AddUserPage> {
       ),
       backgroundColor: AppColors.cardBg,
       builder: (BuildContext sheetContext) {
-        bool isInitialLoadCalled = false;
         return StatefulBuilder(
           builder: (context, setStateSheet) {
-            if (!isInitialLoadCalled) {
-              isInitialLoadCalled = true;
-              Future.microtask(() => _fetchDepartments().then((_) {
-                if (context.mounted) setStateSheet(() {});
-              }));
-            }
             return Container(
               padding: const EdgeInsets.all(20),
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.6,
+                maxHeight: MediaQuery.of(context).size.height * 0.7,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -470,12 +492,56 @@ class _AddUserPageState extends State<AddUserPage> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          _departmentSearchDebounce?.cancel();
+                          Navigator.pop(context);
+                        },
                       ),
                     ],
                   ),
                   const Divider(height: 1, thickness: 1),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+
+                  // شريط البحث
+                  TextField(
+                    controller: _departmentSearchController,
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context)!.translate('search_departments') ?? 'Search departments...',
+                      prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                      suffixIcon: _departmentSearchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _departmentSearchController.clear();
+                                _departmentSearchDebounce?.cancel();
+                                setStateSheet(() {
+                                  _isLoadingMoreDepartments = true;
+                                });
+                                _fetchDepartments(searchQuery: '').then((_) {
+                                  if (context.mounted) setStateSheet(() {});
+                                });
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onChanged: (value) {
+                      _departmentSearchDebounce?.cancel();
+                      _departmentSearchDebounce = Timer(const Duration(milliseconds: 500), () {
+                        setStateSheet(() {
+                          _isLoadingMoreDepartments = true;
+                        });
+                        _fetchDepartments(searchQuery: value.trim()).then((_) {
+                          if (context.mounted) setStateSheet(() {});
+                        });
+                      });
+                      setStateSheet(() {}); // لتحديث أيقونة المسح
+                    },
+                  ),
+                  const SizedBox(height: 16),
 
                   // قائمة الأقسام مع Scroll Listener
                   Expanded(
@@ -486,7 +552,7 @@ class _AddUserPageState extends State<AddUserPage> {
                             !_isLoadingMoreDepartments &&
                             _hasMoreDepartments) {
                           _fetchDepartments(loadMore: true).then((_) {
-                            setStateSheet(() {});
+                            if (context.mounted) setStateSheet(() {});
                           });
                         }
                         return false;
@@ -676,45 +742,45 @@ class _AddUserPageState extends State<AddUserPage> {
         ),
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
             child: Container(
               color: AppColors.cardBg,
               child: isMobile
                   ? Column(
                       children: [
                         _buildRoleOption(
-                          title: AppLocalizations.of(context)!.translate('administrator'),
-                          subtitle: AppLocalizations.of(context)!.translate('full_access'),
+                          title: AppLocalizations.of(context)!.translate('administrator') ?? 'Administrator',
+                          subtitle: AppLocalizations.of(context)!.translate('full_access') ?? 'Full system access',
                           value: 'ADMIN',
-                          icon: Icons.admin_panel_settings,
+                          icon: Icons.admin_panel_settings_rounded,
                           isSelected: _selectedRole == 'ADMIN',
                           isMobile: isMobile,
                         ),
-                        const Divider(height: 1, thickness: 1),
+                        // Divider(height: 1, color: AppColors.borderColor.withOpacity(0.3)),
                         _buildRoleOption(
-                          title: AppLocalizations.of(context)!.translate('regular_user'),
-                          subtitle: AppLocalizations.of(context)!.translate('limited_access'),
+                          title: AppLocalizations.of(context)!.translate('regular_user') ?? 'Regular User',
+                          subtitle: AppLocalizations.of(context)!.translate('limited_access') ?? 'Basic permissions',
                           value: 'USER',
-                          icon: Icons.person,
+                          icon: Icons.person_rounded,
                           isSelected: _selectedRole == 'USER',
                           isMobile: isMobile,
                         ),
-                        const Divider(height: 1, thickness: 1),
+                        // Divider(height: 1, color: AppColors.borderColor.withOpacity(0.3)),
                         _buildRoleOption(
-                          title: AppLocalizations.of(context)!.translate('accountant'),
-                          subtitle: AppLocalizations.of(context)!.translate('accounting_access'),
+                          title: AppLocalizations.of(context)!.translate('accountant') ?? 'Accountant',
+                          subtitle: AppLocalizations.of(context)!.translate('accounting_access') ?? 'Accounting permissions',
                           value: 'ACCOUNTANT',
-                          icon: Icons.account_balance,
+                          icon: Icons.account_balance_wallet_rounded,
                           isSelected: _selectedRole == 'ACCOUNTANT',
                           isMobile: isMobile,
                         ),
@@ -722,35 +788,32 @@ class _AddUserPageState extends State<AddUserPage> {
                     )
                   : Row(
                       children: [
-                        // Admin Option
                         Expanded(
                           child: _buildRoleOption(
-                            title: AppLocalizations.of(context)!.translate('administrator'),
-                            subtitle: AppLocalizations.of(context)!.translate('full_access'),
+                            title: AppLocalizations.of(context)!.translate('administrator') ?? 'Admin',
+                            subtitle: AppLocalizations.of(context)!.translate('full_access') ?? 'Full Access',
                             value: 'ADMIN',
-                            icon: Icons.admin_panel_settings,
+                            icon: Icons.admin_panel_settings_rounded,
                             isSelected: _selectedRole == 'ADMIN',
                             isMobile: isMobile,
                           ),
                         ),
-                        // User Option
                         Expanded(
                           child: _buildRoleOption(
-                            title: AppLocalizations.of(context)!.translate('regular_user'),
-                            subtitle: AppLocalizations.of(context)!.translate('limited_access'),
+                            title: AppLocalizations.of(context)!.translate('regular_user') ?? 'User',
+                            subtitle: AppLocalizations.of(context)!.translate('limited_access') ?? 'Limited',
                             value: 'USER',
-                            icon: Icons.person,
+                            icon: Icons.person_rounded,
                             isSelected: _selectedRole == 'USER',
                             isMobile: isMobile,
                           ),
                         ),
-                        // Accountant Option
                         Expanded(
                           child: _buildRoleOption(
-                            title: AppLocalizations.of(context)!.translate('accountant'),
-                            subtitle: AppLocalizations.of(context)!.translate('accounting_access'),
+                            title: AppLocalizations.of(context)!.translate('accountant') ?? 'Finance',
+                            subtitle: AppLocalizations.of(context)!.translate('accounting_access') ?? 'Accounting',
                             value: 'ACCOUNTANT',
-                            icon: Icons.account_balance,
+                            icon: Icons.account_balance_wallet_rounded,
                             isSelected: _selectedRole == 'ACCOUNTANT',
                             isMobile: isMobile,
                           ),
@@ -774,64 +837,115 @@ class _AddUserPageState extends State<AddUserPage> {
     required bool isMobile,
   }) {
     return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedRole = value;
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.all(isMobile ? 16 : 20),
+      onTap: () => setState(() => _selectedRole = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 16 : 20,
+          vertical: isMobile ? 12 : 20,
+        ),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.selectionBg : AppColors.cardBg,
-          border: Border.all(
-            color: isSelected ? AppColors.selectionBorder : AppColors.borderColor,
-            width: isSelected ? 2 : 1,
-          ),
+          color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.transparent,
+          border: isMobile 
+            ? Border(
+                bottom: BorderSide(
+                  color: isSelected ? AppColors.primary.withOpacity(0.3) : AppColors.borderColor.withOpacity(0.5),
+                  width: 1,
+                ),
+                left: BorderSide(
+                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  width: 4,
+                ),
+              )
+            : Border.all(
+                color: isSelected ? AppColors.primary : AppColors.borderColor.withOpacity(0.5),
+                width: isSelected ? 2 : 1,
+              ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: isMobile ? 40 : 48,
-              height: isMobile ? 40 : 48,
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : AppColors.borderColor,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: isSelected ? Colors.white : AppColors.textSecondary,
-                size: isMobile ? 20 : 24,
-              ),
+        child: isMobile 
+          ? Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.primary : AppColors.bodyBg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isSelected ? AppColors.primary.withOpacity(0.7) : AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(
+                    Icons.check_circle,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
+              ],
+            )
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.primary : AppColors.bodyBg,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isSelected ? AppColors.primary.withOpacity(0.7) : AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            SizedBox(height: isMobile ? 8 : 12),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: isMobile ? 14 : 16,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? AppColors.primary : AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: isMobile ? 12 : 13,
-                color: isSelected ? AppColors.primaryLight : AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: isMobile ? 4 : 8),
-            if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: AppColors.primary,
-                size: isMobile ? 18 : 20,
-              ),
-          ],
-        ),
       ),
     );
   }

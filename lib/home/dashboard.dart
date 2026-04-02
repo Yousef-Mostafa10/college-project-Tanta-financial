@@ -174,9 +174,15 @@ class _AdministrativeDashboardPageState
         );
       }
     } catch (e) {
+      final rawMsg = e.toString().replaceFirst('Exception: ', '');
+      // حاول ترجمة الـ key لو موجود في ملفات الترجمة
+      final localizations = AppLocalizations.of(context)!;
+      final translated = localizations.translate(rawMsg);
+      // لو الترجمة رجعت نفس الـ key معناه مش موجود → عرض الرسالة كما هي
+      final displayMsg = (translated != rawMsg) ? translated : rawMsg;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${AppLocalizations.of(context)!.translate('network_error')}: ${e.toString()}'),
+          content: Text(displayMsg),
           backgroundColor: AppColors.accentRed,
         ),
       );
@@ -274,6 +280,18 @@ class _AdministrativeDashboardPageState
     _searchDebounce = Timer(const Duration(milliseconds: 500), () {
       fetchRequests(page: 1, fullLoad: true);
     });
+  }
+
+  void _clearAllFilters() {
+    if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+    setState(() {
+      selectedPriority = 'All';
+      selectedType = 'All Types';
+      selectedStatus = 'All';
+      _searchController.clear();
+      isLoading = true;
+    });
+    fetchRequests(page: 1, fullLoad: true);
   }
 
   void _applyFilters(List<dynamic> allRequests) {
@@ -548,7 +566,7 @@ class _AdministrativeDashboardPageState
 
   Widget _buildRequestsListForDesktop() {
     if (filteredRequests.isEmpty) {
-      return const EmptyState();
+      return EmptyState(onResetFilters: _clearAllFilters);
     }
 
     return Column(
@@ -974,7 +992,7 @@ class _AdministrativeDashboardPageState
 
   Widget _buildMobileRequestsList() {
     if (filteredRequests.isEmpty) {
-      return const EmptyState();
+      return EmptyState(onResetFilters: _clearAllFilters);
     }
 
     return NotificationListener<ScrollNotification>(

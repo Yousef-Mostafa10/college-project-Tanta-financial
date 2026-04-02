@@ -9,6 +9,7 @@ import 'Auth/login.dart';
 import 'home/dashboard.dart';
 import 'home/home.dart';
 import 'utils/session_manager.dart';
+import 'request/Myrequest/myrequest.dart';
 
 void main() {
   runApp(
@@ -22,10 +23,11 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  Future<bool> checkLoginStatus() async {
+  Future<String?> getUserRole() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
-    return token != null && token.isNotEmpty;
+    if (token == null || token.isEmpty) return null;
+    return prefs.getString("user_role") ?? "user";
   }
 
   @override
@@ -57,17 +59,22 @@ class MyApp extends StatelessWidget {
             }
             return supportedLocales.first; // Default to English
           },
-          home: FutureBuilder<bool>(
-            future: checkLoginStatus(),
+          home: FutureBuilder<String?>(
+            future: getUserRole(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               } else if (snapshot.hasError) {
-                print("❌ Error in checkLoginStatus: ${snapshot.error}");
+                print("❌ Error in getUserRole: ${snapshot.error}");
                 return const LoginPage();
               } else {
-                if (snapshot.data == true) {
-                  return const AdministrativeDashboardPage();
+                final role = snapshot.data;
+                if (role != null) {
+                  if (role.toUpperCase() == 'ADMIN') {
+                    return const AdministrativeDashboardPage();
+                  } else {
+                    return const MyRequestsPage();
+                  }
                 } else {
                   return const LoginPage();
                 }

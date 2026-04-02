@@ -254,6 +254,18 @@ class _ArchivePageState extends State<ArchivePage> {
     });
   }
 
+  void _clearAllFilters() {
+    if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+    setState(() {
+      _selectedPriority = 'All';
+      _selectedType = 'All Types';
+      _selectedStatus = 'All';
+      _searchController.clear();
+      _isLoading = true;
+    });
+    _fetchArchiveRequests();
+  }
+
   // 🔹 عرض فلتر الموبايل
   void _showMobileFilterDialog(
       String title,
@@ -456,15 +468,7 @@ class _ArchivePageState extends State<ArchivePage> {
 
   Widget _buildMobileRequestsList() {
     if (_filteredRequests.isEmpty) {
-      return buildEmptyState(context, true, onResetFilters: () {
-        setState(() {
-          _selectedPriority = 'All';
-          _selectedType = 'All Types';
-          _selectedStatus = 'All';
-          _searchController.clear();
-        });
-        _fetchArchiveRequests();
-      });
+      return buildEmptyState(context, true, onResetFilters: _clearAllFilters);
     }
 
     return ListView.builder(
@@ -558,15 +562,7 @@ class _ArchivePageState extends State<ArchivePage> {
 
   Widget _buildDesktopRequestsList() {
     if (_filteredRequests.isEmpty) {
-      return buildEmptyState(context, false, onResetFilters: () {
-        setState(() {
-          _selectedPriority = 'All';
-          _selectedType = 'All Types';
-          _selectedStatus = 'All';
-          _searchController.clear();
-        });
-        _applyFilters();
-      });
+      return buildEmptyState(context, false, onResetFilters: _clearAllFilters);
     }
 
     return Column(

@@ -303,13 +303,13 @@ class InboxMobileCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                     decoration: BoxDecoration(
-                      color: InboxColors.textSecondary.withOpacity(0.05),
+                      color: (documentsCount > 0 ? Colors.blue : InboxColors.textSecondary).withOpacity(0.05),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: InboxColors.textSecondary.withOpacity(0.1)),
+                      border: Border.all(color: (documentsCount > 0 ? Colors.blue : InboxColors.textSecondary).withOpacity(0.1)),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.attach_file_rounded, size: 12, color: InboxColors.textSecondary),
+                        Icon(Icons.attach_file_rounded, size: 12, color: documentsCount > 0 ? Colors.blue : InboxColors.textSecondary),
                         const SizedBox(width: 2),
                         Text(
                           documentsCount > 0 
@@ -318,7 +318,7 @@ class InboxMobileCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
-                            color: InboxColors.textSecondary,
+                            color: documentsCount > 0 ? Colors.blue : InboxColors.textSecondary,
                           ),
                         ),
                       ],

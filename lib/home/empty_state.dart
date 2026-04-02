@@ -4,7 +4,8 @@ import 'package:college_project/l10n/app_localizations.dart';
 import 'dashboard_colors.dart';
 
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key});
+  final VoidCallback? onResetFilters;
+  const EmptyState({super.key, this.onResetFilters});
 
   @override
   Widget build(BuildContext context) {
@@ -38,25 +39,25 @@ class EmptyState extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // يمكن إضافة دالة reset من parent إذا لزم الأمر
-                },
-                icon: const Icon(Icons.refresh_rounded, size: 16),
-                label: Text(AppLocalizations.of(context)!.translate('reset_filters')),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              if (onResetFilters != null) ...[
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: onResetFilters,
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: Text(AppLocalizations.of(context)!.translate('reset_filters')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
-        )
+      ),
     );
   }
-}
+}

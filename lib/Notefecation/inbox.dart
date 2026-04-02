@@ -981,10 +981,16 @@ class _InboxPageState extends State<InboxPage> {
               users.addAll(filteredNewUsers);
             }
             usersPage = page;
-            hasMoreUsers = result['next'] != null;
+            hasMoreUsers = (result['next'] != null || result['pagination']?['next'] != null);
             isLoadingUsers = false;
             isLoadingMoreUsers = false;
           });
+
+          // ✅ Auto-load logic: if the page is empty because of filtering but more pages exist
+          if (filteredNewUsers.isEmpty && hasMoreUsers) {
+             setDialogState(() => isLoadingMoreUsers = true);
+             fetchUsersPage(page + 1, setDialogState, searchQuery: searchQuery, reset: false);
+          }
         } catch (e) {
           setDialogState(() {
             isLoadingUsers = false;
@@ -1080,17 +1086,37 @@ class _InboxPageState extends State<InboxPage> {
                       ),
                       SizedBox(height: 16),
 
-                      if (!isLoadingUsers && users.isEmpty)
-                         Text(
-                           AppLocalizations.of(context)!.translate('no_users_found'),
-                           style: TextStyle(color: CreateRequestColors.textSecondary),
+                      if (isLoadingUsers && users.isEmpty)
+                         Padding(
+                           padding: const EdgeInsets.symmetric(vertical: 20),
+                           child: Center(
+                             child: Column(
+                               children: [
+                                 CircularProgressIndicator(color: CreateRequestColors.primary),
+                                 SizedBox(height: 12),
+                                 Text(
+                                   AppLocalizations.of(context)!.translate('searching'),
+                                   style: TextStyle(color: CreateRequestColors.textSecondary),
+                                 ),
+                               ],
+                             ),
+                           ),
+                         )
+                      else if (!isLoadingUsers && users.isEmpty)
+                         Padding(
+                           padding: const EdgeInsets.symmetric(vertical: 20),
+                           child: Center(
+                             child: Text(
+                               AppLocalizations.of(context)!.translate('no_users_found'),
+                               style: TextStyle(color: CreateRequestColors.textSecondary),
+                             ),
+                           ),
                          ),
 
                       // قائمة المستخدمين
+                      if (users.isNotEmpty)
                       Expanded(
-                        child: isLoadingUsers && users.isEmpty
-                            ? Center(child: CircularProgressIndicator(color: CreateRequestColors.primary))
-                            : NotificationListener<ScrollNotification>(
+                        child: NotificationListener<ScrollNotification>(
                                 onNotification: (scrollInfo) {
                                   if (scrollInfo.metrics.pixels >=
                                           scrollInfo.metrics.maxScrollExtent - 100 &&
@@ -1460,11 +1486,13 @@ class _InboxPageState extends State<InboxPage> {
   }
 
   void _resetFilters() {
+    if (_searchTimer?.isActive ?? false) _searchTimer!.cancel();
     setState(() {
       _selectedPriority = 'All';
       _selectedType = 'All Types';
       _selectedStatus = 'All';
       _searchController.clear();
+      _isLoading = true;
     });
     _fetchInboxRequests();
   }

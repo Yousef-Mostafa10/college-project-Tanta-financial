@@ -1210,7 +1210,11 @@ class BudgetCategoryCard extends StatelessWidget {
                       valueColor: AlwaysStoppedAnimation<Color>(
                         ratio >= 0.9
                             ? BudgetColors.accentRed
-                            : BudgetColors.primary,
+                            : ratio >= 0.7
+                                ? Colors.orange
+                                : ratio >= 0.4
+                                    ? BudgetColors.accentYellow
+                                    : BudgetColors.accentGreen,
                       ),
                     ),
                   ),

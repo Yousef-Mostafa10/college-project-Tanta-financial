@@ -248,7 +248,7 @@ class MobileRequestCard extends StatelessWidget {
   }
 
   Widget _buildDocumentsChip() {
-    final color = documentsCount > 0 ? AppColors.primary : AppColors.textMuted;
+    final color = documentsCount > 0 ? AppColors.accentBlue : AppColors.textMuted;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

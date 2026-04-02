@@ -316,6 +316,18 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     });
   }
 
+  void _clearAllFilters() {
+    if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+    setState(() {
+      _selectedPriority = 'All';
+      _selectedType = 'All Types';
+      _selectedStatus = 'All';
+      _searchController.clear();
+      _isLoading = true;
+    });
+    _fetchMyRequests();
+  }
+
   // 🔹 دالة الحذف
   Future<void> _deleteRequest(String requestId) async {
     final confirmed = await showDialog<bool>(
@@ -429,6 +441,13 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
               return name.contains(query) && !isCurrentUser;
             }).toList();
 
+            // Auto-load more users if search query is present but no results found yet
+            if (query.isNotEmpty && filteredUsers.isEmpty && hasMoreUsers && !isDialogLoading) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                loadMoreUsers();
+              });
+            }
+
             return Dialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: Container(
@@ -462,30 +481,58 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                     ),
                     const SizedBox(height: 16),
                     Expanded(
-                      child: filteredUsers.isEmpty && isDialogLoading
+                      child: (query.isEmpty && allLoadedUsers.isEmpty && isDialogLoading)
                           ? const Center(child: CircularProgressIndicator())
-                          : ListView.builder(
-                              controller: dialogScrollController,
-                              shrinkWrap: true,
-                              itemCount: filteredUsers.length + (hasMoreUsers ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (index == filteredUsers.length) {
-                                  return const Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                                  );
-                                }
-                                final user = filteredUsers[index];
-                                final userName = user["name"]?.toString() ?? "Unknown";
-                                final isSelected = userName == selectedUser;
-                                return ListTile(
-                                  leading: Icon(Icons.person_rounded, color: isSelected ? MyRequestsColors.primary : MyRequestsColors.textSecondary),
-                                  title: Text(userName, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? MyRequestsColors.primary : MyRequestsColors.textPrimary)),
-                                  trailing: isSelected ? Icon(Icons.check_rounded, color: MyRequestsColors.primary) : null,
-                                  onTap: () => setStateDialog(() => selectedUser = userName),
-                                );
-                              },
-                            ),
+                          : (filteredUsers.isEmpty && !hasMoreUsers && !isDialogLoading)
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.person_off_rounded, size: 48, color: MyRequestsColors.textSecondary.withOpacity(0.5)),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        AppLocalizations.of(context)!.translate('no_users_found') ?? 'No users found',
+                                        style: TextStyle(color: MyRequestsColors.textSecondary, fontWeight: FontWeight.w500),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : (filteredUsers.isEmpty && (isDialogLoading || hasMoreUsers))
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          CircularProgressIndicator(color: MyRequestsColors.primary),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            AppLocalizations.of(context)!.translate('searching') ?? 'Searching...',
+                                            style: TextStyle(color: MyRequestsColors.textSecondary, fontWeight: FontWeight.w500),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : ListView.builder(
+                                      controller: dialogScrollController,
+                                      shrinkWrap: true,
+                                      itemCount: filteredUsers.length + (hasMoreUsers ? 1 : 0),
+                                      itemBuilder: (context, index) {
+                                        if (index == filteredUsers.length) {
+                                          return const Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                          );
+                                        }
+                                        final user = filteredUsers[index];
+                                        final userName = user["name"]?.toString() ?? "Unknown";
+                                        final isSelected = userName == selectedUser;
+                                        return ListTile(
+                                          leading: Icon(Icons.person_rounded, color: isSelected ? MyRequestsColors.primary : MyRequestsColors.textSecondary),
+                                          title: Text(userName, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? MyRequestsColors.primary : MyRequestsColors.textPrimary)),
+                                          trailing: isSelected ? Icon(Icons.check_rounded, color: MyRequestsColors.primary) : null,
+                                          onTap: () => setStateDialog(() => selectedUser = userName),
+                                        );
+                                      },
+                                    ),
                     ),
                     const SizedBox(height: 16),
                     TextField(
@@ -775,15 +822,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
 
   Widget _buildMobileRequestsList() {
     if (_filteredRequests.isEmpty) {
-      return buildEmptyState(context, true, onResetFilters: () {
-        setState(() {
-          _selectedPriority = 'All';
-          _selectedType = 'All Types';
-          _selectedStatus = 'All';
-          _searchController.clear();
-        });
-        _fetchMyRequests();
-      });
+      return buildEmptyState(context, true, onResetFilters: _clearAllFilters);
     }
 
     return ListView.builder(
@@ -947,15 +986,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
 
   Widget _buildDesktopRequestsList() {
     if (_filteredRequests.isEmpty) {
-      return buildEmptyState(context, false, onResetFilters: () {
-        setState(() {
-          _selectedPriority = 'All';
-          _selectedType = 'All Types';
-          _selectedStatus = 'All';
-          _searchController.clear();
-        });
-        _fetchMyRequests();
-      });
+      return buildEmptyState(context, false, onResetFilters: _clearAllFilters);
     }
 
     return Column(
