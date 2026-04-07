@@ -456,6 +456,11 @@ class _ArchivePageState extends State<ArchivePage> {
               _fetchArchiveRequests();
             },
           ),
+          fetchTypePage: (page) => _api.fetchTypesPage(page: page),
+          onTypeChanged: (value) {
+            setState(() => _selectedType = value!);
+            _fetchArchiveRequests();
+          },
         ),
 
         // 3️⃣ قائمة الطلبات
@@ -526,6 +531,7 @@ class _ArchivePageState extends State<ArchivePage> {
                 _fetchArchiveRequests();
               },
               onSearchChanged: _onSearchChanged,
+              fetchTypePage: (page) => _api.fetchTypesPage(page: page),
             ),
 
             SizedBox(height: 20),

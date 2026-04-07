@@ -140,58 +140,61 @@ class InboxApi {
     }
   }
 
-  // 🔹 جلب أنواع المعاملات (paginated)
-  Future<List<String>> fetchTypes(String? token) async {
+  // 🔹 جلب أنواع المعاملات مع Pagination (صفحة واحدة)
+  Future<Map<String, dynamic>> fetchTypesPage(String? token, {int page = 1, int perPage = 10}) async {
     try {
-      if (token == null) return ['All Types'];
+      if (token == null) return {'types': [], 'hasMore': false};
 
-      final List<String> typeNames = ['All Types'];
-      int page = 1;
-      bool hasMore = true;
+      final response = await http.get(
+        Uri.parse("$baseUrl/transactions/types?page=$page&perPage=$perPage"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
 
-      while (hasMore) {
-        final response = await http.get(
-          Uri.parse("$baseUrl/transactions/types?page=$page&perPage=10"),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-        );
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        List<String> types = [];
+        bool hasMore = false;
 
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-
-          List<dynamic> typesList = [];
-          Map<String, dynamic>? pagination;
-
-          if (data is Map) {
-            typesList = data['data'] ?? data['transactionTypes'] ?? [];
-            pagination = data['pagination'];
-          } else if (data is List) {
-            typesList = data;
-          }
-
+        if (responseData is Map) {
+          final typesList = responseData['data'] ?? responseData['transactionTypes'] ?? [];
           for (var item in typesList) {
-            if (item["name"] != null && !typeNames.contains(item["name"])) {
-              typeNames.add(item["name"]);
+            if (item["name"] != null) {
+              types.add(item["name"]);
             }
           }
-
+          final pagination = responseData['pagination'];
           if (pagination != null && pagination['next'] != null) {
-            page = pagination['next'];
-          } else {
-            hasMore = false;
+            hasMore = true;
           }
-        } else {
-          hasMore = false;
+        } else if (responseData is List) {
+          for (var item in responseData) {
+            if (item["name"] != null) {
+              types.add(item["name"]);
+            }
+          }
         }
-      }
 
-      return typeNames;
+        return {
+          'types': types,
+          'hasMore': hasMore,
+        };
+      }
+      return {'types': [], 'hasMore': false};
     } catch (e) {
-      print("⚠️ Error fetching types: $e");
-      return ['All Types'];
+      print("⚠️ Error fetching types page: $e");
+      return {'types': [], 'hasMore': false};
     }
+  }
+
+  // 🔹 جلب أنواع المعاملات (للالتزام بالتوافق)
+  Future<List<String>> fetchTypes(String? token) async {
+    final result = await fetchTypesPage(token, page: 1, perPage: 1000);
+    List<String> allTypes = ['All Types'];
+    allTypes.addAll(result['types'] as List<String>);
+    return allTypes.toSet().toList();
   }
 
   // 🔹 جلب الforwards للمعاملة وتحديد حالة المستخدم الحالي

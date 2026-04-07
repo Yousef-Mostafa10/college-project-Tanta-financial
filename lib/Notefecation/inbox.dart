@@ -45,6 +45,8 @@ class _InboxPageState extends State<InboxPage> {
   // ✅ Pagination
   int _currentPage = 1;
   bool _hasMorePages = true;
+  bool _isFetchingMoreGuard = false; // حارس فوري لمنع التكرار
+  int _lastRequestedPage = 0; // لمنع طلب نفس الصفحة مرتين
 
   // ✅ Summary من الـ API
   Map<String, int> _apiSummary = {
@@ -160,6 +162,8 @@ class _InboxPageState extends State<InboxPage> {
       _errorMessage = null;
       _currentPage = 1;
       _hasMorePages = true;
+      _isFetchingMoreGuard = false;
+      _lastRequestedPage = 0;
     });
 
     try {
@@ -262,14 +266,17 @@ class _InboxPageState extends State<InboxPage> {
     }
   }
 
-  // ✅ تحميل المزيد (infinite scroll)
   Future<void> _loadMoreRequests() async {
-    if (_isLoadingMore || !_hasMorePages) return;
+    if (_isFetchingMoreGuard || _isLoadingMore || !_hasMorePages) return;
+
+    final nextPage = _currentPage + 1;
+    if (nextPage <= _lastRequestedPage) return;
+    _lastRequestedPage = nextPage;
+    _isFetchingMoreGuard = true;
 
     setState(() => _isLoadingMore = true);
 
     try {
-      final nextPage = _currentPage + 1;
       final result = await _apiService.fetchInboxRequestsPage(
         _userToken,
         page: nextPage,
@@ -317,7 +324,18 @@ class _InboxPageState extends State<InboxPage> {
 
       if (mounted) {
         setState(() {
-          _requests.addAll(updatedRequests);
+          // منع التكرار
+          final existingIds = _requests.map((r) => r['id'].toString()).toSet();
+          final List<dynamic> newItems = [];
+          for (var r in updatedRequests) {
+            final id = r['id']?.toString() ?? "";
+            if (id.isNotEmpty && !existingIds.contains(id)) {
+              newItems.add(r);
+              existingIds.add(id);
+            }
+          }
+
+          _requests.addAll(newItems);
           _currentPage = pagination?['currentPage'] ?? nextPage;
           _hasMorePages = pagination?['next'] != null;
           _applyFilters();
@@ -328,7 +346,9 @@ class _InboxPageState extends State<InboxPage> {
       }
     } catch (e) {
       print('❌ Error loading more: $e');
+      _lastRequestedPage = _currentPage;
     } finally {
+      _isFetchingMoreGuard = false;
       if (mounted) setState(() => _isLoadingMore = false);
     }
   }
@@ -1678,6 +1698,7 @@ class _InboxPageState extends State<InboxPage> {
           },
           onSearchChanged: _onSearchChanged,
           onShowMobileFilterDialog: _showMobileFilterDialog,
+          fetchTypePage: (page) => _apiService.fetchTypesPage(_userToken, page: page),
         ),
 
         Expanded(
@@ -1997,6 +2018,7 @@ class _InboxPageState extends State<InboxPage> {
                   _fetchInboxRequests();
                 },
                 onSearchChanged: _onSearchChanged,
+                fetchTypePage: (page) => _apiService.fetchTypesPage(_userToken, page: page),
               ),
               const SizedBox(height: 20),
 

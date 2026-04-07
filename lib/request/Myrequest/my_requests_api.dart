@@ -34,57 +34,61 @@ class MyRequestsApi {
     return fallback;
   }
 
-  // 🔹 جلب أنواع المعاملات مع Pagination
-  Future<List<String>> fetchTypes() async {
+  // 🔹 جلب أنواع المعاملات مع Pagination (صفحة واحدة)
+  Future<Map<String, dynamic>> fetchTypesPage({int page = 1, int perPage = 10}) async {
     try {
-      if (userToken == null) return ['All Types'];
+      if (userToken == null) return {'types': [], 'hasMore': false};
 
-      List<String> allTypes = ['All Types'];
-      int page = 1;
-      bool hasMore = true;
+      final response = await http.get(
+        Uri.parse("$baseUrl/transactions/types?page=$page&perPage=$perPage"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $userToken',
+        },
+      );
 
-      while (hasMore) {
-        final response = await http.get(
-          Uri.parse("$baseUrl/transactions/types?page=$page&perPage=10"),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $userToken',
-          },
-        );
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        List<String> types = [];
+        bool hasMore = false;
 
-        if (response.statusCode == 200) {
-          final responseData = jsonDecode(response.body);
-          List<dynamic> typesList = [];
-          Map<String, dynamic>? pagination;
-
-          if (responseData is Map) {
-            typesList = responseData['data'] ?? responseData['transactionTypes'] ?? [];
-            pagination = responseData['pagination'];
-          } else if (responseData is List) {
-            typesList = responseData;
-          }
-
+        if (responseData is Map) {
+          final typesList = responseData['data'] ?? responseData['transactionTypes'] ?? [];
           for (var item in typesList) {
             if (item["name"] != null) {
-              allTypes.add(item["name"]);
+              types.add(item["name"]);
             }
           }
-
+          final pagination = responseData['pagination'];
           if (pagination != null && pagination['next'] != null) {
-            page = pagination['next'];
-          } else {
-            hasMore = false;
+            hasMore = true;
           }
-        } else {
-          hasMore = false;
+        } else if (responseData is List) {
+          for (var item in responseData) {
+            if (item["name"] != null) {
+              types.add(item["name"]);
+            }
+          }
         }
-      }
 
-      return allTypes.toSet().toList(); // إزالة المكررات
+        return {
+          'types': types,
+          'hasMore': hasMore,
+        };
+      }
+      return {'types': [], 'hasMore': false};
     } catch (e) {
-      print("⚠️ Error fetching types: $e");
-      return ['All Types'];
+      print("⚠️ Error fetching types page: $e");
+      return {'types': [], 'hasMore': false};
     }
+  }
+
+  // 🔹 جلب أنواع المعاملات (للتوافق - يجلب الكل)
+  Future<List<String>> fetchTypes() async {
+    final result = await fetchTypesPage(page: 1, perPage: 1000);
+    List<String> allTypes = ['All Types'];
+    allTypes.addAll(result['types'] as List<String>);
+    return allTypes.toSet().toList();
   }
 
   // 🔹 جلب الطلبات الخاصة بالمستخدم - صفحة واحدة مع دعم الفلترة من السيرفر

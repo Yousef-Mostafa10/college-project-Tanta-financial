@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'my_requests_colors.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import '../../shared/paginated_type_picker.dart';
 
 Widget buildMobileFilterSection({
   required BuildContext context,
@@ -15,6 +16,8 @@ Widget buildMobileFilterSection({
   required Function() onPriorityTap,
   required Function() onTypeTap,
   required Function() onStatusTap,
+  required Future<Map<String, dynamic>> Function(int page) fetchTypePage,
+  required Function(String?) onTypeChanged,
 }) {
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -74,12 +77,15 @@ Widget buildMobileFilterSection({
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: _buildMobileFilterChip(
-                context: context,
-                label: AppLocalizations.of(context)!.translate('type_filter'),
-                value: selectedType,
-                icon: Icons.category_outlined,
-                onTap: onTypeTap,
+              child: PaginatedTypePicker(
+                selectedType: selectedType,
+                onTypeChanged: onTypeChanged,
+                fetchPage: fetchTypePage,
+                isMobile: true,
+                primaryColor: MyRequestsColors.primary,
+                borderColor: MyRequestsColors.primary.withOpacity(0.2),
+                textColor: MyRequestsColors.textPrimary,
+                cardBg: MyRequestsColors.cardBg,
               ),
             ),
             const SizedBox(width: 8),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'my_requests_colors.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import '../../shared/paginated_type_picker.dart';
 
 class MyRequestsDesktopFilters extends StatelessWidget {
   final String selectedPriority;
@@ -14,6 +15,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
   final Function(String?) onTypeChanged;
   final Function(String?) onStatusChanged;
   final Function(String) onSearchChanged;
+  final Future<Map<String, dynamic>> Function(int page) fetchTypePage;
 
   const MyRequestsDesktopFilters({
     Key? key,
@@ -28,6 +30,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
     required this.onTypeChanged,
     required this.onStatusChanged,
     required this.onSearchChanged,
+    required this.fetchTypePage,
   }) : super(key: key);
 
   @override
@@ -116,13 +119,15 @@ class MyRequestsDesktopFilters extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildDesktopFilterDropdown(
-                        context: context,
-                        value: selectedType,
-                        items: typeNames,
-                        label: AppLocalizations.of(context)!.translate('type_filter'),
-                        icon: Icons.category_outlined,
-                        onChanged: (value) => onTypeChanged(value),
+                      child: PaginatedTypePicker(
+                        selectedType: selectedType,
+                        onTypeChanged: onTypeChanged,
+                        fetchPage: fetchTypePage,
+                        isMobile: false,
+                        primaryColor: MyRequestsColors.primary,
+                        borderColor: MyRequestsColors.statBorder,
+                        textColor: MyRequestsColors.textPrimary,
+                        cardBg: MyRequestsColors.cardBg,
                       ),
                     ),
                     const SizedBox(width: 12),

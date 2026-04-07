@@ -37,58 +37,59 @@ class DashboardAPI {
     return fallback;
   }
 
-  // جلب أنواع المعاملات مع Pagination
-  Future<List<String>> fetchTypes() async {
+  // جلب أنواع المعاملات مع Pagination (صفحة واحدة)
+  Future<Map<String, dynamic>> fetchTypesPage({int page = 1, int perPage = 10}) async {
     final token = await _getToken();
     if (token == null) throw Exception("No token found");
 
     try {
-      List<String> allTypes = [];
-      int page = 1;
-      bool hasMore = true;
+      final response = await http.get(
+        Uri.parse("$_baseUrl/transactions/types?page=$page&perPage=$perPage"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
 
-      while (hasMore) {
-        final response = await http.get(
-          Uri.parse("$_baseUrl/transactions/types?page=$page&perPage=10"),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-        );
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        List<String> types = [];
+        bool hasMore = false;
 
-        if (response.statusCode == 200) {
-          final responseData = jsonDecode(response.body);
-          List<dynamic> typesList = [];
-          Map<String, dynamic>? pagination;
-
-          if (responseData is Map) {
-            typesList = responseData['data'] ?? responseData['transactionTypes'] ?? [];
-            pagination = responseData['pagination'];
-          } else if (responseData is List) {
-            typesList = responseData;
-          }
-
-          allTypes.addAll(
-            typesList
-                .where((item) => item["name"] != null)
-                .map<String>((item) => item["name"] as String),
-          );
-
+        if (responseData is Map) {
+          final typesList = responseData['data'] ?? responseData['transactionTypes'] ?? [];
+          types = typesList
+              .where((item) => item["name"] != null)
+              .map<String>((item) => item["name"] as String)
+              .toList();
+          
+          final pagination = responseData['pagination'];
           if (pagination != null && pagination['next'] != null) {
-            page = pagination['next'];
-          } else {
-            hasMore = false;
+            hasMore = true;
           }
-        } else {
-          hasMore = false;
+        } else if (responseData is List) {
+          types = responseData
+              .where((item) => item["name"] != null)
+              .map<String>((item) => item["name"] as String)
+              .toList();
         }
-      }
 
-      return allTypes.toSet().toList(); // إزالة المكررات
+        return {
+          'types': types,
+          'hasMore': hasMore,
+        };
+      }
+      return {'types': [], 'hasMore': false};
     } catch (e) {
-      debugPrint("⚠️ Error fetching types: $e");
-      return [];
+      debugPrint("⚠️ Error fetching types page: $e");
+      return {'types': [], 'hasMore': false};
     }
+  }
+
+  // جلب أنواع المعاملات (للتوافق - يجلب الكل)
+  Future<List<String>> fetchTypes() async {
+    final result = await fetchTypesPage(page: 1, perPage: 1000);
+    return (result['types'] as List<String>);
   }
 
   // ✅ جلب آخر حالة Forward

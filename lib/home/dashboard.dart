@@ -40,7 +40,9 @@ class _AdministrativeDashboardPageState
   bool isLoading = false;
   bool isRefreshing = false;
   bool _isLoadingMore = false;
+  bool _isFetchingMoreGuard = false; // حارس فوري لمنع التكرار
   bool _hasMorePages = true;
+  int _lastRequestedPage = 0; // لمنع طلب نفس الصفحة مرتين
   Timer? _searchDebounce;
 
   // ✅ Pagination (للـ API)
@@ -73,15 +75,11 @@ class _AdministrativeDashboardPageState
   }
 
   void _onScroll() {
+    // فقط للـ back-to-top button - لا تستدعي _loadMore هنا لأن NotificationListener يتولى ذلك
     if (_scrollController.position.pixels >= 200) {
       if (!_showBackToTop) setState(() => _showBackToTop = true);
     } else {
       if (_showBackToTop) setState(() => _showBackToTop = false);
-    }
-
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      _loadMore();
     }
   }
 
@@ -195,6 +193,11 @@ class _AdministrativeDashboardPageState
     } else {
       setState(() => isRefreshing = true);
     }
+    // عند جلب من الصفحة الأولى (فلتر/بحث/refresh)، أعد ضبط الحارس
+    if (page == 1) {
+      _isFetchingMoreGuard = false;
+      _lastRequestedPage = 0;
+    }
     try {
       final result = await _api.fetchAllRequests(
         page: page,
@@ -214,9 +217,9 @@ class _AdministrativeDashboardPageState
       setState(() {
         // لو page = 1 (refresh أو فلتر جديد) → امسح القديم
         if (page == 1) {
-          requests = fetchedTransactions;
-          filteredRequests = fetchedTransactions;
-          paginatedRequests = fetchedTransactions;
+          requests = List.from(fetchedTransactions);
+          filteredRequests = List.from(fetchedTransactions);
+          paginatedRequests = List.from(fetchedTransactions);
         }
         currentPage = pagination?['currentPage'] ?? page;
         totalPages = pagination?['lastPage'] ?? 1;
@@ -240,11 +243,15 @@ class _AdministrativeDashboardPageState
 
   // ✅ Infinite scroll: تحميل الصفحة الي بعدها
   Future<void> _loadMore() async {
-    if (_isLoadingMore || !_hasMorePages) return;
+    if (_isFetchingMoreGuard || _isLoadingMore || !_hasMorePages) return;
+
+    final nextPage = currentPage + 1;
+    if (nextPage <= _lastRequestedPage) return;
+    _lastRequestedPage = nextPage;
+    _isFetchingMoreGuard = true;
 
     setState(() => _isLoadingMore = true);
     try {
-      final nextPage = currentPage + 1;
       final result = await _api.fetchAllRequests(
         page: nextPage,
         perPage: itemsPerPage,
@@ -259,9 +266,20 @@ class _AdministrativeDashboardPageState
 
       if (mounted) {
         setState(() {
-          requests.addAll(fetchedTransactions);
-          filteredRequests.addAll(fetchedTransactions);
-          paginatedRequests.addAll(fetchedTransactions);
+          // منع التكرار: تخطي أي عنصر موجود IDه سبقاً، وأي مكرر في نفس الدفعة
+          final existingIds = paginatedRequests.map((r) => r['id'].toString()).toSet();
+          final List<dynamic> newItems = [];
+          for (var r in fetchedTransactions) {
+            final id = r['id']?.toString() ?? "";
+            if (id.isNotEmpty && !existingIds.contains(id)) {
+              newItems.add(r);
+              existingIds.add(id);
+            }
+          }
+
+          requests.addAll(newItems);
+          filteredRequests = List.from(requests);
+          paginatedRequests = List.from(requests);
           currentPage = pagination?['currentPage'] ?? nextPage;
           totalPages = pagination?['lastPage'] ?? totalPages;
           _hasMorePages = pagination?['next'] != null;
@@ -269,10 +287,13 @@ class _AdministrativeDashboardPageState
       }
     } catch (e) {
       debugPrint('❌ Error loading more: $e');
+      _lastRequestedPage = currentPage;
     } finally {
+      _isFetchingMoreGuard = false;
       if (mounted) setState(() => _isLoadingMore = false);
     }
   }
+
 
   // البحث مع Debounce
   void _onSearchChanged(String value) {
@@ -552,6 +573,7 @@ class _AdministrativeDashboardPageState
         setState(() => selectedStatus = value!);
         fetchRequests(page: 1);
       },
+      fetchTypePage: (page) => _api.fetchTypesPage(page: page),
     );
   }
 

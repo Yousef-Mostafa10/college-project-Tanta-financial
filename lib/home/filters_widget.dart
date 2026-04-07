@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import '../shared/paginated_type_picker.dart';
 import 'dashboard_colors.dart';
 import 'dashboard_helpers.dart';
 
@@ -16,6 +17,7 @@ class FiltersWidget extends StatelessWidget {
   final Function(String?) onPriorityChanged;
   final Function(String?) onTypeChanged;
   final Function(String?) onStatusChanged;
+  final Future<Map<String, dynamic>> Function(int page) fetchTypePage;
 
   const FiltersWidget({
     super.key,
@@ -31,6 +33,7 @@ class FiltersWidget extends StatelessWidget {
     required this.onPriorityChanged,
     required this.onTypeChanged,
     required this.onStatusChanged,
+    required this.fetchTypePage,
   });
 
   @override
@@ -85,14 +88,15 @@ class FiltersWidget extends StatelessWidget {
           isMobile: true,
         ),
         const SizedBox(height: 8),
-        _buildFilterDropdown(
-          context: context,
-          value: selectedType,
-          items: typeNames,
-          label: "Type",
-          icon: Icons.category_outlined,
-          onChanged: onTypeChanged,
+        PaginatedTypePicker(
+          selectedType: selectedType,
+          onTypeChanged: onTypeChanged,
+          fetchPage: fetchTypePage,
           isMobile: true,
+          primaryColor: AppColors.primary,
+          borderColor: AppColors.statBorder,
+          textColor: AppColors.textPrimary,
+          cardBg: AppColors.cardBg,
         ),
         const SizedBox(height: 8),
         _buildFilterDropdown(
@@ -124,14 +128,15 @@ class FiltersWidget extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _buildFilterDropdown(
-            context: context,
-            value: selectedType,
-            items: typeNames,
-            label: "Type",
-            icon: Icons.category_outlined,
-            onChanged: onTypeChanged,
+          child: PaginatedTypePicker(
+            selectedType: selectedType,
+            onTypeChanged: onTypeChanged,
+            fetchPage: fetchTypePage,
             isMobile: false,
+            primaryColor: AppColors.primary,
+            borderColor: AppColors.statBorder,
+            textColor: AppColors.textPrimary,
+            cardBg: AppColors.cardBg,
           ),
         ),
         const SizedBox(width: 12),

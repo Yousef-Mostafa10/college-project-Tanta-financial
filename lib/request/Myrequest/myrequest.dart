@@ -810,6 +810,11 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
               _fetchMyRequests();
             },
           ),
+          fetchTypePage: (page) => _api.fetchTypesPage(page: page),
+          onTypeChanged: (value) {
+            setState(() => _selectedType = value!);
+            _fetchMyRequests();
+          },
         ),
 
         // 3️⃣ قائمة الطلبات فقط هي التي تسكرول
@@ -945,6 +950,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                 _fetchMyRequests();
               },
               onSearchChanged: _onSearchChanged,
+              fetchTypePage: (page) => _api.fetchTypesPage(page: page),
             ),
 
             SizedBox(height: 20),

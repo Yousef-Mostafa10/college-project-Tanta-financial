@@ -25,14 +25,19 @@ class CreateRequestColors {
   static const Color textMuted = Color(0xFFB0B0B0);
 
   // Accent Colors
-  static const Color accentRed = Color(0xFFE74C3C);
-  static const Color accentGreen = Color(0xFF27AE60);
-  static const Color accentBlue = Color(0xFF1E88E5);
+  static const Color accentRed = Color(0xFFEF5350);
+  static const Color accentGreen = Color(0xFF66BB6A);
+  static const Color accentBlue = Color(0xFF42A5F5);
   static const Color accentYellow = Color(0xFFFFB74D);
 
+  // Gradient Colors
+  static const Color primaryGradientStart = Color(0xFF00695C);
+  static const Color primaryGradientEnd = Color(0xFF004D40);
+
   // Border Colors
-  static const Color borderColor = Color(0xFFE0E0E0);
+  static const Color borderColor = Color(0xFFECEFF1);
   static const Color focusBorderColor = Color(0xFF00695C);
+  static const Color shadowColor = Color(0x1A000000);
 }
 
 class CreateRequestPage extends StatefulWidget {
@@ -674,6 +679,44 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     });
   }
 
+  // ✅ حذف ملف من السيرفر تماماً
+  Future<void> _deleteDocument(Map<String, dynamic> document, {void Function(void Function())? setStateSheet}) async {
+    try {
+      final dynamic rawId = document["id"];
+      final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
+      final fileName = document["title"] ?? "file";
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.delete(
+        Uri.parse('$_documentApiUrl/documents/$documentId'),
+        headers: {
+          'accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        if (mounted) {
+          setState(() {
+            _previousDocuments.removeWhere((doc) => doc["id"] == documentId);
+            _selectedPreviousDocuments.removeWhere((doc) => doc["id"] == documentId);
+            _uploadedDocumentIds.remove(documentId);
+          });
+          setStateSheet?.call(() {});
+          _showSuccessMessage(AppLocalizations.of(context)!.translate('file_deleted_success') ?? 'File deleted successfully');
+        }
+      } else if (response.statusCode == 403) {
+        _showErrorMessage(AppLocalizations.of(context)!.translate('document_already_used') ?? 'This file is already used in a transaction and cannot be deleted.');
+      } else {
+        _showErrorMessage('Failed to delete file "$fileName"');
+      }
+    } catch (e) {
+      _showErrorMessage('Error deleting file: $e');
+    }
+  }
+
   // ✅ ✅ ✅ قائمة المنسدلة للملفات (القديمة + رفع جديد)
   void _showFileSelectionMenu() async {
     await _fetchPreviousDocuments();
@@ -684,69 +727,86 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       context: context,
       isScrollControlled: true,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       backgroundColor: Colors.white,
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setStateSheet) {
             return Container(
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.7,
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: CreateRequestColors.borderColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Select Files',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: CreateRequestColors.primary,
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.close_rounded),
+                        icon: Icon(Icons.close_rounded, color: CreateRequestColors.textSecondary),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
                   ),
-                  Divider(height: 1, thickness: 1),
+                  SizedBox(height: 12),
                   SizedBox(height: 16),
 
-                  ListTile(
-                    leading: Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: CreateRequestColors.accentBlue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: CreateRequestColors.accentBlue.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: CreateRequestColors.accentBlue.withOpacity(0.1)),
+                    ),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.all(12),
+                      leading: Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: CreateRequestColors.accentBlue.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.cloud_upload_rounded, color: CreateRequestColors.accentBlue),
                       ),
-                      child: Icon(Icons.cloud_upload_rounded, color: CreateRequestColors.accentBlue),
-                    ),
-                    title: Text(
-                      'Upload New Files',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: CreateRequestColors.textPrimary,
+                      title: Text(
+                        'Upload New Files',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: CreateRequestColors.textPrimary,
+                        ),
                       ),
-                    ),
-                    subtitle: Text(
-                      'Select PDF files from your device',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: CreateRequestColors.textSecondary,
+                      subtitle: Text(
+                        'Select PDF files from your device',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: CreateRequestColors.textSecondary,
+                        ),
                       ),
-                    ),
-                    trailing: Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 16,
-                      color: CreateRequestColors.textMuted,
-                    ),
+                      trailing: Icon(
+                        Icons.add_rounded,
+                        color: CreateRequestColors.accentBlue,
+                      ),
                     onTap: () async {
                       Navigator.pop(context);
                       try {
@@ -776,18 +836,26 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                       } catch (e) {}
                     },
                   ),
+                ),
 
                   SizedBox(height: 16),
 
                   Row(
                     children: [
-                      Icon(Icons.history_rounded, size: 20, color: CreateRequestColors.primary),
-                      SizedBox(width: 8),
+                      Container(
+                        padding: EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: CreateRequestColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(Icons.history_rounded, size: 18, color: CreateRequestColors.primary),
+                      ),
+                      SizedBox(width: 10),
                       Text(
                         'Previously Uploaded Files',
                         style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.bold,
                           color: CreateRequestColors.textPrimary,
                         ),
                       ),
@@ -887,14 +955,45 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            trailing: isSelected
-                                ? Icon(
-                              Icons.check_circle_rounded,
-                              color: CreateRequestColors.accentGreen,
-                            )
-                                : Icon(
-                              Icons.add_circle_outline_rounded,
-                              color: CreateRequestColors.primary,
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.delete_outline_rounded, color: CreateRequestColors.accentRed, size: 22),
+                                  onPressed: () {
+                                    // تأكيد الحذف
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: Text(AppLocalizations.of(context)!.translate('delete_file') ?? 'Delete File'),
+                                        content: Text(AppLocalizations.of(context)!.translate('delete_file_confirm')?.replaceFirst('{fileName}', doc['title'] ?? '') ?? 'Are you sure you want to delete this file?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context),
+                                            child: Text(AppLocalizations.of(context)!.translate('cancel') ?? 'Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.pop(context);
+                                              _deleteDocument(doc, setStateSheet: setStateSheet);
+                                            },
+                                            child: Text(AppLocalizations.of(context)!.translate('delete') ?? 'Delete', style: TextStyle(color: CreateRequestColors.accentRed)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                                isSelected
+                                    ? Icon(
+                                  Icons.check_circle_rounded,
+                                  color: CreateRequestColors.accentGreen,
+                                )
+                                    : Icon(
+                                  Icons.add_circle_outline_rounded,
+                                  color: CreateRequestColors.primary,
+                                ),
+                              ],
                             ),
                             onTap: () {
                               if (isSelected) {
@@ -911,64 +1010,51 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     ),
                   ),
 
-                  SizedBox(height: 16),
+                    SizedBox(height: 12),
 
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: CreateRequestColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Selected Files:',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: CreateRequestColors.textPrimary,
-                          ),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [CreateRequestColors.primaryGradientStart, CreateRequestColors.primaryGradientEnd],
                         ),
-                        Text(
-                          '${_selectedPreviousDocuments.length + _selectedFiles.length}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: CreateRequestColors.primary,
-                            fontSize: 16,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: CreateRequestColors.primary.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: 16),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: CreateRequestColors.primary,
-                        padding: EdgeInsets.symmetric(vertical: 14),
+                        ],
                       ),
-                      child: Text(
-                        'Done',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Done',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
             );
           },
         );
       },
     );
   }
+
 
   // ✅ ربط ملف بالعملية يدوياً (مثل editerequest.dart)
   Future<void> _linkDocumentToTransaction(int transactionId, int documentId) async {
@@ -1099,40 +1185,50 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           builder: (context, setStateDialog) {
             return Dialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
               ),
               child: Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                constraints: BoxConstraints(maxHeight: 500),
-                padding: EdgeInsets.all(20),
+                width: MediaQuery.of(context).size.width * 0.95,
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+                padding: EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.list_alt_rounded,
-                          color: CreateRequestColors.primary,
-                          size: 24,
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Select Request Type',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                        Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: CreateRequestColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.list_alt_rounded,
                             color: CreateRequestColors.primary,
+                            size: 24,
                           ),
                         ),
-                        Spacer(),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            'Select Request Type',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: CreateRequestColors.primary,
+                            ),
+                          ),
+                        ),
                         IconButton(
-                          icon: Icon(Icons.close_rounded),
+                          icon: Icon(Icons.close_rounded, color: CreateRequestColors.textSecondary),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
                     ),
                     SizedBox(height: 16),
+                    Divider(color: CreateRequestColors.borderColor),
+                    SizedBox(height: 12),
                     Expanded(
                       child: _isLoadingTypes
                           ? Center(child: CircularProgressIndicator(color: CreateRequestColors.primary))
@@ -1146,11 +1242,12 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                               },
                               child: ListView.builder(
                                 shrinkWrap: true,
+                                padding: EdgeInsets.zero,
                                 itemCount: _requestTypesData.length + (_typesHasMore ? 1 : 0),
                                 itemBuilder: (context, index) {
                                   if (index >= _requestTypesData.length) {
                                     return Padding(
-                                      padding: const EdgeInsets.all(16),
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
                                       child: Center(
                                         child: _isLoadingMoreTypes
                                             ? SizedBox(
@@ -1174,47 +1271,64 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
                                   final type = _requestTypesData[index];
                                   final isSelected = type.name == _selectedRequestType;
-                                  return ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: isSelected
-                                          ? CreateRequestColors.primary.withOpacity(0.2)
-                                          : CreateRequestColors.primary.withOpacity(0.1),
-                                      child: Icon(
-                                        Icons.description_outlined,
-                                        color: isSelected
-                                            ? CreateRequestColors.primary
-                                            : CreateRequestColors.textSecondary,
-                                        size: 20,
+                                  return Container(
+                                    margin: EdgeInsets.only(bottom: 8),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? CreateRequestColors.primary.withOpacity(0.05) : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isSelected ? CreateRequestColors.primary : Colors.transparent,
+                                        width: 1.5,
                                       ),
                                     ),
-                                    title: Text(
-                                      type.name,
-                                      style: TextStyle(
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                        color: isSelected
-                                            ? CreateRequestColors.primary
-                                            : CreateRequestColors.textPrimary,
-                                        fontSize: 14,
+                                    child: ListTile(
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      leading: CircleAvatar(
+                                        backgroundColor: isSelected
+                                            ? CreateRequestColors.primary.withOpacity(0.2)
+                                            : CreateRequestColors.bodyBg.withOpacity(0.8),
+                                        child: Icon(
+                                          Icons.description_outlined,
+                                          color: isSelected
+                                              ? CreateRequestColors.primary
+                                              : CreateRequestColors.textSecondary,
+                                          size: 18,
+                                        ),
                                       ),
+                                      title: Text(
+                                        type.name,
+                                        style: TextStyle(
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                          color: isSelected
+                                              ? CreateRequestColors.primary
+                                              : CreateRequestColors.textPrimary,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      subtitle: (type.creatorName != 'System' && type.creatorName != '')
+                                          ? Text(
+                                              'Created by: ${type.creatorName}',
+                                              style: TextStyle(fontSize: 11, color: CreateRequestColors.textSecondary),
+                                            )
+                                          : null,
+                                      trailing: isSelected
+                                          ? Icon(
+                                              Icons.check_circle_rounded,
+                                              color: CreateRequestColors.primary,
+                                              size: 20,
+                                            )
+                                          : Icon(
+                                              Icons.chevron_right_rounded,
+                                              color: CreateRequestColors.textMuted,
+                                              size: 20,
+                                            ),
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedRequestType = type.name;
+                                        });
+                                        Navigator.pop(context);
+                                      },
                                     ),
-                                    subtitle: (type.creatorName != 'System' && type.creatorName != '')
-                                        ? Text(
-                                            'Created by: ${type.creatorName}',
-                                            style: TextStyle(fontSize: 11, color: CreateRequestColors.textMuted),
-                                          )
-                                        : null,
-                                    trailing: isSelected
-                                        ? Icon(
-                                            Icons.check_circle_rounded,
-                                            color: CreateRequestColors.primary,
-                                          )
-                                        : null,
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedRequestType = type.name;
-                                      });
-                                      Navigator.pop(context);
-                                    },
                                   );
                                 },
                               ),
@@ -1238,35 +1352,43 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           builder: (context, setStateDialog) {
             return Dialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
               ),
               child: Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                constraints: BoxConstraints(maxHeight: 500),
-                padding: EdgeInsets.all(20),
+                width: MediaQuery.of(context).size.width * 0.95,
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+                padding: EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.person_search_rounded,
-                          color: CreateRequestColors.primary,
-                          size: 24,
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Select User',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                        Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: CreateRequestColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.person_search_rounded,
                             color: CreateRequestColors.primary,
+                            size: 24,
                           ),
                         ),
-                        Spacer(),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            'Select User',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: CreateRequestColors.primary,
+                            ),
+                          ),
+                        ),
                         IconButton(
-                          icon: Icon(Icons.close_rounded),
+                          icon: Icon(Icons.close_rounded, color: CreateRequestColors.textSecondary),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
@@ -1274,13 +1396,25 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     SizedBox(height: 16),
                     TextField(
                       controller: _userSearchController,
+                      style: TextStyle(fontSize: 14),
                       decoration: InputDecoration(
+                        filled: true,
+                        fillColor: CreateRequestColors.bodyBg.withOpacity(0.5),
                         hintText: 'Search users...',
-                        prefixIcon: Icon(Icons.search_rounded, color: CreateRequestColors.primary),
+                        prefixIcon: Icon(Icons.search_rounded, color: CreateRequestColors.primary, size: 20),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
                         ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 1.5),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                       onChanged: (value) {
                         _userSearchTimer?.cancel();
@@ -1293,7 +1427,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                         });
                       },
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 20),
                     Expanded(
                       child: _isLoadingUsers
                           ? Center(child: CircularProgressIndicator(color: CreateRequestColors.primary))
@@ -1310,30 +1444,42 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                               },
                               child: ListView.builder(
                                 shrinkWrap: true,
+                                padding: EdgeInsets.zero,
                                 itemCount: _filteredUsersData.length + 1 + (_usersHasMore ? 1 : 0),
                                 itemBuilder: (context, index) {
                                   if (index == 0) {
-                                    return ListTile(
-                                      leading: Icon(
-                                        Icons.clear_all_rounded,
-                                        color: CreateRequestColors.textMuted,
+                                    return Container(
+                                      margin: EdgeInsets.only(bottom: 8),
+                                      decoration: BoxDecoration(
+                                        color: CreateRequestColors.bodyBg.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: CreateRequestColors.borderColor),
                                       ),
-                                      title: Text(
-                                        'Clear Selection',
-                                        style: TextStyle(
-                                          color: CreateRequestColors.textMuted,
+                                      child: ListTile(
+                                        leading: Icon(
+                                          Icons.clear_all_rounded,
+                                          color: CreateRequestColors.textSecondary,
+                                          size: 20,
                                         ),
+                                        title: Text(
+                                          'Clear Selection',
+                                          style: TextStyle(
+                                            color: CreateRequestColors.textSecondary,
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        onTap: () {
+                                          setState(() => _selectedReceiver = 'Select User');
+                                          Navigator.pop(context);
+                                        },
                                       ),
-                                      onTap: () {
-                                        setState(() => _selectedReceiver = 'Select User');
-                                        Navigator.pop(context);
-                                      },
                                     );
                                   }
 
                                   if (index > _filteredUsersData.length) {
                                     return Padding(
-                                      padding: const EdgeInsets.all(16),
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
                                       child: Center(
                                         child: _isLoadingMoreUsers
                                             ? SizedBox(
@@ -1357,45 +1503,62 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
                                   final user = _filteredUsersData[index - 1];
                                   final isSelected = user['name'] == _selectedReceiver;
-                                  return ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: isSelected
-                                          ? CreateRequestColors.primary.withOpacity(0.2)
-                                          : CreateRequestColors.primary.withOpacity(0.1),
-                                      child: Icon(
-                                        Icons.person_rounded,
-                                        color: isSelected
-                                            ? CreateRequestColors.primary
-                                            : CreateRequestColors.textSecondary,
+                                  return Container(
+                                    margin: EdgeInsets.only(bottom: 8),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? CreateRequestColors.primary.withOpacity(0.05) : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isSelected ? CreateRequestColors.primary : Colors.transparent,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: ListTile(
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      leading: CircleAvatar(
+                                        backgroundColor: isSelected
+                                            ? CreateRequestColors.primary.withOpacity(0.2)
+                                            : CreateRequestColors.bodyBg.withOpacity(0.8),
+                                        child: Icon(
+                                          Icons.person_rounded,
+                                          color: isSelected
+                                              ? CreateRequestColors.primary
+                                              : CreateRequestColors.textSecondary,
+                                          size: 18,
+                                        ),
+                                      ),
+                                      title: Text(
+                                        user['name'],
+                                        style: TextStyle(
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                          color: isSelected
+                                              ? CreateRequestColors.primary
+                                              : CreateRequestColors.textPrimary,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        'ID: ${user['id']}',
+                                        style: TextStyle(fontSize: 11, color: CreateRequestColors.textSecondary),
+                                      ),
+                                      trailing: isSelected
+                                          ? Icon(
+                                        Icons.check_circle_rounded,
+                                        color: CreateRequestColors.primary,
+                                        size: 20,
+                                      )
+                                          : Icon(
+                                        Icons.chevron_right_rounded,
+                                        color: CreateRequestColors.textMuted,
                                         size: 20,
                                       ),
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedReceiver = user['name'];
+                                        });
+                                        Navigator.pop(context);
+                                      },
                                     ),
-                                    title: Text(
-                                      user['name'],
-                                      style: TextStyle(
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                        color: isSelected
-                                            ? CreateRequestColors.primary
-                                            : CreateRequestColors.textPrimary,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      'ID: ${user['id']}',
-                                      style: TextStyle(fontSize: 11, color: CreateRequestColors.textMuted),
-                                    ),
-                                    trailing: isSelected
-                                        ? Icon(
-                                      Icons.check_circle_rounded,
-                                      color: CreateRequestColors.primary,
-                                    )
-                                        : null,
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedReceiver = user['name'];
-                                      });
-                                      Navigator.pop(context);
-                                    },
                                   );
                                 },
                               ),
@@ -1411,12 +1574,25 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     );
   }
 
-  Widget _buildSectionHeader(String title) => Text(
-    title,
-    style: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: CreateRequestColors.primary),
+  Widget _buildSectionHeader(String title, IconData icon) => Row(
+    children: [
+      Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: CreateRequestColors.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: CreateRequestColors.primary, size: 20),
+      ),
+      SizedBox(width: 12),
+      Text(
+        title,
+        style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: CreateRequestColors.primary),
+      ),
+    ],
   );
 
   Widget _buildLabel(String text) => Text(
@@ -1429,79 +1605,131 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   );
 
   Widget _buildHeader(bool isMobile) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppLocalizations.of(context)!.translate('create_new_request'),
-          style: TextStyle(
-            fontSize: isMobile ? 22 : 28,
-            fontWeight: FontWeight.bold,
-            color: CreateRequestColors.primary,
-          ),
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [CreateRequestColors.primaryGradientStart, CreateRequestColors.primaryGradientEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        SizedBox(height: 4),
-        Text(
-          AppLocalizations.of(context)!.translate('create_request_subtitle'),
-          style: TextStyle(
-            fontSize: isMobile ? 14 : 16,
-            color: CreateRequestColors.textSecondary,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: CreateRequestColors.primary.withOpacity(0.3),
+            blurRadius: 12,
+            offset: Offset(0, 4),
           ),
-        ),
-      ],
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.edit_document, color: Colors.white, size: isMobile ? 24 : 32),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  AppLocalizations.of(context)!.translate('create_new_request'),
+                  style: TextStyle(
+                    fontSize: isMobile ? 22 : 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text(
+            AppLocalizations.of(context)!.translate('create_request_subtitle'),
+            style: TextStyle(
+              fontSize: isMobile ? 14 : 16,
+              color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildActionButtons(bool isMobile) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        OutlinedButton(
-          onPressed: () => Navigator.pop(context),
-          style: OutlinedButton.styleFrom(
-            padding: EdgeInsets.symmetric(
-              horizontal: isMobile ? 20 : 24,
-              vertical: isMobile ? 12 : 16,
-            ),
-            side: BorderSide(color: CreateRequestColors.primary),
-            foregroundColor: CreateRequestColors.primary,
-          ),
-          child: Text(
-            AppLocalizations.of(context)!.translate('cancel'),
-            style: TextStyle(
-              fontSize: isMobile ? 14 : 16,
-            ),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: _isSubmitting ? null : _submitForm,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: CreateRequestColors.primary,
-            padding: EdgeInsets.symmetric(
-              horizontal: isMobile ? 20 : 24,
-              vertical: isMobile ? 12 : 16,
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 24),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.symmetric(
+                  vertical: isMobile ? 14 : 18,
+                ),
+                side: BorderSide(color: CreateRequestColors.primary, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                foregroundColor: CreateRequestColors.primary,
+              ),
+              child: Text(
+                AppLocalizations.of(context)!.translate('cancel'),
+                style: TextStyle(
+                  fontSize: isMobile ? 14 : 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
-          child: _isSubmitting
-              ? SizedBox(
-            width: isMobile ? 20 : 24,
-            height: isMobile ? 20 : 24,
-            child: CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 2,
-            ),
-          )
-              : Text(
-            _selectedReceiver == 'Select User'
-                ? AppLocalizations.of(context)!.translate('create_request')
-                : AppLocalizations.of(context)!.translate('send_request_button'),
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: isMobile ? 14 : 16,
+          SizedBox(width: 16),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [CreateRequestColors.primaryGradientStart, CreateRequestColors.primaryGradientEnd],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: CreateRequestColors.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _submitForm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: EdgeInsets.symmetric(
+                    vertical: isMobile ? 14 : 18,
+                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _isSubmitting
+                    ? SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+                    : Text(
+                  _selectedReceiver == 'Select User'
+                      ? AppLocalizations.of(context)!.translate('create_request')
+                      : AppLocalizations.of(context)!.translate('send_request_button'),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isMobile ? 14 : 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1516,19 +1744,30 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           AppLocalizations.of(context)!.translate('create_new_request'),
           style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: min(width * 0.04, 20),
+            fontWeight: FontWeight.bold,
+            fontSize: min(width * 0.045, 22),
             color: Colors.white,
+            letterSpacing: 0.5,
           ),
         ),
-        backgroundColor: CreateRequestColors.primary,
-        foregroundColor: Colors.white,
+        centerTitle: true,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [CreateRequestColors.primaryGradientStart, CreateRequestColors.primaryGradientEnd],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
       ),
       backgroundColor: CreateRequestColors.bodyBg,
       body: _buildResponsiveBody(isMobile, isTablet, isDesktop, height),
@@ -1548,455 +1787,554 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             _buildHeader(isMobile),
             SizedBox(height: isMobile ? 16 : 24),
 
-            _buildSectionHeader(AppLocalizations.of(context)!.translate('basic_information')),
-            SizedBox(height: isMobile ? 12 : 16),
-
-            _buildLabel('${AppLocalizations.of(context)!.translate('request_title')} *'),
-            SizedBox(height: 8),
-            TextFormField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)!.translate('request_title_hint'),
-                hintStyle: TextStyle(color: CreateRequestColors.textMuted),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 2),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: isMobile ? 12 : 16,
-                ),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: CreateRequestColors.borderColor),
               ),
-              validator: (v) => (v == null || v.isEmpty)
-                  ? AppLocalizations.of(context)!.translate('request_title_error')
-                  : null,
-            ),
-            SizedBox(height: isMobile ? 12 : 16),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildLabel('${AppLocalizations.of(context)!.translate('request_type_label')} *'),
-                IconButton(
-                  icon: Icon(Icons.settings, color: CreateRequestColors.primary, size: 20),
-                  onPressed: _showManageTypesDialog,
-                ),
-              ],
-            ),
-            SizedBox(height: 8),
-
-            FormField<String>(
-              initialValue: _selectedRequestType,
-              validator: (v) => _selectedRequestType == 'Request Type'
-                  ? AppLocalizations.of(context)!.translate('request_type_hint')
-                  : null,
-              builder: (state) {
-                return Column(
+              color: CreateRequestColors.cardBg,
+              child: Padding(
+                padding: EdgeInsets.all(isMobile ? 16 : 24),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    InkWell(
-                      onTap: () async {
-                        _showTypeSelectionDialog();
-                        // We need a way to trigger validation after selection
-                        // This is handled by the fact that the dialog sets state and we can manually call validate or just check during submit.
-                        // Actually, the simplest is to update the form field state.
+                    _buildSectionHeader(AppLocalizations.of(context)!.translate('basic_information'), Icons.info_outline_rounded),
+                    SizedBox(height: isMobile ? 12 : 16),
+
+                    _buildLabel('${AppLocalizations.of(context)!.translate('request_title')} *'),
+                    SizedBox(height: 8),
+                    TextFormField(
+                      controller: _titleController,
+                      style: TextStyle(fontSize: 15, color: CreateRequestColors.textPrimary),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: CreateRequestColors.bodyBg.withOpacity(0.5),
+                        hintText: AppLocalizations.of(context)!.translate('request_title_hint'),
+                        hintStyle: TextStyle(color: CreateRequestColors.textMuted, fontSize: 14),
+                        prefixIcon: Icon(Icons.title_rounded, color: CreateRequestColors.primary, size: 20),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 1.5),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      ),
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? AppLocalizations.of(context)!.translate('request_title_error')
+                          : null,
+                    ),
+                    SizedBox(height: isMobile ? 16 : 20),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildLabel('${AppLocalizations.of(context)!.translate('request_type_label')} *'),
+                        IconButton(
+                          icon: Icon(Icons.settings_suggest_rounded, color: CreateRequestColors.primary, size: 22),
+                          onPressed: _showManageTypesDialog,
+                          style: IconButton.styleFrom(
+                            backgroundColor: CreateRequestColors.primary.withOpacity(0.1),
+                            padding: EdgeInsets.all(8),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+
+                    FormField<String>(
+                      initialValue: _selectedRequestType,
+                      validator: (v) => _selectedRequestType == 'Request Type'
+                          ? AppLocalizations.of(context)!.translate('request_type_hint')
+                          : null,
+                      builder: (state) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            InkWell(
+                              onTap: () => _showTypeSelectionDialog(),
+                              borderRadius: BorderRadius.circular(12),
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: CreateRequestColors.bodyBg.withOpacity(0.5),
+                                  prefixIcon: Icon(Icons.category_rounded, color: CreateRequestColors.primary, size: 20),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: state.hasError ? CreateRequestColors.accentRed : CreateRequestColors.borderColor),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: state.hasError ? CreateRequestColors.accentRed : CreateRequestColors.borderColor),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: state.hasError ? CreateRequestColors.accentRed : CreateRequestColors.focusBorderColor, width: 1.5),
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        _selectedRequestType == 'Request Type'
+                                            ? AppLocalizations.of(context)!.translate('request_type_hint')
+                                            : _selectedRequestType,
+                                        style: TextStyle(
+                                          fontWeight: _selectedRequestType == 'Request Type' ? FontWeight.normal : FontWeight.w600,
+                                          fontSize: 15,
+                                          color: _selectedRequestType == 'Request Type'
+                                              ? CreateRequestColors.textMuted
+                                              : CreateRequestColors.textPrimary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Icon(Icons.keyboard_arrow_down_rounded, color: CreateRequestColors.textSecondary),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (state.hasError)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8, left: 12),
+                                child: Text(
+                                  state.errorText!,
+                                  style: TextStyle(color: CreateRequestColors.accentRed, fontSize: 12),
+                                ),
+                              ),
+                          ],
+                        );
                       },
-                      child: InputDecorator(
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderSide: BorderSide(color: state.hasError ? CreateRequestColors.accentRed : CreateRequestColors.borderColor),
+                    ),
+                    SizedBox(height: isMobile ? 16 : 20),
+
+                    _buildLabel(AppLocalizations.of(context)!.translate('priority_label')),
+                    SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _selectedPriority,
+                      style: TextStyle(fontSize: 15, color: CreateRequestColors.textPrimary),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: CreateRequestColors.bodyBg.withOpacity(0.5),
+                        prefixIcon: Icon(Icons.priority_high_rounded, color: CreateRequestColors.primary, size: 20),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 1.5),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      ),
+                      icon: Icon(Icons.keyboard_arrow_down_rounded, color: CreateRequestColors.textSecondary),
+                      items: ['Low', 'Medium', 'High']
+                          .map((v) {
+                        String label = v;
+                        if (v == 'Low') label = AppLocalizations.of(context)!.translate('priority_low');
+                        if (v == 'Medium') label = AppLocalizations.of(context)!.translate('priority_medium');
+                        if (v == 'High') label = AppLocalizations.of(context)!.translate('priority_high');
+                        return DropdownMenuItem(value: v, child: Text(label));
+                      })
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedPriority = v!),
+                    ),
+                    SizedBox(height: isMobile ? 16 : 20),
+
+                    _buildLabel('${AppLocalizations.of(context)!.translate('description_label')} *'),
+                    SizedBox(height: 8),
+                    TextFormField(
+                      controller: _descriptionController,
+                      maxLines: 4,
+                      style: TextStyle(fontSize: 15, color: CreateRequestColors.textPrimary),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: CreateRequestColors.bodyBg.withOpacity(0.5),
+                        hintText: AppLocalizations.of(context)!.translate('description_hint'),
+                        hintStyle: TextStyle(color: CreateRequestColors.textMuted, fontSize: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 1.5),
+                        ),
+                        contentPadding: EdgeInsets.all(16),
+                      ),
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? AppLocalizations.of(context)!.translate('description_error')
+                          : null,
+                    ),
+                    SizedBox(height: isMobile ? 16 : 20),
+
+                    _buildLabel(AppLocalizations.of(context)!.translate('comment_label')),
+                    SizedBox(height: 8),
+                    TextFormField(
+                      controller: _commentController,
+                      maxLines: 2,
+                      style: TextStyle(fontSize: 15, color: CreateRequestColors.textPrimary),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: CreateRequestColors.bodyBg.withOpacity(0.5),
+                        hintText: AppLocalizations.of(context)!.translate('comment_hint'),
+                        hintStyle: TextStyle(color: CreateRequestColors.textMuted, fontSize: 14),
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: Icon(Icons.comment_outlined, color: CreateRequestColors.primary, size: 20),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 1.5),
+                        ),
+                        contentPadding: EdgeInsets.all(16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: isMobile ? 24 : 32),
+
+            SizedBox(height: isMobile ? 16 : 24),
+
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: CreateRequestColors.borderColor),
+              ),
+              color: CreateRequestColors.cardBg,
+              child: Padding(
+                padding: EdgeInsets.all(isMobile ? 16 : 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader(AppLocalizations.of(context)!.translate('send_request_section'), Icons.send_rounded),
+                    SizedBox(height: isMobile ? 12 : 16),
+
+                    _buildLabel('${AppLocalizations.of(context)!.translate('send_to_user_label')} ${AppLocalizations.of(context)!.locale.languageCode == 'ar' ? '(اختياري)' : '(Optional)'}'),
+                    SizedBox(height: 8),
+
+                    _isLoadingUsers
+                        ? Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: CreateRequestColors.bodyBg.withOpacity(0.5),
+                        border: Border.all(color: CreateRequestColors.borderColor),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(width: 12),
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: CreateRequestColors.primary,
+                            ),
                           ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: state.hasError ? CreateRequestColors.accentRed : CreateRequestColors.borderColor),
+                          SizedBox(width: 12),
+                          Text(
+                            'Loading users...',
+                            style: TextStyle(color: CreateRequestColors.textMuted, fontSize: 14),
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: state.hasError ? CreateRequestColors.accentRed : CreateRequestColors.focusBorderColor, width: 2),
+                        ],
+                      ),
+                    )
+                        : InkWell(
+                      onTap: _showUserSelectionDialog,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _selectedReceiver == 'Select User'
+                              ? CreateRequestColors.bodyBg.withOpacity(0.5)
+                              : CreateRequestColors.primary.withOpacity(0.05),
+                          border: Border.all(
+                            color: _selectedReceiver == 'Select User'
+                                ? CreateRequestColors.borderColor
+                                : CreateRequestColors.primary,
+                            width: 1.5,
                           ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: isMobile ? 12 : 16,
-                          ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
-                              child: Text(
-                                _selectedRequestType == 'Request Type'
-                                    ? AppLocalizations.of(context)!.translate('request_type_hint')
-                                    : _selectedRequestType,
-                                style: TextStyle(
-                                  fontWeight: _selectedRequestType == 'Request Type' ? FontWeight.normal : FontWeight.w600,
-                                  color: _selectedRequestType == 'Request Type'
-                                      ? CreateRequestColors.textMuted
-                                      : CreateRequestColors.textPrimary,
-                                ),
-                                overflow: TextOverflow.ellipsis,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _selectedReceiver == 'Select User' ? Icons.person_outline_rounded : Icons.person_rounded,
+                                    color: _selectedReceiver == 'Select User' ? CreateRequestColors.textMuted : CreateRequestColors.primary,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      _selectedReceiver == 'Select User'
+                                          ? AppLocalizations.of(context)!.translate('select_user_hint')
+                                          : _selectedReceiver,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: _selectedReceiver == 'Select User' ? FontWeight.normal : FontWeight.w600,
+                                        color: _selectedReceiver == 'Select User'
+                                            ? CreateRequestColors.textMuted
+                                            : CreateRequestColors.primary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            Icon(Icons.arrow_drop_down, color: CreateRequestColors.textSecondary),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: CreateRequestColors.primary,
+                              size: 22,
+                            ),
                           ],
                         ),
                       ),
                     ),
-                    if (state.hasError)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8, left: 12),
-                        child: Text(
-                          state.errorText!,
-                          style: TextStyle(color: CreateRequestColors.accentRed, fontSize: 12),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-            SizedBox(height: isMobile ? 12 : 16),
-
-            _buildLabel(AppLocalizations.of(context)!.translate('priority_label')),
-            SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: _selectedPriority,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 2),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: isMobile ? 12 : 16,
-                ),
-              ),
-              items: ['Low', 'Medium', 'High']
-                  .map((v) {
-                String label = v;
-                if (v == 'Low') label = AppLocalizations.of(context)!.translate('priority_low');
-                if (v == 'Medium') label = AppLocalizations.of(context)!.translate('priority_medium');
-                if (v == 'High') label = AppLocalizations.of(context)!.translate('priority_high');
-                return DropdownMenuItem(value: v, child: Text(label));
-              })
-                  .toList(),
-              onChanged: (v) => setState(() => _selectedPriority = v!),
-            ),
-            SizedBox(height: isMobile ? 12 : 16),
-
-            _buildLabel('${AppLocalizations.of(context)!.translate('description_label')} *'),
-            SizedBox(height: 8),
-            TextFormField(
-              controller: _descriptionController,
-              maxLines: 4,
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)!.translate('description_hint'),
-                hintStyle: TextStyle(color: CreateRequestColors.textMuted),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 2),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: isMobile ? 12 : 16,
-                ),
-              ),
-              validator: (v) => (v == null || v.isEmpty)
-                  ? AppLocalizations.of(context)!.translate('description_error')
-                  : null,
-            ),
-            SizedBox(height: isMobile ? 16 : 20),
-
-            _buildLabel(AppLocalizations.of(context)!.translate('comment_label')),
-            SizedBox(height: 8),
-            TextFormField(
-              controller: _commentController,
-              maxLines: 2,
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)!.translate('comment_hint'),
-                hintStyle: TextStyle(color: CreateRequestColors.textMuted),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 2),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: isMobile ? 12 : 16,
-                ),
-              ),
-            ),
-            SizedBox(height: isMobile ? 24 : 32),
-
-            _buildSectionHeader(AppLocalizations.of(context)!.translate('send_request_section')),
-            SizedBox(height: isMobile ? 12 : 16),
-
-            _buildLabel('${AppLocalizations.of(context)!.translate('send_to_user_label')} ${AppLocalizations.of(context)!.locale.languageCode == 'ar' ? '(اختياري)' : '(Optional)'}'),
-            SizedBox(height: 8),
-
-            _isLoadingUsers
-                ? Container(
-              height: 56,
-              decoration: BoxDecoration(
-                border: Border.all(color: CreateRequestColors.borderColor),
-                borderRadius: BorderRadius.circular(4),
-                color: CreateRequestColors.cardBg,
-              ),
-              child: Row(
-                children: [
-                  SizedBox(width: 12),
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: CreateRequestColors.primary,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'Loading users...',
-                    style: TextStyle(color: CreateRequestColors.textMuted),
-                  ),
-                ],
-              ),
-            )
-                : InkWell(
-              onTap: _showUserSelectionDialog,
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: isMobile ? 12 : 16,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: _selectedReceiver == 'Select User'
-                        ? CreateRequestColors.borderColor
-                        : CreateRequestColors.primary,
-                    width: _selectedReceiver == 'Select User' ? 1 : 2,
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                  color: CreateRequestColors.cardBg,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _selectedReceiver == 'Select User'
-                            ? AppLocalizations.of(context)!.translate('select_user_hint')
-                            : _selectedReceiver,
-                        style: TextStyle(
-                          fontSize: isMobile ? 14 : 16,
-                          color: _selectedReceiver == 'Select User'
-                              ? CreateRequestColors.textMuted
-                              : CreateRequestColors.textPrimary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Icon(
-                      Icons.arrow_drop_down_rounded,
-                      color: CreateRequestColors.primary,
-                      size: 24,
-                    ),
                   ],
                 ),
               ),
             ),
             SizedBox(height: isMobile ? 24 : 32),
 
-            _buildSectionHeader(AppLocalizations.of(context)!.translate('supporting_documents')),
-            SizedBox(height: isMobile ? 12 : 16),
+            SizedBox(height: isMobile ? 16 : 24),
 
-            Center(
-              child: Container(
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: CreateRequestColors.borderColor),
+              ),
+              color: CreateRequestColors.cardBg,
+              child: Padding(
                 padding: EdgeInsets.all(isMobile ? 16 : 24),
-                decoration: BoxDecoration(
-                  border: Border.all(color: CreateRequestColors.borderColor),
-                  borderRadius: BorderRadius.circular(8),
-                  color: CreateRequestColors.cardBg,
-                ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.cloud_upload_rounded,
-                      size: isMobile ? 40 : 48,
-                      color: CreateRequestColors.textSecondary,
-                    ),
-                    SizedBox(height: isMobile ? 12 : 16),
-                    Text(
-                      _selectedFiles.isEmpty && _selectedPreviousDocuments.isEmpty
-                          ? 'Click to select files or choose from previously uploaded'
-                          : '${_selectedFiles.length + _selectedPreviousDocuments.length} file(s) selected',
-                      style: TextStyle(
-                        fontSize: isMobile ? 14 : 16,
-                        color: CreateRequestColors.textSecondary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: isMobile ? 8 : 16),
-                    ElevatedButton(
-                      onPressed: _showFileSelectionMenu,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: CreateRequestColors.primary,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isMobile ? 16 : 24,
-                          vertical: isMobile ? 12 : 16,
+                    _buildSectionHeader(AppLocalizations.of(context)!.translate('supporting_documents'), Icons.attach_file_rounded),
+                    SizedBox(height: isMobile ? 16 : 20),
+
+                    Center(
+                      child: InkWell(
+                        onTap: _showFileSelectionMenu,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(isMobile ? 24 : 32),
+                          decoration: BoxDecoration(
+                            color: CreateRequestColors.bodyBg.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: CreateRequestColors.borderColor,
+                              width: 1.5,
+                              style: BorderStyle.solid,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: CreateRequestColors.primary.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.cloud_upload_outlined,
+                                  size: isMobile ? 32 : 40,
+                                  color: CreateRequestColors.primary,
+                                ),
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                _selectedFiles.isEmpty && _selectedPreviousDocuments.isEmpty
+                                    ? 'Click to select files'
+                                    : '${_selectedFiles.length + _selectedPreviousDocuments.length} file(s) selected',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: CreateRequestColors.textPrimary,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Support PDF documents',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: CreateRequestColors.textSecondary,
+                                ),
+                              ),
+                              SizedBox(height: 20),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: CreateRequestColors.primary,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'Choose Files',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      child: Text(
-                        'Choose Files',
+                    ),
+
+                    if (_selectedFiles.isNotEmpty || _selectedPreviousDocuments.isNotEmpty) ...[
+                      SizedBox(height: 24),
+                      Text(
+                        'Selected Files:',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isMobile ? 14 : 16,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: CreateRequestColors.textPrimary,
                         ),
                       ),
-                    ),
+                      SizedBox(height: 12),
+                      Column(
+                        children: [
+                          ..._selectedPreviousDocuments.map((doc) {
+                            return Container(
+                              margin: EdgeInsets.only(bottom: 8),
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: CreateRequestColors.bodyBg.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: CreateRequestColors.borderColor),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.picture_as_pdf_rounded, color: CreateRequestColors.accentRed, size: 24),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          doc['title'] ?? 'Untitled',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: CreateRequestColors.textPrimary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'Previously uploaded',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: CreateRequestColors.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.close_rounded, color: CreateRequestColors.textMuted, size: 20),
+                                    onPressed: () => _removePreviousDocument(doc),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                          ..._selectedFiles.map((file) {
+                            return Container(
+                              margin: EdgeInsets.only(bottom: 8),
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: CreateRequestColors.bodyBg.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: CreateRequestColors.borderColor),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.picture_as_pdf_rounded, color: CreateRequestColors.accentRed, size: 24),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          file.name,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: CreateRequestColors.textPrimary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'New file to upload',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: CreateRequestColors.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.close_rounded, color: CreateRequestColors.textMuted, size: 20),
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedFiles.removeWhere((f) => f.name == file.name);
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
-
-            if (_selectedFiles.isNotEmpty || _selectedPreviousDocuments.isNotEmpty) ...[
-              SizedBox(height: isMobile ? 12 : 16),
-              Text(
-                'Selected Files:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: isMobile ? 14 : 16,
-                  color: CreateRequestColors.textPrimary,
-                ),
-              ),
-              SizedBox(height: 8),
-              Column(
-                children: [
-                  ..._selectedPreviousDocuments.map((doc) {
-                    return Container(
-                      margin: EdgeInsets.symmetric(vertical: 4),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: isMobile ? 6 : 8,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: CreateRequestColors.borderColor),
-                        borderRadius: BorderRadius.circular(6),
-                        color: CreateRequestColors.cardBg,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  doc['title'] ?? 'Untitled',
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 12 : 14,
-                                    color: CreateRequestColors.primary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  'Previously uploaded',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: CreateRequestColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.close_rounded,
-                              color: CreateRequestColors.accentRed,
-                              size: isMobile ? 18 : 24,
-                            ),
-                            onPressed: () {
-                              _removePreviousDocument(doc);
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  ..._selectedFiles.map((file) {
-                    return Container(
-                      margin: EdgeInsets.symmetric(vertical: 4),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: isMobile ? 6 : 8,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: CreateRequestColors.borderColor),
-                        borderRadius: BorderRadius.circular(6),
-                        color: CreateRequestColors.cardBg,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  file.name,
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 12 : 14,
-                                    color: CreateRequestColors.textPrimary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  'New file',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: CreateRequestColors.accentBlue,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.close_rounded,
-                              color: CreateRequestColors.accentRed,
-                              size: isMobile ? 18 : 24,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _selectedFiles.remove(file);
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ],
-              ),
-            ],
-
-            SizedBox(height: isMobile ? 24 : 32),
 
             _buildActionButtons(isMobile),
             SizedBox(height: isMobile ? 16 : 24),

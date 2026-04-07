@@ -1046,11 +1046,42 @@ class _EditRequestPageState extends State<EditRequestPage> {
                                       color: isAlreadyAttached ? AppColors.accentGreen : AppColors.textSecondary,
                                     ),
                                   ),
-                                  trailing: isAlreadyAttached
-                                      ? Icon(Icons.check_circle, color: AppColors.accentGreen)
-                                      : isSelected
-                                          ? Icon(Icons.check_circle_rounded, color: AppColors.accentGreen)
-                                          : Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (!isAlreadyAttached)
+                                        IconButton(
+                                          icon: Icon(Icons.delete_outline_rounded, color: AppColors.accentRed, size: 22),
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                title: Text(AppLocalizations.of(context)!.translate('delete_file') ?? 'Delete File'),
+                                                content: Text(AppLocalizations.of(context)!.translate('delete_file_confirm')?.replaceFirst('{fileName}', doc['title'] ?? '') ?? 'Are you sure you want to delete this file?'),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(context),
+                                                    child: Text(AppLocalizations.of(context)!.translate('cancel') ?? 'Cancel'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () {
+                                                      Navigator.pop(context);
+                                                      _deleteDocumentGlobally(doc, setStateSheet: setStateSheet);
+                                                    },
+                                                    child: Text(AppLocalizations.of(context)!.translate('delete') ?? 'Delete', style: TextStyle(color: AppColors.accentRed)),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      isAlreadyAttached
+                                          ? Icon(Icons.check_circle, color: AppColors.accentGreen)
+                                          : isSelected
+                                              ? Icon(Icons.check_circle_rounded, color: AppColors.accentGreen)
+                                              : Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
+                                    ],
+                                  ),
                                   enabled: !isAlreadyAttached,
                                   onTap: isAlreadyAttached ? null : () {
                                     if (isSelected) {
@@ -1243,7 +1274,8 @@ class _EditRequestPageState extends State<EditRequestPage> {
     }
   }
 
-  Future<void> _deleteExistingFile(Map<String, dynamic> document) async {
+  // ✅ حذف ملف من السيرفر تماماً (من قائمة الملفات المرفوعة مؤخراً)
+  Future<void> _deleteDocumentGlobally(Map<String, dynamic> document, {void Function(void Function())? setStateSheet}) async {
     try {
       final dynamic rawId = document["id"];
       final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
@@ -1257,16 +1289,53 @@ class _EditRequestPageState extends State<EditRequestPage> {
         },
       );
 
-      if (response.statusCode == 200) {
-        setState(() {
-          _documents.removeWhere((doc) => doc["id"] == documentId);
-        });
-        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('file_deleted_success'));
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        if (mounted) {
+          setState(() {
+            _documents.removeWhere((doc) => doc["id"] == documentId);
+            _previousDocuments.removeWhere((doc) => doc["id"] == documentId);
+            _selectedPreviousDocuments.removeWhere((doc) => doc["id"] == documentId);
+          });
+          setStateSheet?.call(() {});
+          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('file_deleted_success'));
+        }
+      } else if (response.statusCode == 403) {
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('document_already_used') ?? 'This file is already used in a transaction and cannot be deleted.');
       } else {
         _showErrorSnackBar(AppLocalizations.of(context)!.translate('delete_failed_error').replaceFirst('{fileName}', fileName));
       }
     } catch (e) {
       _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
+    }
+  }
+
+  // ✅ فصل ملف عن العملية (من قائمة الملفات الملحقة حالياً)
+  Future<void> _detachDocumentFromTransaction(Map<String, dynamic> document) async {
+    try {
+      final dynamic rawId = document["id"];
+      final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
+      final fileName = document["title"] ?? "file";
+
+      final response = await http.delete(
+        Uri.parse('$_documentApiUrl/transactions/${widget.requestId}/document/$documentId'),
+        headers: {
+          'accept': 'application/json',
+          'Authorization': 'Bearer $_userToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _documents.removeWhere((doc) => doc["id"] == documentId);
+        });
+        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('file_detached_success'));
+      } else if (response.statusCode == 403) {
+        _showErrorSnackBar(AppLocalizations.of(context)!.translate('forward_already_seen') ?? 'Cannot edit documents because the receiver has already seen the request.');
+      } else {
+        _showErrorSnackBar('Failed to detach file "$fileName"');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error: $e');
     }
   }
 
@@ -1638,7 +1707,29 @@ class _EditRequestPageState extends State<EditRequestPage> {
         ),
         trailing: IconButton(
           icon: Icon(Icons.delete, color: AppColors.accentRed, size: isMobile ? 18 : 20),
-          onPressed: () => _deleteExistingFile(document),
+          onPressed: () {
+            // تأكيد الفصل من الطلب
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text(AppLocalizations.of(context)!.translate('delete_file') ?? 'Delete File'),
+                content: Text(AppLocalizations.of(context)!.translate('delete_file_confirm')?.replaceFirst('{fileName}', fileName) ?? 'Are you sure you want to remove this file from the request?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(AppLocalizations.of(context)!.translate('cancel') ?? 'Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _detachDocumentFromTransaction(document);
+                    },
+                    child: Text(AppLocalizations.of(context)!.translate('delete') ?? 'Delete', style: TextStyle(color: AppColors.accentRed)),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
         contentPadding: EdgeInsets.symmetric(
           horizontal: isMobile ? 12 : 16,

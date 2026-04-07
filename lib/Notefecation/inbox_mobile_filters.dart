@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import './inbox_colors.dart';
+import '../shared/paginated_type_picker.dart';
 
 class InboxMobileFilters extends StatelessWidget {
   final String selectedPriority;
@@ -17,6 +18,7 @@ class InboxMobileFilters extends StatelessWidget {
   final Function(String) onStatusChanged;
   final Function(String) onSearchChanged;
   final Function(String, List<String>, String, Function(String))? onShowMobileFilterDialog;
+  final Future<Map<String, dynamic>> Function(int page) fetchTypePage;
 
   const InboxMobileFilters({
     Key? key,
@@ -32,6 +34,7 @@ class InboxMobileFilters extends StatelessWidget {
     required this.onStatusChanged,
     required this.onSearchChanged,
     this.onShowMobileFilterDialog,
+    required this.fetchTypePage,
   }) : super(key: key);
 
   Widget _buildMobileFilterChip({
@@ -203,21 +206,15 @@ class InboxMobileFilters extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildMobileFilterChip(
-                  context: context,
-                  label: AppLocalizations.of(context)!.translate('type'),
-                  value: selectedType,
-                  icon: Icons.category_outlined,
-                  onTap: () {
-                    if (onShowMobileFilterDialog != null) {
-                      onShowMobileFilterDialog!(
-                        AppLocalizations.of(context)!.translate("select_type"),
-                        typeNames,
-                        selectedType,
-                        onTypeChanged,
-                      );
-                    }
-                  },
+                child: PaginatedTypePicker(
+                  selectedType: selectedType,
+                  onTypeChanged: (val) => onTypeChanged(val!),
+                  fetchPage: fetchTypePage,
+                  isMobile: true,
+                  primaryColor: InboxColors.primary,
+                  borderColor: InboxColors.primary.withOpacity(0.2),
+                  textColor: InboxColors.textPrimary,
+                  cardBg: InboxColors.cardBg,
                 ),
               ),
               const SizedBox(width: 8),
