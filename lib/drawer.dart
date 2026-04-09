@@ -9,52 +9,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:college_project/providers/language_provider.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/providers/theme_provider.dart';
+import 'package:college_project/core/app_colors.dart';
 
 import 'Department/DepartmentsPage.dart';
 import 'Budget/BudgetPage.dart';
-
-// 🎨 COLOR PALETTE - Consistent with the whole application
-class AppColors {
-  // Primary Colors
-  static const Color primary = Color(0xFF00695C);
-  static const Color primaryLight = Color(0xFF00796B);
-  static const Color primaryDark = Color(0xFF004D40);
-
-  // Background Colors
-  static const Color bodyBg = Color(0xFFF5F6FA);
-  static const Color cardBg = Color(0xFFFFFFFF);
-
-  // Text Colors
-  static const Color textPrimary = Color(0xFF2C3E50);
-  static const Color textSecondary = Color(0xFF7F8C8D);
-  static const Color textMuted = Color(0xFFB0B0B0);
-  static const Color textWhite = Color(0xFFFFFFFF);
-
-  // Accent Colors
-  static const Color accentGreen = Color(0xFF27AE60);
-  static const Color accentBlue = Color(0xFF1E88E5);
-  static const Color accentYellow = Color(0xFFFFB74D);
-  static const Color accentPurple = Color(0xFF9C27B0);
-  static const Color accentOrange = Color(0xFFFF9800);
-
-  // Status Colors
-  static const Color statusApproved = Color(0xFF27AE60);
-  static const Color statusRejected = Color(0xFFE74C3C);
-  static const Color statusWaiting = Color(0xFF1E88E5);
-
-  // Gradient Colors
-  static const Color gradientStart = Color(0xFF00695C);
-  static const Color gradientMiddle = Color(0xFF00796B);
-  static const Color gradientEnd = Color(0xFFF5F6FA);
-
-  // Menu Item Colors
-  static const Color menuItemBg = Color(0xFFF8F9FA);
-  static const Color menuItemBorder = Color(0xFFE9ECEF);
-
-  // Drawer Background - لون أخضر فاتح مثل شريط الإحصائيات
-  static const Color drawerBg = Color(0xFFF0F8F7); // أخضر فاتح جداً
-  static const Color statBgLight = Color(0xFFF0F8F7); // نفس لون شريط الإحصائيات
-}
 
 class CustomDrawer extends StatefulWidget {
   final VoidCallback onLogout;
@@ -253,117 +212,39 @@ class _CustomDrawerState extends State<CustomDrawer> {
               endIndent: isMobile ? 20 : 24,
             ),
 
-            _buildSectionHeader(AppLocalizations.of(context)!.translate('general'), Icons.settings_rounded, isMobile),
+            _buildSectionHeader(AppLocalizations.of(context)!.translate('settings'), Icons.settings_rounded, isMobile),
 
-            // إعدادات اللغة (Language Settings)
-            Container(
-              margin: EdgeInsets.symmetric(
-                horizontal: isMobile ? 12 : 16,
-                vertical: isMobile ? 2 : 4,
-              ),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
-                color: AppColors.cardBg,
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(0.1),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.03),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Theme(
-                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                child: ExpansionTile(
-                  leading: Container(
-                    padding: EdgeInsets.all(isMobile ? 8 : 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.textSecondary.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.textSecondary.withOpacity(0.2)),
-                    ),
-                    child: Icon(
-                      Icons.settings_rounded,
-                      color: AppColors.textSecondary,
-                      size: isMobile ? 20 : 22,
-                    ),
-                  ),
-                  title: Text(
-                    AppLocalizations.of(context)!.translate('settings'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: isMobile ? 14 : 16,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  // collapsedIconColor: AppColors.primary.withOpacity(0.5),
-                  childrenPadding: const EdgeInsets.only(bottom: 10),
-                  children: [
-                     Padding(
-                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                       child: Row(
-                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                         children: [
-                           Row(
-                             children: [
-                               Icon(Icons.language, color: AppColors.primary, size: 20),
-                               const SizedBox(width: 10),
-                               Text(
-                                 AppLocalizations.of(context)!.translate('language'),
-                                 style: TextStyle(
-                                   color: AppColors.textPrimary,
-                                   fontSize: 14,
-                                   fontWeight: FontWeight.w500,
-                                 ),
-                               ),
-                             ],
-                           ),
-                           Consumer<LanguageProvider>(
-                             builder: (context, provider, child) {
-                               return DropdownButton<String>(
-                                 value: provider.currentLocale.languageCode,
-                                 underline: const SizedBox(),
-                                 icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
-                                 onChanged: (String? newValue) {
-                                   if (newValue != null) {
-                                     provider.changeLanguage(Locale(newValue));
-                                   }
-                                 },
-                                 items: const [
-                                   DropdownMenuItem(value: 'en', child: Text('English')),
-                                   DropdownMenuItem(value: 'ar', child: Text('العربية')),
-                                 ],
-                               );
-                             },
-                           ),
-                         ],
-                       ),
-                     ),
-                  ],
-                ),
-              ),
-            ),
-
-            _buildMenuItem(
-              icon: Icons.help_outline_rounded,
-              title: AppLocalizations.of(context)!.translate('help_support'),
-              color: AppColors.textSecondary,
-              isMobile: isMobile,
-              onTap: () {
-                Navigator.pop(context);
-                _showComingSoonSnackbar(context);
+            // تبديل الوضع (Dark/Light)
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return _buildMenuItem(
+                  icon: themeProvider.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  title: themeProvider.isDarkMode 
+                      ? AppLocalizations.of(context)!.translate('dark_mode')
+                      : AppLocalizations.of(context)!.translate('light_mode'),
+                  color: AppColors.accentYellow,
+                  isMobile: isMobile,
+                  onTap: () {
+                    themeProvider.toggleTheme(!themeProvider.isDarkMode);
+                  },
+                );
               },
             ),
 
-            SizedBox(height: isMobile ? 16 : 20),
-            Divider(
-              height: 1,
-              color: AppColors.primary.withOpacity(0.1),
-              thickness: 1,
+            // تبديل اللغة
+            Consumer<LanguageProvider>(
+              builder: (context, languageProvider, child) {
+                final isArabic = languageProvider.currentLocale.languageCode == 'ar';
+                return _buildMenuItem(
+                  icon: Icons.language_rounded,
+                  title: isArabic ? 'English' : 'العربية',
+                  color: AppColors.accentBlue,
+                  isMobile: isMobile,
+                  onTap: () {
+                    languageProvider.changeLanguage(isArabic ? const Locale('en') : const Locale('ar'));
+                  },
+                );
+              },
             ),
 
             // تسجيل الخروج
@@ -398,7 +279,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
           BoxShadow(
             color: AppColors.primary.withOpacity(0.2),
             blurRadius: 8,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -421,7 +302,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
                   BoxShadow(
                     color: Colors.black.withOpacity(0.2),
                     blurRadius: 8,
-                    offset: const Offset(0, 4),
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
@@ -454,7 +335,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
                   Shadow(
                     blurRadius: 4,
                     color: Colors.black26,
-                    offset: const Offset(1, 1),
+                    offset: Offset(1, 1),
                   ),
                 ],
               ),
@@ -556,7 +437,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
           BoxShadow(
             color: AppColors.primary.withOpacity(0.03),
             blurRadius: 4,
-            offset: const Offset(0, 2),
+            offset: Offset(0, 2),
           ),
         ],
       ),

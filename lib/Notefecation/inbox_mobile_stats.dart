@@ -40,7 +40,7 @@ class InboxMobileStats extends StatelessWidget {
           BoxShadow(
             color: InboxColors.statShadow,
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
         border: Border.all(color: InboxColors.statBorder),
@@ -69,7 +69,7 @@ class InboxMobileStats extends StatelessWidget {
           ),
           child: Icon(icon, color: color, size: 18),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Text(
           value.toString(),
           style: TextStyle(
@@ -78,7 +78,7 @@ class InboxMobileStats extends StatelessWidget {
             color: color,
           ),
         ),
-        const SizedBox(height: 2),
+        SizedBox(height: 2),
         Text(
           label,
           style: TextStyle(

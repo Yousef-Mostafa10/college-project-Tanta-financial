@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../app_config.dart';
 import '../l10n/app_localizations.dart';
+import '../core/app_colors.dart';
+
 
 // ─────────────────────────────────────────────
 // 📄 Budget Entries Page
@@ -232,16 +234,16 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.warning_rounded, color: EntryColors.accentRed, size: 28),
-            const SizedBox(width: 12),
-            Text(AppLocalizations.of(context)!.translate('delete_confirm_title'), style: const TextStyle(color: EntryColors.textPrimary)),
+            Icon(Icons.warning_rounded, color: EntryColors.accentRed, size: 28),
+            SizedBox(width: 12),
+            Text(AppLocalizations.of(context)!.translate('delete_confirm_title'), style: TextStyle(color: EntryColors.textPrimary)),
           ],
         ),
         content: Text(
           AppLocalizations.of(context)!.translate('delete_entry_confirm')
             .replaceAll('{amount}', _formatNumber(entry['amount'] ?? 0))
             .replaceAll('{currency}', AppLocalizations.of(context)!.translate('currency_unit')),
-          style: const TextStyle(fontSize: 14, color: EntryColors.textSecondary),
+          style: TextStyle(fontSize: 14, color: EntryColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -254,7 +256,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
               _deleteEntry(entry['id']);
             },
             style: ElevatedButton.styleFrom(backgroundColor: EntryColors.accentRed),
-            child: Text(AppLocalizations.of(context)!.translate('delete_button'), style: const TextStyle(color: Colors.white)),
+            child: Text(AppLocalizations.of(context)!.translate('delete_button'), style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -313,7 +315,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
       lastDate: DateTime(2030),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
+          colorScheme: ColorScheme.light(
             primary: EntryColors.primary,
             onPrimary: Colors.white,
           ),
@@ -383,21 +385,21 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
           children: [
             Text(
               AppLocalizations.of(context)!.translate('payment_records'),
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.white),
             ),
             Text(
               '"${widget.categoryName}"',
-              style: const TextStyle(fontSize: 12, color: Colors.white70),
+              style: TextStyle(fontSize: 12, color: Colors.white70),
             ),
           ],
         ),
         backgroundColor: EntryColors.sidebarBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -406,14 +408,14 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
             icon: Badge(
               isLabelVisible: _hasActiveFilters,
               backgroundColor: EntryColors.accentYellow,
-              child: const Icon(Icons.filter_list, color: Colors.white),
+              child: Icon(Icons.filter_list, color: Colors.white),
             ),
             onPressed: () => setState(() => _showFilters = !_showFilters),
             tooltip: AppLocalizations.of(context)!.translate('filters_tooltip'),
           ),
           // Refresh button
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
+            icon: Icon(Icons.refresh, color: Colors.white),
             onPressed: () => _fetchEntries(reset: true),
             tooltip: AppLocalizations.of(context)!.translate('refresh_tooltip'),
           ),
@@ -442,7 +444,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
               mini: true,
               onPressed: _scrollToTop,
               backgroundColor: EntryColors.primary.withOpacity(0.85),
-              child: const Icon(Icons.arrow_upward, color: Colors.white),
+              child: Icon(Icons.arrow_upward, color: Colors.white),
             )
           : null,
     );
@@ -462,7 +464,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
             icon: Icons.person_search,
             keyboardType: TextInputType.text,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
 
           // Row 2: Min / Max Amount
           Row(
@@ -477,7 +479,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
                   color: EntryColors.accentGreen,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: _buildFilterField(
                   controller: _maxAmountController,
@@ -490,7 +492,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
 
           // Row 3: From / To dates
           Row(
@@ -506,7 +508,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: _buildDateButton(
                   label: AppLocalizations.of(context)!.translate('to_date_label'),
@@ -523,16 +525,16 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
 
           // Clear filters button
           if (_hasActiveFilters) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: _clearFilters,
-                icon: const Icon(Icons.clear_all, size: 18),
+                icon: Icon(Icons.clear_all, size: 18),
                 label: Text(AppLocalizations.of(context)!.translate('clear_filters_button')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: EntryColors.accentRed,
-                  side: const BorderSide(color: EntryColors.accentRed),
+                  side: BorderSide(color: EntryColors.accentRed),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -551,19 +553,20 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     String? suffixText,
-    Color color = EntryColors.primary,
+    Color? color,
   }) {
+    final effectiveColor = color ?? EntryColors.primary;
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(fontSize: 12, color: EntryColors.textMuted),
-        prefixIcon: Icon(icon, color: color, size: 18),
+        prefixIcon: Icon(icon, color: effectiveColor, size: 18),
         suffixText: suffixText,
         suffixIcon: controller.text.isNotEmpty
             ? IconButton(
-                icon: const Icon(Icons.clear, size: 16),
+                icon: Icon(Icons.clear, size: 16),
                 onPressed: () {
                   controller.clear();
                   _fetchEntries(reset: true);
@@ -608,7 +611,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
                 color: value != null
                     ? EntryColors.primary
                     : EntryColors.textMuted),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Expanded(
               child: Text(
                 value != null
@@ -626,7 +629,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
             if (value != null)
               GestureDetector(
                 onTap: onClear,
-                child: const Icon(Icons.close,
+                child: Icon(Icons.close,
                     size: 16, color: EntryColors.textMuted),
               ),
           ],
@@ -652,12 +655,12 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.receipt_long,
+                Icon(Icons.receipt_long,
                     size: 14, color: EntryColors.primary),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Text(
                   AppLocalizations.of(context)!.translate('total_entries_stat').replaceAll('{count}', '$_totalEntries'),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: EntryColors.primary,
                     fontWeight: FontWeight.w500,
                     fontSize: 13,
@@ -667,7 +670,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
             ),
           ),
           if (_hasActiveFilters) ...[
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
@@ -680,10 +683,10 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
                 children: [
                   Icon(Icons.filter_alt,
                       size: 14, color: EntryColors.accentYellow),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   Text(
                     AppLocalizations.of(context)!.translate('active_filter_label'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: EntryColors.accentYellow,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -701,7 +704,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
   // ─── Main content ────────────────────────────
   Widget _buildContent() {
     if (isLoading) {
-      return const Center(
+      return Center(
           child:
               CircularProgressIndicator(color: EntryColors.primary));
     }
@@ -710,19 +713,19 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline,
+            Icon(Icons.error_outline,
                 size: 64, color: EntryColors.accentRed),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(errorMessage!,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 16, color: EntryColors.textMuted)),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => _fetchEntries(reset: true),
               style: ElevatedButton.styleFrom(
                   backgroundColor: EntryColors.primary),
               child: Text(AppLocalizations.of(context)!.translate('retry_button'),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -736,19 +739,19 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
             Icon(Icons.receipt_long_outlined,
                 size: 64,
                 color: EntryColors.textMuted.withOpacity(0.5)),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               _hasActiveFilters
                   ? AppLocalizations.of(context)!.translate('no_results_filters')
                   : AppLocalizations.of(context)!.translate('no_entries_category'),
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 16, color: EntryColors.textMuted),
             ),
             if (_hasActiveFilters) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               TextButton.icon(
                 onPressed: _clearFilters,
-                icon: const Icon(Icons.clear_all),
+                icon: Icon(Icons.clear_all),
                 label: Text(AppLocalizations.of(context)!.translate('clear_filters_button')),
               ),
             ],
@@ -763,7 +766,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
       itemCount: entries.length + (_hasMorePages ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == entries.length) {
-          return const Padding(
+          return Padding(
             padding: EdgeInsets.all(16),
             child: Center(
               child: CircularProgressIndicator(
@@ -792,7 +795,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
           BoxShadow(
             color: EntryColors.statShadow,
             blurRadius: 5,
-            offset: const Offset(0, 2),
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -811,7 +814,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
               child: Center(
                 child: Text(
                   '#${index + 1}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: EntryColors.accentGreen,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -819,7 +822,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
                 ),
               ),
             ),
-            const SizedBox(width: 14),
+            SizedBox(width: 14),
 
             // Info
             Expanded(
@@ -829,12 +832,12 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
                   // Amount
                   Row(
                     children: [
-                      const Icon(Icons.monetization_on,
+                      Icon(Icons.monetization_on,
                           size: 16, color: EntryColors.accentGreen),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(
                         '${_formatNumber(amount)} ' + AppLocalizations.of(context)!.translate('currency_unit'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: EntryColors.accentGreen,
@@ -842,38 +845,38 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
 
                   // Inputter
                   Row(
                     children: [
-                      const Icon(Icons.person_outline,
+                      Icon(Icons.person_outline,
                           size: 14, color: EntryColors.textMuted),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(
                         inputterName.isNotEmpty
                             ? inputterName
                             : inputterId != null
                                 ? AppLocalizations.of(context)!.translate('inputter_label') + ' #$inputterId'
                                 : AppLocalizations.of(context)!.translate('unknown'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           color: EntryColors.textSecondary,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
 
                   // Date
                   Row(
                     children: [
-                      const Icon(Icons.access_time,
+                      Icon(Icons.access_time,
                           size: 14, color: EntryColors.textMuted),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(
                         createdAt,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: EntryColors.textMuted,
                         ),
@@ -900,18 +903,18 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
                     ),
                     child: Text(
                       'ID: ${entry['id']}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         color: EntryColors.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   InkWell(
                     onTap: () => _confirmDeleteEntry(entry),
                     borderRadius: BorderRadius.circular(4),
-                    child: const Padding(
+                    child: Padding(
                       padding: EdgeInsets.all(4.0),
                       child: Icon(Icons.delete_outline,
                           color: EntryColors.accentRed, size: 20),
@@ -930,17 +933,17 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
 // 🎨 Colors
 // ─────────────────────────────────────────────
 class EntryColors {
-  static const Color primary = Color(0xFF00695C);
-  static const Color sidebarBg = Color(0xFF0E6C62);
-  static const Color bodyBg = Color(0xFFF5F6FA);
-  static const Color cardBg = Color(0xFFFFFFFF);
-  static const Color textPrimary = Color(0xFF2C3E50);
-  static const Color textSecondary = Color(0xFF7F8C8D);
-  static const Color textMuted = Color(0xFFB0B0B0);
-  static const Color accentYellow = Color(0xFFFFB74D);
-  static const Color accentRed = Color(0xFFE74C3C);
-  static const Color accentGreen = Color(0xFF27AE60);
-  static const Color statBgLight = Color(0xFFF0F8F7);
-  static const Color statBorder = Color(0xFFB2DFDB);
-  static const Color statShadow = Color(0x1A00695C);
+  static Color get primary         => AppColors.primary;
+  static Color get sidebarBg       => AppColors.shade950;
+  static Color get bodyBg          => AppColors.background;
+  static Color get cardBg          => AppColors.surface;
+  static Color get textPrimary     => AppColors.textPrimary;
+  static Color get textSecondary   => AppColors.textSecondary;
+  static Color get textMuted       => AppColors.textMuted;
+  static Color get accentYellow    => AppColors.accentYellow;
+  static Color get accentRed       => AppColors.accentRed;
+  static Color get accentGreen     => AppColors.primary;
+  static Color get statBgLight     => AppColors.surfaceElevated;
+  static Color get statBorder      => AppColors.borderColor;
+  static Color get statShadow      => AppColors.shadowColor;
 }

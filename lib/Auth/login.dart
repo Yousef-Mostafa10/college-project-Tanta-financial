@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../home/dashboard.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
+import '../core/app_colors.dart';
 import 'auth_service.dart';
 import '../request/Myrequest/myrequest.dart';
 
@@ -25,11 +26,11 @@ class _LoginPageState extends State<LoginPage> {
   bool isLoading = false;
   bool isPasswordVisible = false;
 
-  // 🎨 COLORS
-  static const Color primaryColor = Color(0xFF00695C);
-  static const Color primaryLight = Color(0xFF00796B);
-  static const Color backgroundColor = Color(0xFFF5F6FA);
-  static const Color cardColor = Colors.white;
+  // 🎨 COLORS - Using Centralized AppColors
+  static Color get primaryColor => AppColors.primary;
+  static Color get primaryLight => AppColors.primaryLight;
+  static Color get backgroundColor => AppColors.bodyBg;
+  static Color get cardColor => AppColors.cardBg;
 
   // 🔹 LOGIN باستخدام الـ endpoint الجديد
   Future<void> login() async {
@@ -263,7 +264,7 @@ class _LoginPageState extends State<LoginPage> {
                   AppLocalizations.of(context)!.translate('sign_in_subtitle'),
                   style: TextStyle(
                     fontSize: min(screenWidth * 0.025, 16),
-                    color: Colors.grey[600],
+                    color: AppColors.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -290,14 +291,14 @@ class _LoginPageState extends State<LoginPage> {
                 controller: emailController,
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context)!.translate('enter_username_hint'),
-                  prefixIcon: const Icon(Icons.person, color: primaryLight),
+                  prefixIcon: Icon(Icons.person, color: primaryLight),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: primaryLight),
+                    borderSide: BorderSide(color: primaryLight),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: primaryColor, width: 2),
+                    borderSide: BorderSide(color: primaryColor, width: 2),
                   ),
                   contentPadding: EdgeInsets.symmetric(
                     vertical: screenWidth > 600 ? 18 : 16,
@@ -324,7 +325,7 @@ class _LoginPageState extends State<LoginPage> {
                 obscureText: !isPasswordVisible,
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context)!.translate('enter_password_hint'),
-                  prefixIcon: const Icon(Icons.lock, color: primaryLight),
+                  prefixIcon: Icon(Icons.lock, color: primaryLight),
                   suffixIcon: IconButton(
                     icon: Icon(
                       isPasswordVisible ? Icons.visibility : Icons.visibility_off,
@@ -338,11 +339,11 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: primaryLight),
+                    borderSide: BorderSide(color: primaryLight),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: primaryColor, width: 2),
+                    borderSide: BorderSide(color: primaryColor, width: 2),
                   ),
                   contentPadding: EdgeInsets.symmetric(
                     vertical: screenWidth > 600 ? 18 : 16,

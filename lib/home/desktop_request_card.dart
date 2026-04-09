@@ -78,9 +78,9 @@ class DesktopRequestCard extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withOpacity(0.2),
                     shape: BoxShape.circle,
-                    border: Border.all(color: statusColor.withOpacity(0.3)),
+                    border: Border.all(color: statusColor.withOpacity(0.5)),
                   ),
                   child: Icon(statusIcon, color: statusColor, size: 20),
                 ),
@@ -100,9 +100,9 @@ class DesktopRequestCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: statusColor.withOpacity(0.3)),
+                    border: Border.all(color: statusColor.withOpacity(0.5)),
                   ),
                   child: Text(
                     AppLocalizations.of(context)!.translate(statusText.toLowerCase().replaceAll(' ', '_')),
@@ -166,7 +166,7 @@ class DesktopRequestCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             AppLocalizations.of(context)!.translate('view_details'),
-                            style: TextStyle(color: AppColors.textPrimary),
+                            style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -179,12 +179,12 @@ class DesktopRequestCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             AppLocalizations.of(context)!.translate('track_request'),
-                            style: TextStyle(color: AppColors.textPrimary),
+                            style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
                     ),
-                    PopupMenuItem(                      // ✅ زر تعديل
+                    PopupMenuItem(
                       value: "edit",
                       child: Row(
                         children: [
@@ -192,7 +192,7 @@ class DesktopRequestCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             AppLocalizations.of(context)!.translate('edit'),
-                            style: TextStyle(color: AppColors.accentYellow),
+                            style: TextStyle(color: AppColors.accentYellow, fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -205,7 +205,7 @@ class DesktopRequestCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             AppLocalizations.of(context)!.translate('delete'),
-                            style: TextStyle(color: AppColors.accentRed),
+                            style: TextStyle(color: AppColors.accentRed, fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -224,9 +224,9 @@ class DesktopRequestCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withOpacity(0.2),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -255,9 +255,9 @@ class DesktopRequestCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withOpacity(0.2),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

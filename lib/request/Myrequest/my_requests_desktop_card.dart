@@ -136,7 +136,7 @@ class _MyRequestDesktopCardState extends State<MyRequestDesktopCard> {
                     ),
                     child: Icon(widget.statusIcon, color: widget.statusColor, size: 20),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       widget.title,
@@ -167,13 +167,13 @@ class _MyRequestDesktopCardState extends State<MyRequestDesktopCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
 
               // 2️⃣ التاريخ وعمليات التوجيه
               Row(
                 children: [
                   Icon(Icons.calendar_today_rounded, size: 14, color: MyRequestsColors.textSecondary),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   Text(
                     widget.date,
                     style: TextStyle(fontSize: 13, color: MyRequestsColors.textSecondary),
@@ -194,7 +194,7 @@ class _MyRequestDesktopCardState extends State<MyRequestDesktopCard> {
                           valueColor: AlwaysStoppedAnimation<Color>(MyRequestsColors.primary.withOpacity(0.5)),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(
                         '...',
                         style: TextStyle(fontSize: 12, color: MyRequestsColors.textMuted),
@@ -216,15 +216,15 @@ class _MyRequestDesktopCardState extends State<MyRequestDesktopCard> {
                   },
                 ),
               
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
 
               // 3️⃣ النوع والأولوية والمستندات
               Row(
                 children: [
                   _buildDesktopChip(widget.type, Icons.category_outlined, MyRequestsColors.primary),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   _buildDesktopChip(displayPriority, priorityIcon, priorityColor),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   _buildDesktopChip(
                     '${widget.documentsCount}',
                     Icons.attach_file_rounded,
@@ -238,7 +238,7 @@ class _MyRequestDesktopCardState extends State<MyRequestDesktopCard> {
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: TextButton.icon(
                         onPressed: widget.onForward,
-                        icon: const Icon(Icons.send_rounded, size: 16),
+                        icon: Icon(Icons.send_rounded, size: 16),
                         label: Text(AppLocalizations.of(context)!.translate('forward') ?? 'Forward'),
                         style: TextButton.styleFrom(
                           foregroundColor: MyRequestsColors.primary,
@@ -283,8 +283,8 @@ class _MyRequestDesktopCardState extends State<MyRequestDesktopCard> {
                         child: Row(
                           children: [
                             Icon(Icons.remove_red_eye_outlined, size: 18, color: MyRequestsColors.primary),
-                            const SizedBox(width: 12),
-                            Text(AppLocalizations.of(context)!.translate('view_details') ?? 'View Details', style: const TextStyle(fontSize: 14, color: MyRequestsColors.textPrimary)),
+                            SizedBox(width: 12),
+                            Text(AppLocalizations.of(context)!.translate('view_details') ?? 'View Details', style: TextStyle(fontSize: 14, color: MyRequestsColors.textPrimary)),
                           ],
                         ),
                       ),
@@ -293,8 +293,8 @@ class _MyRequestDesktopCardState extends State<MyRequestDesktopCard> {
                         child: Row(
                           children: [
                             Icon(Icons.edit_outlined, size: 18, color: MyRequestsColors.primary),
-                            const SizedBox(width: 12),
-                            Text(AppLocalizations.of(context)!.translate('edit_request') ?? 'Edit Request', style: const TextStyle(fontSize: 14, color: MyRequestsColors.textPrimary)),
+                            SizedBox(width: 12),
+                            Text(AppLocalizations.of(context)!.translate('edit_request') ?? 'Edit Request', style: TextStyle(fontSize: 14, color: MyRequestsColors.textPrimary)),
                           ],
                         ),
                       ),
@@ -303,8 +303,8 @@ class _MyRequestDesktopCardState extends State<MyRequestDesktopCard> {
                         child: Row(
                           children: [
                             Icon(Icons.track_changes_outlined, size: 18, color: MyRequestsColors.primary),
-                            const SizedBox(width: 12),
-                            Text(AppLocalizations.of(context)!.translate('track_request') ?? 'Track Request', style: const TextStyle(fontSize: 14, color: MyRequestsColors.textPrimary)),
+                            SizedBox(width: 12),
+                            Text(AppLocalizations.of(context)!.translate('track_request') ?? 'Track Request', style: TextStyle(fontSize: 14, color: MyRequestsColors.textPrimary)),
                           ],
                         ),
                       ),
@@ -314,8 +314,8 @@ class _MyRequestDesktopCardState extends State<MyRequestDesktopCard> {
                         child: Row(
                           children: [
                             Icon(Icons.delete_outlined, size: 18, color: MyRequestsColors.accentRed),
-                            const SizedBox(width: 12),
-                            Text(AppLocalizations.of(context)!.translate('delete_button') ?? 'Delete', style: const TextStyle(fontSize: 14, color: MyRequestsColors.accentRed)),
+                            SizedBox(width: 12),
+                            Text(AppLocalizations.of(context)!.translate('delete_button') ?? 'Delete', style: TextStyle(fontSize: 14, color: MyRequestsColors.accentRed)),
                           ],
                         ),
                       ),
@@ -367,7 +367,7 @@ class _ForwardInfoWidgetState extends State<ForwardInfoWidget> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(AppLocalizations.of(context)!.translate('yes') ?? 'Yes', style: const TextStyle(color: Colors.red)),
+            child: Text(AppLocalizations.of(context)!.translate('yes') ?? 'Yes', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -408,7 +408,7 @@ class _ForwardInfoWidgetState extends State<ForwardInfoWidget> {
       child: Row(
         children: [
           Icon(Icons.send_rounded, size: 14, color: MyRequestsColors.primary),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             child: Text(
               "${AppLocalizations.of(context)!.translate('forwarded_to_prefix') ?? 'Forwarded to:'} ${widget.receiverName}",
@@ -430,9 +430,9 @@ class _ForwardInfoWidgetState extends State<ForwardInfoWidget> {
                 value: 'cancel',
                 child: Row(
                   children: [
-                    const Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
-                    const SizedBox(width: 8),
-                    Text(AppLocalizations.of(context)!.translate('cancel_button') ?? 'Cancel', style: const TextStyle(color: Colors.red)),
+                    Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text(AppLocalizations.of(context)!.translate('cancel_button') ?? 'Cancel', style: TextStyle(color: Colors.red)),
                   ],
                 ),
               ),
@@ -486,7 +486,7 @@ Widget _buildDesktopChip(String text, IconData icon, Color color) {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 14, color: color),
-        const SizedBox(width: 6),
+        SizedBox(width: 6),
         Text(
           text,
           style: TextStyle(

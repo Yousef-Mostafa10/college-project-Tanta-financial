@@ -136,7 +136,7 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
                     ),
                     child: Icon(widget.statusIcon, color: widget.statusColor, size: 16),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       widget.title,
@@ -167,13 +167,13 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
 
               // التاريخ
               Row(
                 children: [
                   Icon(Icons.calendar_today_rounded, size: 12, color: MyRequestsColors.textSecondary),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       widget.date,
@@ -198,7 +198,7 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
                           valueColor: AlwaysStoppedAnimation<Color>(MyRequestsColors.primary.withOpacity(0.5)),
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      SizedBox(width: 6),
                       Text(
                         '...',
                         style: TextStyle(fontSize: 10, color: MyRequestsColors.textMuted),
@@ -220,15 +220,15 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
                   },
                 ),
               
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
 
               // النوع والأولوية والمستندات
               Row(
                 children: [
                   _buildMobileChip(widget.type, Icons.category_outlined, MyRequestsColors.primary),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   _buildMobileChip(displayPriority, priorityIcon, priorityColor),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   _buildMobileChip(
                     '${widget.documentsCount}',
                     Icons.attach_file_rounded,
@@ -242,8 +242,8 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: TextButton.icon(
                         onPressed: widget.onForward,
-                        icon: const Icon(Icons.send_rounded, size: 14),
-                        label: Text(AppLocalizations.of(context)!.translate('forward') ?? 'Forward', style: const TextStyle(fontSize: 12)),
+                        icon: Icon(Icons.send_rounded, size: 14),
+                        label: Text(AppLocalizations.of(context)!.translate('forward') ?? 'Forward', style: TextStyle(fontSize: 12)),
                         style: TextButton.styleFrom(
                           foregroundColor: MyRequestsColors.primary,
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -288,8 +288,8 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
                         child: Row(
                           children: [
                             Icon(Icons.remove_red_eye_outlined, size: 16, color: MyRequestsColors.primary),
-                            const SizedBox(width: 8),
-                            Text(AppLocalizations.of(context)!.translate('view_details') ?? 'View Details', style: const TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
+                            SizedBox(width: 8),
+                            Text(AppLocalizations.of(context)!.translate('view_details') ?? 'View Details', style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
                           ],
                         ),
                       ),
@@ -298,8 +298,8 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
                         child: Row(
                           children: [
                             Icon(Icons.edit_outlined, size: 16, color: MyRequestsColors.primary),
-                            const SizedBox(width: 8),
-                            Text(AppLocalizations.of(context)!.translate('edit_request') ?? 'Edit Request', style: const TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
+                            SizedBox(width: 8),
+                            Text(AppLocalizations.of(context)!.translate('edit_request') ?? 'Edit Request', style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
                           ],
                         ),
                       ),
@@ -308,8 +308,8 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
                         child: Row(
                           children: [
                             Icon(Icons.track_changes_outlined, size: 16, color: MyRequestsColors.primary),
-                            const SizedBox(width: 8),
-                            Text(AppLocalizations.of(context)!.translate('track_request') ?? 'Track Request', style: const TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
+                            SizedBox(width: 8),
+                            Text(AppLocalizations.of(context)!.translate('track_request') ?? 'Track Request', style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
                           ],
                         ),
                       ),
@@ -319,8 +319,8 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
                         child: Row(
                           children: [
                             Icon(Icons.delete_outlined, size: 16, color: MyRequestsColors.accentRed),
-                            const SizedBox(width: 8),
-                            Text(AppLocalizations.of(context)!.translate('delete_button') ?? 'Delete', style: const TextStyle(fontSize: 12, color: MyRequestsColors.accentRed)),
+                            SizedBox(width: 8),
+                            Text(AppLocalizations.of(context)!.translate('delete_button') ?? 'Delete', style: TextStyle(fontSize: 12, color: MyRequestsColors.accentRed)),
                           ],
                         ),
                       ),
@@ -372,7 +372,7 @@ class _ForwardInfoWidgetState extends State<ForwardInfoWidget> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(AppLocalizations.of(context)!.translate('yes') ?? 'Yes', style: const TextStyle(color: Colors.red)),
+            child: Text(AppLocalizations.of(context)!.translate('yes') ?? 'Yes', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -413,7 +413,7 @@ class _ForwardInfoWidgetState extends State<ForwardInfoWidget> {
       child: Row(
         children: [
           Icon(Icons.send_rounded, size: 12, color: MyRequestsColors.primary),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Expanded(
             child: Text(
               "${AppLocalizations.of(context)!.translate('forwarded_to_prefix') ?? 'Forwarded to:'} ${widget.receiverName}",
@@ -435,9 +435,9 @@ class _ForwardInfoWidgetState extends State<ForwardInfoWidget> {
                 value: 'cancel',
                 child: Row(
                   children: [
-                    const Icon(Icons.cancel_outlined, size: 16, color: Colors.red),
-                    const SizedBox(width: 8),
-                    Text(AppLocalizations.of(context)!.translate('cancel_button') ?? 'Cancel', style: const TextStyle(fontSize: 12, color: Colors.red)),
+                    Icon(Icons.cancel_outlined, size: 16, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text(AppLocalizations.of(context)!.translate('cancel_button') ?? 'Cancel', style: TextStyle(fontSize: 12, color: Colors.red)),
                   ],
                 ),
               ),
@@ -492,7 +492,7 @@ Widget _buildMobileChip(String text, IconData icon, Color color) {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 10, color: color),
-        const SizedBox(width: 2),
+        SizedBox(width: 2),
         Text(
           text.length > 6 ? text.substring(0, 6) + '...' : text,
           style: TextStyle(

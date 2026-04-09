@@ -8,49 +8,9 @@ import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
 import 'transaction_type_model.dart';
 
-// 🎨 COLOR PALETTE - Consistent with the whole application
-class AppColors {
-  // Primary Colors
-  static const Color primary = Color(0xFF00695C);
-  static const Color primaryLight = Color(0xFF00796B);
+import '../core/app_colors.dart';
 
-  // Background Colors
-  static const Color bodyBg = Color(0xFFF5F6FA);
-  static const Color cardBg = Color(0xFFFFFFFF);
 
-  // Text Colors
-  static const Color textPrimary = Color(0xFF2C3E50);
-  static const Color textSecondary = Color(0xFF7F8C8D);
-  static const Color textMuted = Color(0xFFB0B0B0);
-
-  // Accent Colors
-  static const Color accentRed = Color(0xFFE74C3C);
-  static const Color accentGreen = Color(0xFF27AE60);
-  static const Color accentBlue = Color(0xFF1E88E5);
-  static const Color accentYellow = Color(0xFFFFB74D);
-
-  // Status Colors
-  static const Color statusPending = Color(0xFFFFB74D);
-  static const Color statusFulfilled = Color(0xFF27AE60);
-  static const Color statusError = Color(0xFFE74C3C);
-  static const Color statusInfo = Color(0xFF1E88E5);
-
-  // File Icon Colors
-  static const Color filePdf = Color(0xFFE74C3C);
-  static const Color fileDoc = Color(0xFF1E88E5);
-  static const Color fileExcel = Color(0xFF27AE60);
-  static const Color fileImage = Color(0xFF9C27B0);
-  static const Color fileGeneric = Color(0xFF00695C);
-
-  // Border Colors
-  static const Color borderColor = Color(0xFFE0E0E0);
-  static const Color focusBorderColor = Color(0xFF00695C);
-
-  // Button Colors
-  static const Color buttonPrimary = Color(0xFF00695C);
-  static const Color buttonPrimaryHover = Color(0xFF00796B);
-  static const Color buttonSecondary = Color(0xFF2C3E50);
-}
 
 class EditRequestPage extends StatefulWidget {
   final String requestId;
@@ -111,15 +71,9 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
   InputDecoration _buildInputDecoration() {
     return InputDecoration(
-      border: OutlineInputBorder(
-        borderSide: BorderSide(color: AppColors.borderColor),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: AppColors.borderColor),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
@@ -169,6 +123,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
     setState(() {
       _isLoadingTypes = true;
       _requestTypesData = [];
+      _requestTypes = ['Request Type']; // Reset names list for a clean refresh
       _typesCurrentPage = 1;
       _typesHasMore = true;
     });
@@ -283,9 +238,9 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         await _fetchRequestTypes();
-        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_type_created'));
+        _showSuccessSnackBar('request_type_created');
       } else {
-        _showErrorSnackBar(AppLocalizations.of(context)!.translate('request_type_create_failed').replaceFirst('{error}', response.statusCode.toString()));
+        _handleApiError(response, 'request_type_create_failed');
       }
     } catch (e) {
       _showErrorSnackBar('Error: $e');
@@ -304,9 +259,9 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         await _fetchRequestTypes();
-        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_type_deleted'));
+        _showSuccessSnackBar('request_type_deleted');
       } else {
-        _showErrorSnackBar(AppLocalizations.of(context)!.translate('request_type_delete_failed').replaceFirst('{error}', response.statusCode.toString()));
+        _handleApiError(response, 'request_type_delete_failed');
       }
     } catch (e) {
       _showErrorSnackBar('Error: $e');
@@ -467,7 +422,10 @@ class _EditRequestPageState extends State<EditRequestPage> {
                   Expanded(
                     child: TextField(
                       controller: nameController,
-                      decoration: InputDecoration(hintText: AppLocalizations.of(context)!.translate('new_type_name_hint')),
+                      decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.surface,
+                prefixIcon: Icon(Icons.edit_note, color: AppColors.primary, size: 20),hintText: AppLocalizations.of(context)!.translate('new_type_name_hint')),
                     ),
                   ),
                   IconButton(
@@ -484,26 +442,48 @@ class _EditRequestPageState extends State<EditRequestPage> {
               ),
               Divider(),
               SizedBox(
-                height: 200,
+                height: 300,
                 width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _requestTypesData.length,
-                  itemBuilder: (context, index) {
-                    final type = _requestTypesData[index];
-                    return ListTile(
-                      title: Text(type.name),
-                      subtitle: Text(AppLocalizations.of(context)!.translate('type_by').replaceFirst('{name}', type.creatorName), style: TextStyle(fontSize: 10)),
-                      trailing: IconButton(
-                        icon: Icon(Icons.delete_outline, color: AppColors.accentRed, size: 20),
-                        onPressed: () {
-                          _deleteRequestType(type.name);
-                          Navigator.pop(context);
+                child: _isLoadingTypes
+                    ? Center(child: CircularProgressIndicator(color: AppColors.primary))
+                    : NotificationListener<ScrollNotification>(
+                        onNotification: (ScrollNotification scrollInfo) {
+                          if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 100 &&
+                              !_isLoadingMoreTypes && _typesHasMore) {
+                            _loadMoreTypes(setStateDialog: setStateDialog);
+                          }
+                          return false;
                         },
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _requestTypesData.length + (_typesHasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index >= _requestTypesData.length) {
+                              return Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Center(
+                                  child: _isLoadingMoreTypes 
+                                    ? CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)
+                                    : SizedBox.shrink(),
+                                ),
+                              );
+                            }
+                            final type = _requestTypesData[index];
+                            return ListTile(
+                              title: Text(type.name),
+                              subtitle: Text(AppLocalizations.of(context)!.translate('type_by').replaceFirst('{name}', type.creatorName), style: TextStyle(fontSize: 10)),
+                              trailing: IconButton(
+                                icon: Icon(Icons.delete_outline, color: AppColors.accentRed, size: 20),
+                                onPressed: () {
+                                  _deleteRequestType(type.name).then((_) {
+                                    setStateDialog(() {});
+                                  });
+                                },
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    );
-                  },
-                ),
               ),
             ],
           ),
@@ -694,6 +674,26 @@ class _EditRequestPageState extends State<EditRequestPage> {
     return priority[0].toUpperCase() + priority.substring(1).toLowerCase();
   }
 
+  void _handleApiError(http.Response response, String fallback) {
+    String errorMsg = fallback;
+    try {
+      if (response.body.isNotEmpty) {
+        final data = json.decode(response.body);
+        if (data is Map) {
+          final rawMsg = data["message"] ?? data["error"] ?? data["msg"];
+          if (rawMsg is Map) {
+            if (rawMsg['ar'] != null) errorMsg = rawMsg['ar'];
+            else if (rawMsg['en'] != null) errorMsg = rawMsg['en'];
+            else if (rawMsg['key'] != null) errorMsg = rawMsg['key'];
+          } else if (rawMsg is String) {
+             errorMsg = rawMsg;
+          }
+        }
+      }
+    } catch (_) {}
+    _showErrorSnackBar(errorMsg);
+  }
+
   void _showErrorSnackBar(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -870,7 +870,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setStateSheet) {
@@ -1851,17 +1851,14 @@ class _EditRequestPageState extends State<EditRequestPage> {
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.surface,
+                prefixIcon: Icon(Icons.edit_note, color: AppColors.primary, size: 20),
                 hintText: AppLocalizations.of(context)!.translate('request_title'),
                 hintStyle: TextStyle(color: AppColors.textMuted),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2),
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2)),
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: isMobile ? 12 : 16,
                   vertical: isMobile ? 14 : 16,
@@ -1902,15 +1899,12 @@ class _EditRequestPageState extends State<EditRequestPage> {
                       onTap: _isCreator ? _showTypeSelectionDialog : null,
                       child: InputDecorator(
                         decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.borderColor),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.borderColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.focusBorderColor, width: 2),
-                          ),
+                filled: true,
+                fillColor: AppColors.surface,
+                prefixIcon: Icon(Icons.edit_note, color: AppColors.primary, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.borderColor)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.borderColor)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.focusBorderColor, width: 2)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         ),
                         child: Row(
@@ -1959,15 +1953,12 @@ class _EditRequestPageState extends State<EditRequestPage> {
             DropdownButtonFormField<String>(
               value: _selectedPriority,
               decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2),
-                ),
+                filled: true,
+                fillColor: AppColors.surface,
+                prefixIcon: Icon(Icons.edit_note, color: AppColors.primary, size: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2)),
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: isMobile ? 12 : 16,
                   vertical: isMobile ? 14 : 16,
@@ -2008,17 +1999,14 @@ class _EditRequestPageState extends State<EditRequestPage> {
               controller: _descriptionController,
               maxLines: isMobile ? 4 : 5,
               decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.surface,
+                prefixIcon: Icon(Icons.edit_note, color: AppColors.primary, size: 20),
                 hintText: AppLocalizations.of(context)!.translate('description_label'),
                 hintStyle: TextStyle(color: AppColors.textMuted),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2),
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2)),
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: isMobile ? 12 : 16,
                   vertical: isMobile ? 14 : 16,
@@ -2061,21 +2049,17 @@ class _EditRequestPageState extends State<EditRequestPage> {
                     controller: _senderCommentController,
                     maxLines: isMobile ? 3 : 4,
                     decoration: InputDecoration(
+                      filled: true,
+                      fillColor: AppColors.surface,
                       hintText: AppLocalizations.of(context)!.translate('enter_sender_comment') ?? 'Enter your comment...',
                       hintStyle: TextStyle(color: AppColors.textMuted),
                       prefixIcon: Padding(
                         padding: EdgeInsets.only(bottom: isMobile ? 40 : 60),
                         child: Icon(Icons.comment_rounded, color: AppColors.primary, size: 20),
                       ),
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppColors.borderColor),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppColors.borderColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2),
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2)),
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: isMobile ? 12 : 16,
                         vertical: isMobile ? 14 : 16,
@@ -2199,9 +2183,27 @@ class _EditRequestPageState extends State<EditRequestPage> {
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(AppLocalizations.of(context)!.translate('edit_request')),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          title: Text(
+            AppLocalizations.of(context)!.translate('edit_request'),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: isMobile ? 18 : 20,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+          centerTitle: true,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.headerGradientStart, AppColors.headerGradientEnd],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+          backgroundColor: Colors.transparent,
         ),
         body: _buildLoadingState(),
       );
@@ -2212,12 +2214,24 @@ class _EditRequestPageState extends State<EditRequestPage> {
         title: Text(
           AppLocalizations.of(context)!.translate('edit_request'),
           style: TextStyle(
+            fontWeight: FontWeight.bold,
             fontSize: isMobile ? 18 : 20,
-            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            letterSpacing: 0.5,
           ),
         ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        centerTitle: true,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.headerGradientStart, AppColors.headerGradientEnd],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
       ),
       backgroundColor: AppColors.bodyBg,
       body: _buildMainContent(isMobile, isTablet, isDesktop),
@@ -2226,9 +2240,27 @@ class _EditRequestPageState extends State<EditRequestPage> {
     if (isDesktop) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(AppLocalizations.of(context)!.translate('edit_request')),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          title: Text(
+            AppLocalizations.of(context)!.translate('edit_request'),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: isMobile ? 18 : 20,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+          centerTitle: true,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.headerGradientStart, AppColors.headerGradientEnd],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+          backgroundColor: Colors.transparent,
         ),
         backgroundColor: AppColors.bodyBg,
         body: SingleChildScrollView(

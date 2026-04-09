@@ -80,9 +80,9 @@ class MobileRequestCard extends StatelessWidget {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withOpacity(0.2),
                       shape: BoxShape.circle,
-                      border: Border.all(color: statusColor.withOpacity(0.3)),
+                      border: Border.all(color: statusColor.withOpacity(0.5)),
                     ),
                     child: Icon(statusIcon, color: statusColor, size: 16),
                   ),
@@ -102,9 +102,9 @@ class MobileRequestCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: statusColor.withOpacity(0.3)),
+                      border: Border.all(color: statusColor.withOpacity(0.5)),
                     ),
                     child: Text(
                       AppLocalizations.of(context)!.translate(statusText.toLowerCase().replaceAll(' ', '_')),
@@ -166,7 +166,7 @@ class MobileRequestCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               AppLocalizations.of(context)!.translate('view_details'),
-                              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                              style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -179,12 +179,12 @@ class MobileRequestCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               AppLocalizations.of(context)!.translate('track_request'),
-                              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                              style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
                       ),
-                      PopupMenuItem(                      // ✅ زر تعديل
+                      PopupMenuItem(
                         value: "edit",
                         child: Row(
                           children: [
@@ -192,7 +192,7 @@ class MobileRequestCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               AppLocalizations.of(context)!.translate('edit'),
-                              style: TextStyle(fontSize: 12, color: AppColors.accentYellow),
+                              style: TextStyle(fontSize: 12, color: AppColors.accentYellow, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -205,7 +205,7 @@ class MobileRequestCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               AppLocalizations.of(context)!.translate('delete'),
-                              style: TextStyle(fontSize: 12, color: AppColors.accentRed),
+                              style: TextStyle(fontSize: 12, color: AppColors.accentRed, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -225,9 +225,9 @@ class MobileRequestCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withOpacity(0.2),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

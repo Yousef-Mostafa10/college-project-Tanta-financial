@@ -619,14 +619,14 @@ class InboxApi {
   }
 
   // ✅ الرد على forward (موافقة/رفض/طلب تعديل) - POST /transaction/{id}/forward/{forwardId}/response
-  Future<bool> respondToForward(
+  Future<http.Response> respondToForward(
       String transactionId,
       int forwardId,
       String status,
       String? token, {
         String? comment,
       }) async {
-    if (token == null) return false;
+    if (token == null) return http.Response('{"error": "unauthorized"}', 401);
 
     try {
       final Map<String, dynamic> body = {
@@ -657,12 +657,12 @@ class InboxApi {
       print("📤 respondToForward POST Response: ${response.statusCode} - ${response.body}");
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        return true;
+        return response;
       }
 
-      // لو رجع 403 FORWARD_ALREADY_SEEN نجرب PATCH
-      if (response.statusCode == 403) {
-        print("🔄 POST returned 403, trying PATCH...");
+      // لو رجع 403 وفيه رسالة انه شافه قبل كده، نجرب PATCH كاحتياط
+      if (response.statusCode == 403 && response.body.contains("FORWARD_ALREADY_SEEN")) {
+        print("🔄 POST returned 403 FORWARD_ALREADY_SEEN, trying PATCH...");
         final patchResponse = await http.patch(
           Uri.parse(url),
           headers: headers,
@@ -670,25 +670,25 @@ class InboxApi {
         );
 
         print("📤 respondToForward PATCH Response: ${patchResponse.statusCode} - ${patchResponse.body}");
-        return patchResponse.statusCode >= 200 && patchResponse.statusCode < 300;
+        return patchResponse;
       }
 
-      return false;
+      return response;
     } catch (e) {
       print("❌ Error in respondToForward: $e");
-      return false;
+      return http.Response('{"error": "$e"}', 500);
     }
   }
 
   // ✅ تعديل الرد على forward - PATCH /transaction/{id}/forward/{forwardId}/response
-  Future<bool> updateForwardResponse(
+  Future<http.Response> updateForwardResponse(
       String transactionId,
       int forwardId,
       String status,
       String? token, {
         String? comment,
       }) async {
-    if (token == null) return false;
+    if (token == null) return http.Response('{"error": "unauthorized"}', 401);
 
     try {
       final Map<String, dynamic> body = {
@@ -709,22 +709,22 @@ class InboxApi {
       );
 
       print("📝 Update forward response: ${response.statusCode} - ${response.body}");
-      return response.statusCode == 200;
+      return response;
     } catch (e) {
       print("❌ Error in updateForwardResponse: $e");
-      return false;
+      return http.Response('{"error": "$e"}', 500);
     }
   }
 
   // ✅ تنفيذ الإجراءات (يجد الـ forwardId تلقائياً ثم يستخدم POST /response)
-  Future<bool> performActionUpdated(
+  Future<http.Response> performActionUpdated(
       String transactionId,
       String action,
       String? token,
       String? userName, {
         String? comment,
       }) async {
-    if (token == null || userName == null) return false;
+    if (token == null || userName == null) return http.Response('{"error": "unauthorized"}', 401);
 
     print("🎯 performActionUpdated - transactionId: $transactionId, action: $action, userName: $userName");
 
@@ -734,7 +734,7 @@ class InboxApi {
 
       if (forwardId == null) {
         print("❌ No forward found where user is receiver");
-        return false;
+        return http.Response('{"message": {"key": "FORWARD_NOT_FOUND"}}', 404);
       }
 
       // تحديد الحالة
@@ -751,7 +751,7 @@ class InboxApi {
           break;
         default:
           print("❌ Unknown action: $action");
-          return false;
+          return http.Response('{"message": {"key": "UNKNOWN_ACTION"}}', 400);
       }
 
       print("📤 Calling respondToForward - transactionId: $transactionId, forwardId: $forwardId, status: $status, comment: $comment");
@@ -765,26 +765,26 @@ class InboxApi {
       );
     } catch (e) {
       print("❌ Error in performActionUpdated: $e");
-      return false;
+      return http.Response('{"error": "$e"}', 500);
     }
   }
 
   // ✅ تعديل الرد (يجد الـ forwardId تلقائياً ثم يستخدم PATCH /response)
-  Future<bool> editMyResponse(
+  Future<http.Response> editMyResponse(
       String transactionId,
       String action,
       String? token,
       String? userName, {
         String? comment,
       }) async {
-    if (token == null || userName == null) return false;
+    if (token == null || userName == null) return http.Response('{"error": "unauthorized"}', 401);
 
     try {
       final forwardId = await getMyForwardIdAsReceiver(transactionId, token, userName);
 
       if (forwardId == null) {
         print("❌ No forward found where user is receiver for editing");
-        return false;
+        return http.Response('{"message": {"key": "FORWARD_NOT_FOUND"}}', 404);
       }
 
       String status;
@@ -799,7 +799,7 @@ class InboxApi {
           status = 'NEEDS_EDITING';
           break;
         default:
-          return false;
+          return http.Response('{"message": {"key": "UNKNOWN_ACTION"}}', 400);
       }
 
       return await updateForwardResponse(
@@ -811,7 +811,7 @@ class InboxApi {
       );
     } catch (e) {
       print("❌ Error in editMyResponse: $e");
-      return false;
+      return http.Response('{"error": "$e"}', 500);
     }
   }
 

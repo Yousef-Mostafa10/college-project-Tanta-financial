@@ -36,7 +36,7 @@ class UserCard extends StatelessWidget {
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
         border: Border.all(color: AppColors.borderColor, width: 1),
@@ -254,11 +254,11 @@ class UserCard extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           AppLocalizations.of(dialogContext)!.translate('delete_user'),
-          style: const TextStyle(color: AppColors.accentRed, fontWeight: FontWeight.bold),
+          style: TextStyle(color: AppColors.accentRed, fontWeight: FontWeight.bold),
         ),
         content: Text(
           "${AppLocalizations.of(dialogContext)!.translate('delete_confirmation')} ${user.name}?",
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(color: AppColors.textPrimary),
         ),
         actions: [
           TextButton(

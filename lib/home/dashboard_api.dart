@@ -244,7 +244,17 @@ class DashboardAPI {
     } else if (response.statusCode == 401) {
       throw Exception("Unauthorized - Token may be expired");
     } else {
-      throw Exception("Failed to load requests: ${response.statusCode}");
+      String errorMsg = "Failed to load requests: ${response.statusCode}";
+      try {
+        if (response.body.isNotEmpty) {
+          final errorData = json.decode(response.body);
+          if (errorData is Map) {
+            final rawMsg = errorData["message"] ?? errorData["error"] ?? errorData["msg"];
+            errorMsg = _extractErrorMessage(rawMsg, errorMsg);
+          }
+        }
+      } catch (_) {}
+      throw Exception(errorMsg);
     }
   }
 

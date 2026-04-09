@@ -49,7 +49,7 @@ class InboxDesktopFilters extends StatelessWidget {
               BoxShadow(
                 color: InboxColors.statShadow,
                 blurRadius: 8,
-                offset: const Offset(0, 2),
+                offset: Offset(0, 2),
               ),
             ],
           ),
@@ -78,7 +78,7 @@ class InboxDesktopFilters extends StatelessWidget {
             onChanged: onSearchChanged,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
 
         // فلاتر الديسكتوب
         Card(
@@ -95,7 +95,7 @@ class InboxDesktopFilters extends StatelessWidget {
                 Row(
                   children: [
                     Icon(Icons.filter_alt_outlined, color: InboxColors.primary, size: 16),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Text(
                       AppLocalizations.of(context)!.translate('filters_label'),
                       style: TextStyle(
@@ -107,7 +107,7 @@ class InboxDesktopFilters extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -120,7 +120,7 @@ class InboxDesktopFilters extends StatelessWidget {
                         onChanged: (value) => onPriorityChanged(value!),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: PaginatedTypePicker(
                         selectedType: selectedType,
@@ -133,7 +133,7 @@ class InboxDesktopFilters extends StatelessWidget {
                         cardBg: InboxColors.cardBg,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: _buildDesktopFilterDropdown(
                         context: context,
@@ -189,7 +189,7 @@ class InboxDesktopFilters extends StatelessWidget {
                     size: 18,
                     color: _getStatusColor(context, label, item),
                   ),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       AppLocalizations.of(context)!.translate(item.toLowerCase().replaceAll(' ', '_')),

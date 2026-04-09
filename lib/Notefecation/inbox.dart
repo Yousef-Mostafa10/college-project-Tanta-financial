@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:college_project/l10n/app_localizations.dart';
@@ -503,6 +505,39 @@ class _InboxPageState extends State<InboxPage> {
     }
   }
 
+  void _handleApiError(http.Response response, String fallbackKey) {
+    String errorKey = fallbackKey;
+    try {
+      if (response.body.isNotEmpty) {
+        final data = json.decode(response.body);
+        if (data is Map) {
+          final rawMsg = data["message"] ?? data["error"] ?? data["msg"];
+          if (rawMsg is Map) {
+            if (rawMsg['key'] != null) errorKey = rawMsg['key'];
+          } else if (rawMsg is String) {
+             errorKey = rawMsg;
+          }
+        }
+      }
+    } catch (_) {}
+
+    String translatedMsg = AppLocalizations.of(context)?.translate(errorKey) ?? errorKey;
+    if (translatedMsg == errorKey && errorKey != fallbackKey) {
+       // if we couldn't translate the key, try to translate the fallback just in case
+       translatedMsg = AppLocalizations.of(context)?.translate(fallbackKey) ?? fallbackKey;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(translatedMsg),
+          backgroundColor: InboxColors.accentRed,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Future<void> _performAction(
       Map<String, dynamic> request,
       String action,
@@ -544,7 +579,7 @@ class _InboxPageState extends State<InboxPage> {
         });
       }
 
-      final success = await _apiService.performActionUpdated(
+      final response = await _apiService.performActionUpdated(
         requestId,
         action,
         _userToken,
@@ -554,7 +589,7 @@ class _InboxPageState extends State<InboxPage> {
 
       if (!mounted) return;
 
-      if (success) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         // إزالة علامة التحديث
         _updateRequestInList(requestId, {'isUpdating': null});
 
@@ -587,14 +622,8 @@ class _InboxPageState extends State<InboxPage> {
           'isUpdating': null,
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('failed_to_perform_action')),
-            backgroundColor: InboxColors.accentRed,
-          ),
-        );
-
-        print('❌ $action failed for request $requestId');
+        _handleApiError(response, 'failed_to_perform_action');
+        print('❌ $action failed for request $requestId with status ${response.statusCode}');
       }
     } catch (e) {
       print('❌ Exception in _performAction: $e');
@@ -632,7 +661,7 @@ class _InboxPageState extends State<InboxPage> {
           title: Row(
             children: [
               Icon(icon, color: color, size: 24),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text(
                 action == 'Approve'
                     ? (AppLocalizations.of(context)!.translate('approve'))
@@ -658,7 +687,7 @@ class _InboxPageState extends State<InboxPage> {
                   color: InboxColors.textSecondary,
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               TextField(
                 maxLines: 3,
                 decoration: InputDecoration(
@@ -689,7 +718,7 @@ class _InboxPageState extends State<InboxPage> {
                     : action == 'Reject'
                         ? (AppLocalizations.of(context)!.translate('reject'))
                         : (AppLocalizations.of(context)!.translate('need_change')),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: Colors.white),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
@@ -751,12 +780,12 @@ class _InboxPageState extends State<InboxPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(AppLocalizations.of(context)!.translate('specify_changes_hint')),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   TextField(
                     maxLines: 4,
                     decoration: InputDecoration(
                       hintText: AppLocalizations.of(context)!.translate('enter_comments'),
-                      border: const OutlineInputBorder(),
+                      border: OutlineInputBorder(),
                     ),
                     onChanged: (value) {
                       setStateDialog(() {
@@ -891,12 +920,12 @@ class _InboxPageState extends State<InboxPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(AppLocalizations.of(context)!.translate('reject_reason_hint')),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   TextField(
                     maxLines: 4,
                     decoration: InputDecoration(
                       hintText: AppLocalizations.of(context)!.translate('enter_rejection_reason'),
-                      border: const OutlineInputBorder(),
+                      border: OutlineInputBorder(),
                     ),
                     onChanged: (value) {
                       setStateDialog(() {
@@ -1161,7 +1190,7 @@ class _InboxPageState extends State<InboxPage> {
                                         padding: const EdgeInsets.all(16),
                                         child: Center(
                                           child: isLoadingMoreUsers
-                                              ? const SizedBox(
+                                              ? SizedBox(
                                                   width: 24,
                                                   height: 24,
                                                   child: CircularProgressIndicator(
@@ -1414,7 +1443,7 @@ class _InboxPageState extends State<InboxPage> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text(AppLocalizations.of(context)!.translate('yes'), style: const TextStyle(color: Colors.red)),
+              child: Text(AppLocalizations.of(context)!.translate('yes'), style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -1586,7 +1615,7 @@ class _InboxPageState extends State<InboxPage> {
                   onSelected(option);
                 },
               )),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
             ],
           ),
         );
@@ -1602,7 +1631,7 @@ class _InboxPageState extends State<InboxPage> {
           CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(InboxColors.primary),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             AppLocalizations.of(context)!.translate('loading_your_inbox'),
             style: TextStyle(
@@ -1627,7 +1656,7 @@ class _InboxPageState extends State<InboxPage> {
               size: 64,
               color: InboxColors.accentRed,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               AppLocalizations.of(context)!.translate('error_loading_requests'),
               style: TextStyle(
@@ -1636,7 +1665,7 @@ class _InboxPageState extends State<InboxPage> {
                 color: InboxColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               _errorMessage ?? AppLocalizations.of(context)!.translate('unknown_error'),
               textAlign: TextAlign.center,
@@ -1645,10 +1674,10 @@ class _InboxPageState extends State<InboxPage> {
                 color: InboxColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _fetchInboxRequests,
-              icon: const Icon(Icons.refresh_rounded),
+              icon: Icon(Icons.refresh_rounded),
               label: Text(AppLocalizations.of(context)!.translate('retry_button')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: InboxColors.primary,
@@ -1922,7 +1951,7 @@ class _InboxPageState extends State<InboxPage> {
     try {
       if (mounted) setState(() => _isLoading = true);
 
-      final success = await _apiService.editMyResponse(
+      final response = await _apiService.editMyResponse(
         requestId,
         action,
         _userToken,
@@ -1932,7 +1961,7 @@ class _InboxPageState extends State<InboxPage> {
 
       if (!mounted) return;
 
-      if (success) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         _updateRequestInList(requestId, {'isUpdating': null});
 
         Future.delayed(const Duration(milliseconds: 500), () {
@@ -1948,12 +1977,7 @@ class _InboxPageState extends State<InboxPage> {
         );
       } else {
         _updateRequestInList(requestId, {'isUpdating': null});
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('failed_to_update_response') ?? 'Failed to update response'),
-            backgroundColor: InboxColors.accentRed,
-          ),
-        );
+        _handleApiError(response, 'failed_to_update_response');
       }
     } catch (e) {
       if (mounted) {
@@ -1995,7 +2019,7 @@ class _InboxPageState extends State<InboxPage> {
                 apiSummary: _apiSummary,
                 totalRequests: _totalRequests,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               InboxDesktopFilters(
                 selectedPriority: _selectedPriority,
@@ -2020,13 +2044,13 @@ class _InboxPageState extends State<InboxPage> {
                 onSearchChanged: _onSearchChanged,
                 fetchTypePage: (page) => _apiService.fetchTypesPage(_userToken, page: page),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
 
               InboxHeader(
                 isMobile: false,
                 itemCount: _filteredRequests.length,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               _buildDesktopRequestsList(),
 
@@ -2143,7 +2167,7 @@ class _InboxPageState extends State<InboxPage> {
                   mini: true,
                   onPressed: _scrollToTop,
                   backgroundColor: InboxColors.primary.withOpacity(0.8),
-                  child: const Icon(Icons.arrow_upward, color: Colors.white),
+                  child: Icon(Icons.arrow_upward, color: Colors.white),
                 ),
               ),
             )

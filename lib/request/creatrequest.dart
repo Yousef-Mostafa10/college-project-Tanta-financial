@@ -9,35 +9,33 @@ import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
 import 'transaction_type_model.dart';
 
+import '../core/app_colors.dart';
+
 // 🎨 COLOR PALETTE - Consistent with Dashboard and Inbox
 class CreateRequestColors {
-  // Primary Colors (same as AppColors)
-  static const Color primary = Color(0xFF00695C);
-  static const Color primaryLight = Color(0xFF00796B);
+  // ─── FOREST DARK THEME ─────────────────────────────────────────
+  static Color get primary         => AppColors.primary;
+  static Color get primaryLight    => AppColors.primaryLight;
 
-  // Background Colors
-  static const Color bodyBg = Color(0xFFF5F6FA);
-  static const Color cardBg = Color(0xFFFFFFFF);
+  static Color get bodyBg          => AppColors.bodyBg;
+  static Color get cardBg          => AppColors.cardBg;
 
-  // Text Colors
-  static const Color textPrimary = Color(0xFF2C3E50);
-  static const Color textSecondary = Color(0xFF7F8C8D);
-  static const Color textMuted = Color(0xFFB0B0B0);
+  static Color get textPrimary     => AppColors.textPrimary;
+  static Color get textSecondary   => AppColors.textSecondary;
+  static Color get textMuted       => AppColors.textMuted;
 
-  // Accent Colors
-  static const Color accentRed = Color(0xFFEF5350);
-  static const Color accentGreen = Color(0xFF66BB6A);
-  static const Color accentBlue = Color(0xFF42A5F5);
-  static const Color accentYellow = Color(0xFFFFB74D);
+  static Color get accentRed       => AppColors.accentRed;
+  static Color get accentGreen     => AppColors.accentGreen;
+  static Color get accentBlue      => AppColors.accentBlue;
+  static Color get accentYellow    => AppColors.accentYellow;
 
-  // Gradient Colors
-  static const Color primaryGradientStart = Color(0xFF00695C);
-  static const Color primaryGradientEnd = Color(0xFF004D40);
+  // Always dark for headers: white text must be readable in both themes
+  static Color get primaryGradientStart => AppColors.headerGradientStart;
+  static Color get primaryGradientEnd   => AppColors.headerGradientEnd;
 
-  // Border Colors
-  static const Color borderColor = Color(0xFFECEFF1);
-  static const Color focusBorderColor = Color(0xFF00695C);
-  static const Color shadowColor = Color(0x1A000000);
+  static Color get borderColor     => AppColors.borderColor;
+  static Color get focusBorderColor=> AppColors.primary;
+  static Color get shadowColor     => AppColors.shadowColor;
 }
 
 class CreateRequestPage extends StatefulWidget {
@@ -51,6 +49,10 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   final _descriptionController = TextEditingController();
   final _commentController = TextEditingController();
   final _userSearchController = TextEditingController();
+
+  final _titleKey = GlobalKey();
+  final _typeKey = GlobalKey();
+  final _descriptionKey = GlobalKey();
 
   String _selectedRequestType = 'Request Type';
   String _selectedPriority = 'Medium';
@@ -233,6 +235,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     setState(() {
       _isLoadingTypes = true;
       _requestTypesData = [];
+      _requestTypes = ['Request Type']; // Reset names list
       _typesCurrentPage = 1;
       _typesHasMore = true;
     });
@@ -492,13 +495,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         await fetchRequestTypes();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Type created successfully!'), backgroundColor: CreateRequestColors.accentGreen),
-          );
-        }
+        _showSuccessMessage('Type created successfully!');
+      } else {
+        _handleApiError(response, 'Failed to create type');
       }
-    } catch (e) {}
+    } catch (e) {
+      _showErrorMessage(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   Future<void> _deleteRequestType(String name) async {
@@ -513,13 +516,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         await fetchRequestTypes();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Type deleted successfully!'), backgroundColor: CreateRequestColors.accentGreen),
-          );
-        }
+        _showSuccessMessage('Type deleted successfully!');
+      } else {
+        _handleApiError(response, 'Failed to delete type');
       }
-    } catch (e) {}
+    } catch (e) {
+      _showErrorMessage(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   void _showManageTypesDialog() {
@@ -556,28 +559,67 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 ),
                 Divider(),
                 SizedBox(
-                  height: 200,
+                  height: 300,
                   width: double.maxFinite,
                   child: _isLoadingTypes
                       ? Center(child: CircularProgressIndicator(color: CreateRequestColors.primary))
-                      : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _requestTypesData.length,
-                    itemBuilder: (context, index) {
-                      final type = _requestTypesData[index];
-                      return ListTile(
-                        title: Text(type.name),
-                        subtitle: Text('By: ${type.creatorName}', style: TextStyle(fontSize: 10)),
-                        trailing: IconButton(
-                          icon: Icon(Icons.delete_outline, color: CreateRequestColors.accentRed, size: 20),
-                          onPressed: () {
-                            _deleteRequestType(type.name);
-                            Navigator.pop(context);
+                      : NotificationListener<ScrollNotification>(
+                          onNotification: (ScrollNotification scrollInfo) {
+                            if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 100 &&
+                                !_isLoadingMoreTypes && _typesHasMore) {
+                              _loadMoreTypes(setStateDialog: setStateDialog);
+                            }
+                            return false;
                           },
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: _requestTypesData.length + (_typesHasMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index >= _requestTypesData.length) {
+                                return Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Center(
+                                    child: _isLoadingMoreTypes 
+                                      ? CircularProgressIndicator(strokeWidth: 2, color: CreateRequestColors.primary)
+                                      : SizedBox.shrink(),
+                                  ),
+                                );
+                              }
+                              final type = _requestTypesData[index];
+                              return ListTile(
+                                title: Text(type.name),
+                                subtitle: Text('By: ${type.creatorName}', style: TextStyle(fontSize: 10)),
+                                trailing: IconButton(
+                                  icon: Icon(Icons.delete_outline, color: CreateRequestColors.accentRed, size: 20),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (confirmContext) => AlertDialog(
+                                        title: Text('Delete Type'),
+                                        content: Text('Are you sure you want to delete "${type.name}"?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(confirmContext),
+                                            child: Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.pop(confirmContext);
+                                              _deleteRequestType(type.name).then((_) {
+                                                setStateDialog(() {});
+                                              });
+                                            },
+                                            child: Text('Delete', style: TextStyle(color: CreateRequestColors.accentRed)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             ),
@@ -592,9 +634,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
   void _showErrorMessage(String message) {
     if (!mounted) return;
+    
+    final translated = AppLocalizations.of(context)?.translate(message) ?? message;
+    final displayMsg = (translated != message) ? translated : message;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(displayMsg),
         backgroundColor: CreateRequestColors.accentRed,
         duration: Duration(seconds: 3),
       ),
@@ -603,13 +649,37 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
   void _showSuccessMessage(String message) {
     if (!mounted) return;
+    
+    final translated = AppLocalizations.of(context)?.translate(message) ?? message;
+    final displayMsg = (translated != message) ? translated : message;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(displayMsg),
         backgroundColor: CreateRequestColors.accentGreen,
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  void _handleApiError(http.Response response, String fallback) {
+    String errorMsg = fallback;
+    try {
+      if (response.body.isNotEmpty) {
+        final data = json.decode(response.body);
+        if (data is Map) {
+          final rawMsg = data["message"] ?? data["error"] ?? data["msg"];
+          if (rawMsg is Map) {
+            if (rawMsg['ar'] != null) errorMsg = rawMsg['ar'];
+            else if (rawMsg['en'] != null) errorMsg = rawMsg['en'];
+            else if (rawMsg['key'] != null) errorMsg = rawMsg['key'];
+          } else if (rawMsg is String) {
+             errorMsg = rawMsg;
+          }
+        }
+      }
+    } catch (_) {}
+    _showErrorMessage(errorMsg);
   }
 
   Future<void> _uploadNewFiles() async {
@@ -708,12 +778,12 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           _showSuccessMessage(AppLocalizations.of(context)!.translate('file_deleted_success') ?? 'File deleted successfully');
         }
       } else if (response.statusCode == 403) {
-        _showErrorMessage(AppLocalizations.of(context)!.translate('document_already_used') ?? 'This file is already used in a transaction and cannot be deleted.');
+        _handleApiError(response, 'document_already_used');
       } else {
-        _showErrorMessage('Failed to delete file "$fileName"');
+        _handleApiError(response, 'Failed to delete file "$fileName"');
       }
     } catch (e) {
-      _showErrorMessage('Error deleting file: $e');
+      _showErrorMessage(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 
@@ -729,7 +799,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setStateSheet) {
@@ -1168,11 +1238,23 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             await _forwardTransaction(transactionId);
           }
 
-          _showSuccessMessage('Request sent successfully');
+          _showSuccessMessage('request_sent_success');
           Navigator.pop(context);
+        } else {
+          _handleApiError(response, 'failed_create_request');
         }
-      } catch (e) {} finally {
+      } catch (e) {
+         _showErrorMessage(e.toString().replaceFirst('Exception: ', ''));
+      } finally {
         setState(() => _isSubmitting = false);
+      }
+    } else {
+      if (_titleController.text.trim().isEmpty && _titleKey.currentContext != null) {
+        Scrollable.ensureVisible(_titleKey.currentContext!, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
+      } else if (_selectedRequestType == 'Request Type' && _typeKey.currentContext != null) {
+        Scrollable.ensureVisible(_typeKey.currentContext!, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
+      } else if (_descriptionController.text.trim().isEmpty && _descriptionKey.currentContext != null) {
+        Scrollable.ensureVisible(_descriptionKey.currentContext!, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
       }
     }
   }
@@ -1805,6 +1887,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     _buildLabel('${AppLocalizations.of(context)!.translate('request_title')} *'),
                     SizedBox(height: 8),
                     TextFormField(
+                      key: _titleKey,
                       controller: _titleController,
                       style: TextStyle(fontSize: 15, color: CreateRequestColors.textPrimary),
                       decoration: InputDecoration(
@@ -1850,6 +1933,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     SizedBox(height: 8),
 
                     FormField<String>(
+                      key: _typeKey,
                       initialValue: _selectedRequestType,
                       validator: (v) => _selectedRequestType == 'Request Type'
                           ? AppLocalizations.of(context)!.translate('request_type_hint')
@@ -1957,6 +2041,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     _buildLabel('${AppLocalizations.of(context)!.translate('description_label')} *'),
                     SizedBox(height: 8),
                     TextFormField(
+                      key: _descriptionKey,
                       controller: _descriptionController,
                       maxLines: 4,
                       style: TextStyle(fontSize: 15, color: CreateRequestColors.textPrimary),

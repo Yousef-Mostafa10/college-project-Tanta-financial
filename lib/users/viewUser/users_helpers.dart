@@ -41,8 +41,8 @@ class UsersHelpers {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.error, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
+            Icon(Icons.error, color: Colors.white, size: 20),
+            SizedBox(width: 8),
             Expanded(child: Text(cleanMessage)),
           ],
         ),
@@ -157,8 +157,8 @@ class UsersHelpers {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
+            Icon(Icons.check_circle, color: Colors.white, size: 20),
+            SizedBox(width: 8),
             Expanded(child: Text(localizedMessage)),
           ],
         ),

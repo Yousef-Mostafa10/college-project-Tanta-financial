@@ -12,43 +12,7 @@ import 'package:college_project/l10n/app_localizations.dart';
 import '../../app_config.dart';
 import '../../utils/storage_permission_helper.dart';
 
-// 🎨 COLOR PALETTE - Consistent with Dashboard and Inbox
-class AppColors {
-  // Primary Colors
-  static const Color primary = Color(0xFF00695C);
-  static const Color primaryLight = Color(0xFF00796B);
-
-  // Background Colors
-  static const Color bodyBg = Color(0xFFF5F6FA);
-  static const Color cardBg = Color(0xFFFFFFFF);
-
-  // Text Colors
-  static const Color textPrimary = Color(0xFF2C3E50);
-  static const Color textSecondary = Color(0xFF7F8C8D);
-  static const Color textMuted = Color(0xFFB0B0B0);
-
-  // Accent Colors
-  static const Color accentRed = Color(0xFFE74C3C);
-  static const Color accentGreen = Color(0xFF27AE60);
-  static const Color accentBlue = Color(0xFF1E88E5);
-  static const Color accentYellow = Color(0xFFFFB74D);
-
-  // Border Colors
-  static const Color borderColor = Color(0xFFE0E0E0);
-
-  // Status Colors
-  static const Color statusPending = Color(0xFFFFB74D);
-  static const Color statusFulfilled = Color(0xFF27AE60);
-  static const Color statusError = Color(0xFFE74C3C);
-  static const Color statusInfo = Color(0xFF1E88E5);
-
-  // File Icon Colors
-  static const Color filePdf = Color(0xFFE74C3C);
-  static const Color fileDoc = Color(0xFF1E88E5);
-  static const Color fileExcel = Color(0xFF27AE60);
-  static const Color fileImage = Color(0xFF9C27B0);
-  static const Color fileGeneric = Color(0xFF00695C);
-}
+import '../../core/app_colors.dart';
 
 class CourseApprovalRequestPage extends StatefulWidget {
   final String requestId;
@@ -687,8 +651,8 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                           ),
                           child: Icon(Icons.check_circle_rounded, color: AppColors.accentGreen, size: 28),
                         ),
-                        const SizedBox(width: 12),
-                        const Expanded(
+                        SizedBox(width: 12),
+                        Expanded(
                           child: Text(
                             'تأكيد اكتمال الطلب',
                             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
@@ -696,12 +660,12 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    const Text(
+                    SizedBox(height: 24),
+                    Text(
                       'الميزانية المستخدمة',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
@@ -715,15 +679,15 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                               child: Row(
                                 children: [
                                   SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
-                                  const SizedBox(width: 12),
-                                  const Text('جاري تحميل الميزانيات...'),
+                                  SizedBox(width: 12),
+                                  Text('جاري تحميل الميزانيات...'),
                                 ],
                               ),
                             )
                           : DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
                                 value: selectedBudget,
-                                hint: const Text('اختر الميزانية'),
+                                hint: Text('اختر الميزانية'),
                                 isExpanded: true,
                                 icon: Icon(Icons.account_balance_wallet_outlined, color: AppColors.primary),
                                 items: _budgets.map((budget) {
@@ -732,7 +696,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(budget['name'], style: const TextStyle(fontSize: 14)),
+                                        Text(budget['name'], style: TextStyle(fontSize: 14)),
                                         Text('${budget['available']} متبقي', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                                       ],
                                     ),
@@ -744,12 +708,12 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                               ),
                             ),
                     ),
-                    const SizedBox(height: 20),
-                    const Text(
+                    SizedBox(height: 20),
+                    Text(
                       'المبلغ المراد تخصيصه',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     TextField(
                       controller: amountController,
                       keyboardType: TextInputType.number,
@@ -764,7 +728,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                         fillColor: Colors.grey[50],
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32),
                     Row(
                       children: [
                         Expanded(
@@ -777,10 +741,10 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text('إلغاء', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: Text('إلغاء', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () {
@@ -807,7 +771,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text('تأكيد واكمال', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: Text('تأكيد واكمال', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],
@@ -854,15 +818,15 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             BoxShadow(
               color: AppColors.accentGreen.withOpacity(0.3),
               blurRadius: 8,
-              offset: const Offset(0, 4),
+              offset: Offset(0, 4),
             ),
           ],
         ),
         child: ElevatedButton.icon(
           onPressed: _isProcessing ? null : _showFulfillmentDialog,
           icon: _isProcessing 
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Icon(Icons.check_circle_outline, color: Colors.white, size: 22),
+              ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : Icon(Icons.check_circle_outline, color: Colors.white, size: 22),
           label: Text(
             AppLocalizations.of(context)!.translate('status_fulfilled') ?? "Fulfilled",
             style: TextStyle(
@@ -907,7 +871,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icon(Icons.refresh_rounded),
             onPressed: _fetchRequestData,
           ),
         ],
@@ -930,7 +894,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             AppLocalizations.of(context)!.translate('loading_request_details'),
             style: TextStyle(
@@ -949,13 +913,13 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.error_outline, size: 64, color: AppColors.accentRed),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             _errorMessage!,
             style: TextStyle(color: AppColors.accentRed, fontSize: 16),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           ElevatedButton(
             onPressed: _fetchRequestData,
             style: ElevatedButton.styleFrom(
@@ -975,7 +939,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.inbox_rounded, size: 64, color: AppColors.textMuted),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             AppLocalizations.of(context)!.translate('no_request_details_msg'),
             style: TextStyle(
@@ -1048,7 +1012,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           _buildForwardsSection(isMobile),
           // ✅ زر Mark as Fulfilled في النهاية
           _buildFulfilledButton(isMobile),
-          const SizedBox(height: 40), // مساحة إضافية في النهاية
+          SizedBox(height: 40), // مساحة إضافية في النهاية
         ],
       ),
     );

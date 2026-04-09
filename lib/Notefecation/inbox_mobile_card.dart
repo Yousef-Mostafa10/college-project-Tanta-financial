@@ -44,7 +44,7 @@ class InboxMobileCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 10, color: color),
-            const SizedBox(width: 2),
+            SizedBox(width: 2),
             Text(
               AppLocalizations.of(context)!.translate(text.toLowerCase()),
               style: TextStyle(
@@ -91,7 +91,7 @@ class InboxMobileCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 4),
             minimumSize: const Size(0, 30),
           ),
-          child: Text(text, style: const TextStyle(fontSize: 11)),
+          child: Text(text, style: TextStyle(fontSize: 11)),
         ),
       );
     }
@@ -105,7 +105,7 @@ class InboxMobileCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 4),
           minimumSize: const Size(0, 30),
         ),
-        child: Text(text, style: const TextStyle(fontSize: 11)),
+        child: Text(text, style: TextStyle(fontSize: 11)),
       ),
     );
   }
@@ -212,7 +212,7 @@ class InboxMobileCard extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,7 +258,7 @@ class InboxMobileCard extends StatelessWidget {
                               valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                             ),
                           ),
-                        if (isUpdating) const SizedBox(width: 4),
+                        if (isUpdating) SizedBox(width: 4),
                         Text(
                           statusLabel,
                           style: TextStyle(
@@ -272,15 +272,15 @@ class InboxMobileCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
 
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
 
               // التاريخ
               Row(
                 children: [
                   Icon(Icons.calendar_today_rounded, size: 12, color: InboxColors.textSecondary),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       formattedDate.length > 16 ? formattedDate.substring(0, 16) : formattedDate,
@@ -291,14 +291,14 @@ class InboxMobileCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
 
               Row(
                 children: [
                   _buildMobileChip(context, type, Icons.category_outlined, InboxColors.primary),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   _buildMobileChip(context, priority, Icons.flag_outlined, InboxHelpers.getPriorityColor(priority)),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   // عدد الملفات
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -310,7 +310,7 @@ class InboxMobileCard extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(Icons.attach_file_rounded, size: 12, color: documentsCount > 0 ? Colors.blue : InboxColors.textSecondary),
-                        const SizedBox(width: 2),
+                        SizedBox(width: 2),
                         Text(
                           documentsCount > 0 
                               ? "$documentsCount" 
@@ -326,7 +326,7 @@ class InboxMobileCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
 
               // أزرار الإجراءات
               if (isForwardChecking) ...[
@@ -344,7 +344,7 @@ class InboxMobileCard extends StatelessWidget {
                           valueColor: AlwaysStoppedAnimation<Color>(InboxColors.primary.withOpacity(0.6)),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(
                         '...',
                         style: TextStyle(fontSize: 11, color: InboxColors.textMuted),
@@ -364,7 +364,7 @@ class InboxMobileCard extends StatelessWidget {
                           valueColor: AlwaysStoppedAnimation<Color>(InboxColors.primary),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         AppLocalizations.of(context)!.translate('updating'),
                         style: TextStyle(
@@ -386,7 +386,7 @@ class InboxMobileCard extends StatelessWidget {
                           onPressed: onReject,
                           color: InboxColors.accentRed,
                         ),
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         _buildMobileActionButton(
                           text: AppLocalizations.of(context)!.translate('approve'),
                           onPressed: onApprove,
@@ -394,7 +394,7 @@ class InboxMobileCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     Row(
                       children: [
                         _buildMobileActionButton(
@@ -402,7 +402,7 @@ class InboxMobileCard extends StatelessWidget {
                           onPressed: onNeedChange,
                           color: Colors.orange,
                         ),
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         _buildMobileActionButton(
                           text: AppLocalizations.of(context)!.translate('view'),
                           onPressed: onViewDetails,
@@ -428,7 +428,7 @@ class InboxMobileCard extends StatelessWidget {
                       child: Row(
                         children: [
                           Icon(Icons.send_rounded, size: 14, color: InboxColors.primary),
-                          const SizedBox(width: 6),
+                          SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               "${AppLocalizations.of(context)!.translate('forwarded_to_prefix')} ${lastForwardSentTo['receiverName']}",
@@ -454,7 +454,7 @@ class InboxMobileCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     // فقط أزرار Edit و View
                     Row(
                       children: [
@@ -464,7 +464,7 @@ class InboxMobileCard extends StatelessWidget {
                           color: Colors.blue,
                           isOutlined: true,
                         ),
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         _buildMobileActionButton(
                           text: AppLocalizations.of(context)!.translate('view'),
                           onPressed: onViewDetails,
@@ -486,7 +486,7 @@ class InboxMobileCard extends StatelessWidget {
                             child: OutlinedButton.icon(
                               onPressed: onEditResponse,
                               icon: Icon(Icons.edit_rounded, size: 14),
-                              label: Text(AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response', style: const TextStyle(fontSize: 11)),
+                              label: Text(AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response', style: TextStyle(fontSize: 11)),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.deepPurple,
                                 side: BorderSide(color: Colors.deepPurple),
@@ -495,7 +495,7 @@ class InboxMobileCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                        if (onEditResponse != null) const SizedBox(width: 6),
+                        if (onEditResponse != null) SizedBox(width: 6),
                         _buildMobileActionButton(
                           text: AppLocalizations.of(context)!.translate('forward'),
                           onPressed: onForward,
@@ -503,7 +503,7 @@ class InboxMobileCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     Row(
                       children: [
                         _buildMobileActionButton(
@@ -512,7 +512,7 @@ class InboxMobileCard extends StatelessWidget {
                           color: Colors.blue,
                           isOutlined: true,
                         ),
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         _buildMobileActionButton(
                           text: AppLocalizations.of(context)!.translate('view_details'),
                           onPressed: onViewDetails,
@@ -535,7 +535,7 @@ class InboxMobileCard extends StatelessWidget {
                           child: OutlinedButton.icon(
                             onPressed: onEditResponse,
                             icon: Icon(Icons.edit_rounded, size: 14),
-                            label: Text(AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response', style: const TextStyle(fontSize: 11)),
+                            label: Text(AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response', style: TextStyle(fontSize: 11)),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.deepPurple,
                               side: BorderSide(color: Colors.deepPurple),
@@ -556,10 +556,10 @@ class InboxMobileCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           minimumSize: const Size(0, 30),
                         ),
-                        child: Text(AppLocalizations.of(context)!.translate('edit_request'), style: const TextStyle(fontSize: 11)),
+                        child: Text(AppLocalizations.of(context)!.translate('edit_request'), style: TextStyle(fontSize: 11)),
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     // زر View Details
                     SizedBox(
                       width: double.infinity,
@@ -571,7 +571,7 @@ class InboxMobileCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           minimumSize: const Size(0, 30),
                         ),
-                        child: Text(AppLocalizations.of(context)!.translate('view_details'), style: const TextStyle(fontSize: 11)),
+                        child: Text(AppLocalizations.of(context)!.translate('view_details'), style: TextStyle(fontSize: 11)),
                       ),
                     ),
                   ],

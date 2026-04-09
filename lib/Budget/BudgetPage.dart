@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_config.dart';
 import '../l10n/app_localizations.dart';
+import '../core/app_colors.dart';
 import 'BudgetEntriesPage.dart';
 
 class BudgetPage extends StatefulWidget {
@@ -368,13 +369,13 @@ class _BudgetPageState extends State<BudgetPage> {
                       color: BudgetColors.accentBlue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.edit,
+                    child: Icon(Icons.edit,
                         color: BudgetColors.accentBlue, size: 22),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Text(
                     AppLocalizations.of(context)!.translate('edit_category_name'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: BudgetColors.textPrimary,
@@ -382,7 +383,7 @@ class _BudgetPageState extends State<BudgetPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               TextField(
                 controller: nameController,
                 autofocus: true,
@@ -391,11 +392,11 @@ class _BudgetPageState extends State<BudgetPage> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  prefixIcon: const Icon(Icons.account_balance_wallet,
+                  prefixIcon: Icon(Icons.account_balance_wallet,
                       color: BudgetColors.primary),
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(
@@ -418,10 +419,10 @@ class _BudgetPageState extends State<BudgetPage> {
                             borderRadius: BorderRadius.circular(8)),
                       ),
                       child: Text(AppLocalizations.of(context)!.translate('save_button'),
-                          style: const TextStyle(color: Colors.white)),
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
@@ -430,7 +431,7 @@ class _BudgetPageState extends State<BudgetPage> {
                             const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8)),
-                        side: const BorderSide(
+                        side: BorderSide(
                             color: BudgetColors.textMuted),
                       ),
                       child: Text(AppLocalizations.of(context)!.translate('cancel_button')),
@@ -572,13 +573,13 @@ class _BudgetPageState extends State<BudgetPage> {
             children: [
               Text(
                 AppLocalizations.of(context)!.translate('add_new_category'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: BudgetColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               // Name field (required)
               TextField(
                 controller: nameController,
@@ -587,11 +588,11 @@ class _BudgetPageState extends State<BudgetPage> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  prefixIcon: const Icon(Icons.account_balance_wallet,
+                  prefixIcon: Icon(Icons.account_balance_wallet,
                       color: BudgetColors.primary),
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               // Amount field (optional)
               TextField(
                 controller: amountController,
@@ -602,17 +603,17 @@ class _BudgetPageState extends State<BudgetPage> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  prefixIcon: const Icon(Icons.monetization_on_outlined,
+                  prefixIcon: Icon(Icons.monetization_on_outlined,
                       color: BudgetColors.accentGreen),
                   suffixText: AppLocalizations.of(context)!.translate('currency_unit'),
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                 AppLocalizations.of(context)!.translate('add_auto_note'),
-                style: const TextStyle(fontSize: 11, color: BudgetColors.textMuted),
+                style: TextStyle(fontSize: 11, color: BudgetColors.textMuted),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
@@ -636,10 +637,10 @@ class _BudgetPageState extends State<BudgetPage> {
                             borderRadius: BorderRadius.circular(8)),
                       ),
                       child: Text(AppLocalizations.of(context)!.translate('add_button'),
-                          style: const TextStyle(color: Colors.white)),
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
@@ -647,7 +648,7 @@ class _BudgetPageState extends State<BudgetPage> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8)),
-                        side: const BorderSide(color: BudgetColors.textMuted),
+                        side: BorderSide(color: BudgetColors.textMuted),
                       ),
                       child: Text(AppLocalizations.of(context)!.translate('cancel_button')),
                     ),
@@ -685,17 +686,17 @@ class _BudgetPageState extends State<BudgetPage> {
                       color: BudgetColors.accentGreen.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.add_card,
+                    child: Icon(Icons.add_card,
                         color: BudgetColors.accentGreen, size: 22),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           AppLocalizations.of(context)!.translate('add_amount_title'),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: BudgetColors.textPrimary,
@@ -703,7 +704,7 @@ class _BudgetPageState extends State<BudgetPage> {
                         ),
                         Text(
                           '"${category['name']}"',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             color: BudgetColors.primary,
                             fontWeight: FontWeight.w500,
@@ -714,7 +715,7 @@ class _BudgetPageState extends State<BudgetPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               TextField(
                 controller: amountController,
                 keyboardType: TextInputType.number,
@@ -725,12 +726,12 @@ class _BudgetPageState extends State<BudgetPage> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  prefixIcon: const Icon(Icons.monetization_on_outlined,
+                  prefixIcon: Icon(Icons.monetization_on_outlined,
                       color: BudgetColors.accentGreen),
                   suffixText: AppLocalizations.of(context)!.translate('currency_unit'),
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(
@@ -750,10 +751,10 @@ class _BudgetPageState extends State<BudgetPage> {
                             borderRadius: BorderRadius.circular(8)),
                       ),
                       child: Text(AppLocalizations.of(context)!.translate('add_button'),
-                          style: const TextStyle(color: Colors.white)),
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
@@ -762,7 +763,7 @@ class _BudgetPageState extends State<BudgetPage> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8)),
                         side:
-                            const BorderSide(color: BudgetColors.textMuted),
+                            BorderSide(color: BudgetColors.textMuted),
                       ),
                       child: Text(AppLocalizations.of(context)!.translate('cancel_button')),
                     ),
@@ -784,10 +785,10 @@ class _BudgetPageState extends State<BudgetPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.warning_rounded, color: BudgetColors.accentRed, size: 28),
-            const SizedBox(width: 12),
+            Icon(Icons.warning_rounded, color: BudgetColors.accentRed, size: 28),
+            SizedBox(width: 12),
             Text(AppLocalizations.of(context)!.translate('delete_confirm_title'),
-                style: const TextStyle(color: BudgetColors.textPrimary)),
+                style: TextStyle(color: BudgetColors.textPrimary)),
           ],
         ),
         content: Column(
@@ -797,18 +798,18 @@ class _BudgetPageState extends State<BudgetPage> {
             Text(
               AppLocalizations.of(context)!.translate('delete_confirm_msg'),
               style:
-                  const TextStyle(fontSize: 14, color: BudgetColors.textSecondary),
+                  TextStyle(fontSize: 14, color: BudgetColors.textSecondary),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               '"${category['name']}"',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: BudgetColors.primary,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -819,13 +820,13 @@ class _BudgetPageState extends State<BudgetPage> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline,
+                  Icon(Icons.info_outline,
                       color: BudgetColors.accentRed, size: 20),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       AppLocalizations.of(context)!.translate('delete_request_confirm'),
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 12, color: BudgetColors.accentRed),
                     ),
                   ),
@@ -862,7 +863,7 @@ class _BudgetPageState extends State<BudgetPage> {
       appBar: AppBar(
         title: Text(
           AppLocalizations.of(context)!.translate('budget_management'),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -871,7 +872,7 @@ class _BudgetPageState extends State<BudgetPage> {
         backgroundColor: BudgetColors.sidebarBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -888,7 +889,7 @@ class _BudgetPageState extends State<BudgetPage> {
                   BoxShadow(
                     color: BudgetColors.statShadow,
                     blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
@@ -896,12 +897,12 @@ class _BudgetPageState extends State<BudgetPage> {
                 controller: searchController,
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context)!.translate('search_budget_hint'),
-                  hintStyle: const TextStyle(color: BudgetColors.textMuted),
+                  hintStyle: TextStyle(color: BudgetColors.textMuted),
                   prefixIcon:
-                      const Icon(Icons.search, color: BudgetColors.primary),
+                      Icon(Icons.search, color: BudgetColors.primary),
                   suffixIcon: searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear,
+                          icon: Icon(Icons.clear,
                               color: BudgetColors.textMuted),
                           onPressed: () {
                             searchController.clear();
@@ -933,12 +934,12 @@ class _BudgetPageState extends State<BudgetPage> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.account_balance_wallet,
+                      Icon(Icons.account_balance_wallet,
                           size: 16, color: BudgetColors.primary),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(
                         AppLocalizations.of(context)!.translate('total_categories_stat').replaceAll('{count}', '$_totalCategories'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: BudgetColors.primary,
                           fontWeight: FontWeight.w500,
                         ),
@@ -950,12 +951,12 @@ class _BudgetPageState extends State<BudgetPage> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
 
           // 📱 Categories Grid
           Expanded(
             child: isLoading
-                ? const Center(
+                ? Center(
                     child: CircularProgressIndicator(
                         color: BudgetColors.primary))
                 : errorMessage != null
@@ -963,19 +964,19 @@ class _BudgetPageState extends State<BudgetPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.error_outline,
+                            Icon(Icons.error_outline,
                                 size: 64, color: BudgetColors.accentRed),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Text(errorMessage!,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 16,
                                     color: BudgetColors.textMuted)),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: fetchAllCategories,
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: BudgetColors.primary),
-                              child: Text(AppLocalizations.of(context)!.translate('retry_button'), style: const TextStyle(color: Colors.white)),
+                              child: Text(AppLocalizations.of(context)!.translate('retry_button'), style: TextStyle(color: Colors.white)),
                             ),
                           ],
                         ),
@@ -991,12 +992,12 @@ class _BudgetPageState extends State<BudgetPage> {
                                   color:
                                       BudgetColors.textMuted.withOpacity(0.5),
                                 ),
-                                const SizedBox(height: 16),
+                                SizedBox(height: 16),
                                 Text(
                                   searchController.text.isEmpty
                                       ? AppLocalizations.of(context)!.translate('no_requests_found')
                                       : AppLocalizations.of(context)!.translate('no_search_results'),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 16,
                                       color: BudgetColors.textMuted),
                                 ),
@@ -1036,7 +1037,7 @@ class _BudgetPageState extends State<BudgetPage> {
                                         : 0),
                                 itemBuilder: (context, index) {
                                   if (index == filteredCategories.length) {
-                                    return const Center(
+                                    return Center(
                                       child: Padding(
                                         padding: EdgeInsets.all(16),
                                         child: CircularProgressIndicator(
@@ -1074,7 +1075,7 @@ class _BudgetPageState extends State<BudgetPage> {
                   heroTag: 'budget_add_btn',
                   onPressed: _showAddCategoryDialog,
                   backgroundColor: BudgetColors.accentYellow,
-                  child: const Icon(Icons.add, color: Colors.white, size: 28),
+                  child: Icon(Icons.add, color: Colors.white, size: 28),
                 ),
               ),
             ),
@@ -1086,7 +1087,7 @@ class _BudgetPageState extends State<BudgetPage> {
                   mini: true,
                   onPressed: _scrollToTop,
                   backgroundColor: BudgetColors.primary.withOpacity(0.8),
-                  child: const Icon(Icons.arrow_upward, color: Colors.white),
+                  child: Icon(Icons.arrow_upward, color: Colors.white),
                 ),
               ),
           ],
@@ -1134,7 +1135,7 @@ class BudgetCategoryCard extends StatelessWidget {
           BoxShadow(
             color: BudgetColors.statShadow,
             blurRadius: 4,
-            offset: const Offset(0, 2),
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -1218,7 +1219,7 @@ class BudgetCategoryCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2),
                   Text(
                     '${(ratio * 100).toStringAsFixed(0)}% ' + AppLocalizations.of(context)!.translate('fulfilled_stat').toLowerCase(),
                     style: TextStyle(
@@ -1236,7 +1237,7 @@ class BudgetCategoryCard extends StatelessWidget {
             top: 8,
             right: 8,
             child: PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert,
+              icon: Icon(Icons.more_vert,
                   color: BudgetColors.textMuted, size: 20),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
@@ -1262,9 +1263,9 @@ class BudgetCategoryCard extends StatelessWidget {
                   value: 'edit',
                   child: Row(
                     children: [
-                      const Icon(Icons.edit,
+                      Icon(Icons.edit,
                           color: BudgetColors.accentBlue, size: 20),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(AppLocalizations.of(context)!.translate('edit_category_name')),
                     ],
                   ),
@@ -1273,9 +1274,9 @@ class BudgetCategoryCard extends StatelessWidget {
                   value: 'addEntry',
                   child: Row(
                     children: [
-                      const Icon(Icons.add_card,
+                      Icon(Icons.add_card,
                           color: BudgetColors.accentGreen, size: 20),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(AppLocalizations.of(context)!.translate('add_amount_title')),
                     ],
                   ),
@@ -1284,9 +1285,9 @@ class BudgetCategoryCard extends StatelessWidget {
                   value: 'viewEntries',
                   child: Row(
                     children: [
-                      const Icon(Icons.history,
+                      Icon(Icons.history,
                           color: BudgetColors.primary, size: 20),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(AppLocalizations.of(context)!.translate('view_entries')),
                     ],
                   ),
@@ -1296,9 +1297,9 @@ class BudgetCategoryCard extends StatelessWidget {
                   value: 'delete',
                   child: Row(
                     children: [
-                      const Icon(Icons.delete,
+                      Icon(Icons.delete,
                           color: BudgetColors.accentRed, size: 20),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(AppLocalizations.of(context)!.translate('delete_button')),
                     ],
                   ),
@@ -1337,7 +1338,7 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         children: [
           Icon(icon, size: isMobile ? 11 : 13, color: color),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           Text(
             '$label: ',
             style: TextStyle(
@@ -1366,19 +1367,19 @@ class _InfoRow extends StatelessWidget {
 // 🎨 Colors
 // ─────────────────────────────────────────────
 class BudgetColors {
-  static const Color primary = Color(0xFF00695C);
-  static const Color primaryLight = Color(0xFF00796B);
-  static const Color sidebarBg = Color(0xFF0E6C62);
-  static const Color bodyBg = Color(0xFFF5F6FA);
-  static const Color cardBg = Color(0xFFFFFFFF);
-  static const Color textPrimary = Color(0xFF2C3E50);
-  static const Color textSecondary = Color(0xFF7F8C8D);
-  static const Color textMuted = Color(0xFFB0B0B0);
-  static const Color accentYellow = Color(0xFFFFB74D);
-  static const Color accentRed = Color(0xFFE74C3C);
-  static const Color accentGreen = Color(0xFF27AE60);
-  static const Color accentBlue = Color(0xFF1E88E5);
-  static const Color statBgLight = Color(0xFFF0F8F7);
-  static const Color statBorder = Color(0xFFB2DFDB);
-  static const Color statShadow = Color(0x1A00695C);
+  static Color get primary         => AppColors.primary;
+  static Color get primaryLight    => AppColors.primaryHover;
+  static Color get sidebarBg       => AppColors.shade950;
+  static Color get bodyBg          => AppColors.background;
+  static Color get cardBg          => AppColors.surface;
+  static Color get textPrimary     => AppColors.textPrimary;
+  static Color get textSecondary   => AppColors.textSecondary;
+  static Color get textMuted       => AppColors.textMuted;
+  static Color get accentYellow    => AppColors.accentYellow;
+  static Color get accentRed       => AppColors.accentRed;
+  static Color get accentGreen     => AppColors.primary;
+  static Color get accentBlue      => AppColors.accentBlue;
+  static Color get statBgLight     => AppColors.surfaceElevated;
+  static Color get statBorder      => AppColors.borderColor;
+  static Color get statShadow      => AppColors.shadowColor;
 }

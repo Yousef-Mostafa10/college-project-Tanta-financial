@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_config.dart';
 import '../l10n/app_localizations.dart';
+import '../core/app_colors.dart';
 
 class DepartmentsPage extends StatefulWidget {
   const DepartmentsPage({Key? key}) : super(key: key);
@@ -512,13 +513,13 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                   children: [
                     Text(
                       AppLocalizations.of(context)!.translate('add_new_dept'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     TextField(
                       controller: nameController,
                       decoration: InputDecoration(
@@ -526,10 +527,10 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        prefixIcon: const Icon(Icons.business, color: AppColors.primary),
+                        prefixIcon: Icon(Icons.business, color: AppColors.primary),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     // Manager Picker Field
                     GestureDetector(
                       onTap: () async {
@@ -547,10 +548,10 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          prefixIcon: const Icon(Icons.person, color: AppColors.primary),
+                          prefixIcon: Icon(Icons.person, color: AppColors.primary),
                           suffixIcon: selectedManagerId != null
                               ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 18),
+                                  icon: Icon(Icons.clear, size: 18),
                                   onPressed: () {
                                     setDialogState(() {
                                       selectedManagerId = null;
@@ -558,7 +559,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                     });
                                   },
                                 )
-                              : const Icon(Icons.arrow_drop_down),
+                              : Icon(Icons.arrow_drop_down),
                         ),
                         child: Text(
                           selectedManagerId != null
@@ -573,7 +574,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     Row(
                       children: [
                         Expanded(
@@ -594,10 +595,10 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: Text(AppLocalizations.of(context)!.translate('add'), style: const TextStyle(color: Colors.black)),
+                            child: Text(AppLocalizations.of(context)!.translate('add'), style: TextStyle(color: Colors.black)),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => Navigator.pop(context),
@@ -606,7 +607,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              side: const BorderSide(color: AppColors.textMuted),
+                              side: BorderSide(color: AppColors.textMuted),
                             ),
                             child: Text(AppLocalizations.of(context)!.translate('cancel')),
                           ),
@@ -647,13 +648,13 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                   children: [
                     Text(
                       AppLocalizations.of(context)!.translate('edit_dept'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     TextField(
                       controller: nameController,
                       decoration: InputDecoration(
@@ -661,10 +662,10 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        prefixIcon: const Icon(Icons.business, color: AppColors.primary),
+                        prefixIcon: Icon(Icons.business, color: AppColors.primary),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     // Manager Picker Field
                     GestureDetector(
                       onTap: () async {
@@ -682,10 +683,10 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          prefixIcon: const Icon(Icons.person, color: AppColors.primary),
+                          prefixIcon: Icon(Icons.person, color: AppColors.primary),
                           suffixIcon: selectedManagerId != null
                               ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 18),
+                                  icon: Icon(Icons.clear, size: 18),
                                   onPressed: () {
                                     setDialogState(() {
                                       selectedManagerId = null;
@@ -693,7 +694,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                     });
                                   },
                                 )
-                              : const Icon(Icons.arrow_drop_down),
+                              : Icon(Icons.arrow_drop_down),
                         ),
                         child: Text(
                           selectedManagerId != null
@@ -708,7 +709,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     Row(
                       children: [
                         Expanded(
@@ -731,7 +732,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                             child: Text(AppLocalizations.of(context)!.translate('save_changes')),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => Navigator.pop(context),
@@ -740,9 +741,9 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              side: const BorderSide(color: AppColors.textMuted),
+                              side: BorderSide(color: AppColors.textMuted),
                             ),
-                            child: const Text('Cancel'),
+                            child: Text('Cancel'),
                           ),
                         ),
                       ],
@@ -862,11 +863,11 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     // Header
                     Row(
                       children: [
-                        const Icon(Icons.person_search, color: AppColors.primary),
-                        const SizedBox(width: 10),
+                        Icon(Icons.person_search, color: AppColors.primary),
+                        SizedBox(width: 10),
                         Text(
                           AppLocalizations.of(context)!.translate('select_manager'),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
@@ -874,21 +875,21 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                         ),
                         const Spacer(),
                         IconButton(
-                          icon: const Icon(Icons.close),
+                          icon: Icon(Icons.close),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
 
                     // ✅ Search bar — بيعمل API call بالـ name
                     TextField(
                       controller: searchCtrl,
                       decoration: InputDecoration(
                         hintText: AppLocalizations.of(context)!.translate('search_user_name_id'),
-                        prefixIcon: const Icon(Icons.search, size: 20),
+                        prefixIcon: Icon(Icons.search, size: 20),
                         suffixIcon: isLoadingUsers && users.isNotEmpty
-                            ? const Padding(
+                            ? Padding(
                                 padding: EdgeInsets.all(10),
                                 child: SizedBox(
                                   width: 16,
@@ -928,12 +929,12 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                         });
                       },
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
 
                     // List
                     Expanded(
                       child: isLoadingUsers && users.isEmpty
-                          ? const Center(
+                          ? Center(
                               child: CircularProgressIndicator(color: AppColors.primary),
                             )
                           : users.isEmpty
@@ -947,7 +948,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                                   : "No users found for this department, please add users to the department first")
                                               : AppLocalizations.of(context)!.translate('no_users_found'),
                                           textAlign: TextAlign.center,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             color: AppColors.textMuted,
                                             height: 1.5,
                                           ),
@@ -981,7 +982,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                           padding: const EdgeInsets.all(16),
                                           child: Center(
                                             child: isLoadingMoreUsers
-                                                ? const SizedBox(
+                                                ? SizedBox(
                                                     width: 24,
                                                     height: 24,
                                                     child: CircularProgressIndicator(
@@ -992,7 +993,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                                 : Text(
                                                     AppLocalizations.of(context)!
                                                         .translate('scroll_for_more'),
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       color: AppColors.textMuted,
                                                       fontSize: 12,
                                                     ),
@@ -1012,7 +1013,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                             user['name'].toString().isNotEmpty
                                                 ? user['name'].toString()[0].toUpperCase()
                                                 : '?',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.bold,
                                               color: AppColors.primary,
@@ -1021,11 +1022,11 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                         ),
                                         title: Text(
                                           user['name'],
-                                          style: const TextStyle(fontSize: 14),
+                                          style: TextStyle(fontSize: 14),
                                         ),
                                         subtitle: Text(
                                           'ID: ${user['id']}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontSize: 11, color: AppColors.textMuted),
                                         ),
                                         onTap: () => Navigator.pop(context, user),
@@ -1058,7 +1059,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           children: [
             Icon(Icons.warning_rounded, color: AppColors.accentRed, size: 28),
             SizedBox(width: 12),
-            Text(AppLocalizations.of(context)!.translate('confirm_delete_title'), style: const TextStyle(color: AppColors.textPrimary)),
+            Text(AppLocalizations.of(context)!.translate('confirm_delete_title'), style: TextStyle(color: AppColors.textPrimary)),
           ],
         ),
         content: Column(
@@ -1067,7 +1068,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           children: [
             Text(
               AppLocalizations.of(context)!.translate('confirm_delete_dept'),
-              style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
             ),
             SizedBox(height: 8),
             Text(
@@ -1093,7 +1094,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                   Expanded(
                     child: Text(
                       AppLocalizations.of(context)!.translate('delete_note_users'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.accentRed,
                       ),
@@ -1132,21 +1133,30 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
       appBar: AppBar(
         title: Text(
           AppLocalizations.of(context)!.translate('departments_management'),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
-        backgroundColor: AppColors.sidebarBg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.headerGradientStart, AppColors.headerGradientEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
+            icon: Icon(Icons.refresh, color: Colors.white),
             onPressed: fetchAllDepartments,
             tooltip: AppLocalizations.of(context)!.translate('refresh'),
           ),
@@ -1159,13 +1169,13 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
             padding: const EdgeInsets.all(24),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.statShadow,
                     blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
@@ -1174,11 +1184,11 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                 onChanged: _onSearchChanged,
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context)!.translate('search_dept_hint'),
-                  hintStyle: const TextStyle(color: AppColors.textMuted),
-                  prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                  hintStyle: TextStyle(color: AppColors.textMuted),
+                  prefixIcon: Icon(Icons.search, color: AppColors.primary),
                   suffixIcon: searchController.text.isNotEmpty
                       ? IconButton(
-                    icon: const Icon(Icons.clear, color: AppColors.textMuted),
+                    icon: Icon(Icons.clear, color: AppColors.textMuted),
                     onPressed: () {
                       searchController.clear();
                       setState(() {
@@ -1208,11 +1218,11 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.corporate_fare, size: 16, color: AppColors.primary),
-                      const SizedBox(width: 8),
+                      Icon(Icons.corporate_fare, size: 16, color: AppColors.primary),
+                      SizedBox(width: 8),
                       Text(
                         AppLocalizations.of(context)!.translate('total_departments').replaceAll('{count}', '$_totalDepartments'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w500,
                         ),
@@ -1224,31 +1234,31 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
 
           // 📱 Departments Grid
           Expanded(
             child: isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? Center(child: CircularProgressIndicator(color: AppColors.primary))
                 : errorMessage != null
                 ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.error_outline,
                     size: 64,
                     color: AppColors.accentRed,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     errorMessage!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       color: AppColors.textMuted,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: fetchAllDepartments,
                     style: ElevatedButton.styleFrom(
@@ -1269,7 +1279,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     size: 64,
                     color: AppColors.textMuted.withOpacity(0.5),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     searchController.text.isEmpty
                         ? AppLocalizations.of(context)!.translate('no_depts_found')
@@ -1304,7 +1314,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                         itemBuilder: (context, index) {
                           // عنصر اللودينج في الآخر
                           if (index == filteredDepartments.length) {
-                            return const Center(
+                            return Center(
                               child: Padding(
                                 padding: EdgeInsets.all(16),
                                 child: CircularProgressIndicator(
@@ -1340,7 +1350,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                   heroTag: 'dept_add_btn',
                   onPressed: _showAddDepartmentDialog,
                   backgroundColor: AppColors.accentYellow,
-                  child: const Icon(
+                  child: Icon(
                     Icons.add,
                     color: Colors.white,
                     size: 28,
@@ -1356,7 +1366,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                   mini: true,
                   onPressed: _scrollToTop,
                   backgroundColor: AppColors.primary.withOpacity(0.8),
-                  child: const Icon(Icons.arrow_upward, color: Colors.white),
+                  child: Icon(Icons.arrow_upward, color: Colors.white),
                 ),
               ),
           ],
@@ -1392,7 +1402,7 @@ class DepartmentCard extends StatelessWidget {
           BoxShadow(
             color: AppColors.statShadow,
             blurRadius: 4,
-            offset: const Offset(0, 2),
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -1439,7 +1449,7 @@ class DepartmentCard extends StatelessWidget {
                       size: isMobile ? 12 : 14,
                       color: AppColors.textMuted,
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         department['managerId'] != null 
@@ -1464,7 +1474,7 @@ class DepartmentCard extends StatelessWidget {
             top: 12,
             right: 12,
             child: PopupMenuButton<String>(
-              icon: const Icon(
+              icon: Icon(
                 Icons.more_vert,
                 color: AppColors.textMuted,
                 size: 20,
@@ -1484,8 +1494,8 @@ class DepartmentCard extends StatelessWidget {
                   value: 'edit',
                   child: Row(
                     children: [
-                      const Icon(Icons.edit, color: AppColors.accentBlue, size: 20),
-                      const SizedBox(width: 8),
+                      Icon(Icons.edit, color: AppColors.accentBlue, size: 20),
+                      SizedBox(width: 8),
                       Text(AppLocalizations.of(context)!.translate('edit')),
                     ],
                   ),
@@ -1494,8 +1504,8 @@ class DepartmentCard extends StatelessWidget {
                   value: 'delete',
                   child: Row(
                     children: [
-                      const Icon(Icons.delete, color: AppColors.accentRed, size: 20),
-                      const SizedBox(width: 8),
+                      Icon(Icons.delete, color: AppColors.accentRed, size: 20),
+                      SizedBox(width: 8),
                       Text(AppLocalizations.of(context)!.translate('delete')),
                     ],
                   ),
@@ -1507,30 +1517,4 @@ class DepartmentCard extends StatelessWidget {
       ),
     );
   }
-}
-
-// 🎨 Colors Class
-class AppColors {
-  static const Color primary = Color(0xFF00695C);
-  static const Color primaryLight = Color(0xFF00796B);
-  static const Color sidebarBg = Color(0xFF0E6C62);
-  static const Color sidebarText = Color(0xFFFFFFFF);
-  static const Color sidebarHover = Color(0xFF07584F);
-  static const Color bodyBg = Color(0xFFF5F6FA);
-  static const Color cardBg = Color(0xFFFFFFFF);
-  static const Color textPrimary = Color(0xFF2C3E50);
-  static const Color textSecondary = Color(0xFF7F8C8D);
-  static const Color textMuted = Color(0xFFB0B0B0);
-  static const Color accentYellow = Color(0xFFFFB74D);
-  static const Color accentRed = Color(0xFFE74C3C);
-  static const Color accentGreen = Color(0xFF27AE60);
-  static const Color accentBlue = Color(0xFF1E88E5);
-  static const Color statusApproved = Color(0xFF27AE60);
-  static const Color statusRejected = Color(0xFFE74C3C);
-  static const Color statusWaiting = Color(0xFF1E88E5);
-  static const Color statusNeedsChange = Color(0xFFFFB74D);
-  static const Color statusFulfilled = Color(0xFF009688);
-  static const Color statBgLight = Color(0xFFF0F8F7);
-  static const Color statBorder = Color(0xFFB2DFDB);
-  static const Color statShadow = Color(0x1A00695C);
 }

@@ -325,7 +325,7 @@ class _ArchivePageState extends State<ArchivePage> {
                       },
                     );
                   }),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                 ],
               ),
             )
@@ -405,7 +405,7 @@ class _ArchivePageState extends State<ArchivePage> {
               mini: true,
               onPressed: _scrollToTop,
               backgroundColor: ArchiveColors.primary.withOpacity(0.8),
-              child: const Icon(Icons.arrow_upward, color: Colors.white),
+              child: Icon(Icons.arrow_upward, color: Colors.white),
             )
           : null,
     );
@@ -622,7 +622,7 @@ class _ArchivePageState extends State<ArchivePage> {
         case "needs-editing":
         case "needs change":
           status = AppLocalizations.of(context)!.translate('status_needs_editing');
-          statusColor = ArchiveColors.statusNeedsChange;
+          statusColor = ArchiveColors.statusPending;
           statusIcon = Icons.edit_note_rounded;
           break;
         case "waiting":

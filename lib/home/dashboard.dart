@@ -231,8 +231,20 @@ class _AdministrativeDashboardPageState
       debugPrint("✅ Loaded page $currentPage/$totalPages - ${fetchedTransactions.length} items");
     } catch (e) {
       debugPrint("❌ Exception while fetching data: $e");
-      if (e.toString().contains('Unauthorized')) {
+      final rawMsg = e.toString().replaceFirst('Exception: ', '');
+      if (rawMsg.contains('Unauthorized')) {
         _handleTokenExpired();
+      } else {
+        if (mounted) {
+          final translated = AppLocalizations.of(context)!.translate(rawMsg);
+          final displayMsg = (translated != rawMsg) ? translated : rawMsg;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(displayMsg),
+              backgroundColor: AppColors.accentRed,
+            ),
+          );
+        }
       }
     }
     setState(() {
@@ -288,6 +300,21 @@ class _AdministrativeDashboardPageState
     } catch (e) {
       debugPrint('❌ Error loading more: $e');
       _lastRequestedPage = currentPage;
+      final rawMsg = e.toString().replaceFirst('Exception: ', '');
+      if (rawMsg.contains('Unauthorized')) {
+        _handleTokenExpired();
+      } else {
+        if (mounted) {
+          final translated = AppLocalizations.of(context)!.translate(rawMsg);
+          final displayMsg = (translated != rawMsg) ? translated : rawMsg;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(displayMsg),
+              backgroundColor: AppColors.accentRed,
+            ),
+          );
+        }
+      }
     } finally {
       _isFetchingMoreGuard = false;
       if (mounted) setState(() => _isLoadingMore = false);
@@ -774,7 +801,7 @@ class _AdministrativeDashboardPageState
               hintText: AppLocalizations.of(context)!.translate('search_transactions'),
               hintStyle: TextStyle(color: AppColors.textMuted),
               prefixIcon:
-              const Icon(Icons.search_rounded, color: AppColors.primary),
+              Icon(Icons.search_rounded, color: AppColors.primary),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide.none,

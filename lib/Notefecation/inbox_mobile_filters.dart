@@ -57,7 +57,7 @@ class InboxMobileFilters extends StatelessWidget {
           case 'fulfilled': // حالة جديدة - الفيل فيلد
             return InboxColors.statusFulfilled;
           case 'needs change': // حالة جديدة - النيد اشانج
-            return InboxColors.statusNeedsChange;
+            return InboxColors.statusPending;
           default:
             return InboxColors.textPrimary;
         }
@@ -111,7 +111,7 @@ class InboxMobileFilters extends StatelessWidget {
               size: 14,
               color: getIconColor(), // لون الأيقونة حسب الحالة
             ),
-            const SizedBox(height: 2),
+            SizedBox(height: 2),
             Text(
               AppLocalizations.of(context)!.translate(label.toLowerCase()),
               style: TextStyle(
@@ -149,7 +149,7 @@ class InboxMobileFilters extends StatelessWidget {
           BoxShadow(
             color: InboxColors.statShadow,
             blurRadius: 8,
-            offset: const Offset(0, 2),
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -161,7 +161,7 @@ class InboxMobileFilters extends StatelessWidget {
             decoration: InputDecoration(
               hintText: AppLocalizations.of(context)!.translate('search_requests'),
               hintStyle: TextStyle(color: InboxColors.textMuted),
-              prefixIcon: const Icon(Icons.search_rounded, color: InboxColors.primary),
+              prefixIcon: Icon(Icons.search_rounded, color: InboxColors.primary),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide.none,
@@ -181,7 +181,7 @@ class InboxMobileFilters extends StatelessWidget {
             ),
             onChanged: onSearchChanged,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
 
           // الفلاتر في صف واحد
           Row(
@@ -204,7 +204,7 @@ class InboxMobileFilters extends StatelessWidget {
                   },
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 child: PaginatedTypePicker(
                   selectedType: selectedType,
@@ -217,7 +217,7 @@ class InboxMobileFilters extends StatelessWidget {
                   cardBg: InboxColors.cardBg,
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 child: _buildMobileFilterChip(
                   context: context,

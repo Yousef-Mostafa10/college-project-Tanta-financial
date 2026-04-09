@@ -41,7 +41,7 @@ Widget buildMobileFilterSection({
           decoration: InputDecoration(
             hintText: AppLocalizations.of(context)!.translate('search_transactions'),
             hintStyle: TextStyle(color: MyRequestsColors.textMuted),
-            prefixIcon: const Icon(Icons.search_rounded, color: MyRequestsColors.primary),
+            prefixIcon: Icon(Icons.search_rounded, color: MyRequestsColors.primary),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -61,7 +61,7 @@ Widget buildMobileFilterSection({
           ),
           onChanged: onSearchChanged,
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
 
         // الفلاتر في صف واحد
         Row(
@@ -75,7 +75,7 @@ Widget buildMobileFilterSection({
                 onTap: onPriorityTap,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(
               child: PaginatedTypePicker(
                 selectedType: selectedType,
@@ -88,7 +88,7 @@ Widget buildMobileFilterSection({
                 cardBg: MyRequestsColors.cardBg,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(
               child: _buildMobileFilterChip(
                 context: context,
@@ -193,7 +193,7 @@ Widget _buildMobileFilterChip({
             size: 14,
             color: getIconColor(), // لون الأيقونة حسب الحالة
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text(
             label,
             style: TextStyle(

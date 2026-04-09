@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import '../../core/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 
 class MyRequestsHelpers {
@@ -67,23 +67,23 @@ class MyRequestsHelpers {
     }
   }
 
-  // 🔹 الحصول على Color للحالة (تم إضافة حالتين)
+  // 🔹 الحصول على Color للحالة — ديناميكي يتغير مع الثيم
   static Color getStatusColorAsColor(String status) {
     switch (status.toLowerCase()) {
       case "approved":
-        return Color(0xFF27AE60);
+        return AppColors.statusApproved;
       case "rejected":
-        return Color(0xFFE74C3C);
+        return AppColors.statusRejected;
       case "waiting":
-        return Color(0xFF1E88E5);
+        return AppColors.statusWaiting;
       case "needs change":
       case "needs_editing":
       case "needs-editing":
-        return Color(0xFFFF9800);
+        return AppColors.statusNeedsChange;
       case "fulfilled":
-        return Color(0xFF9C27B0);
+        return AppColors.statusFulfilled;
       default:
-        return Color(0xFF1E88E5);
+        return AppColors.statusWaiting;
     }
   }
 
@@ -98,34 +98,15 @@ class MyRequestsHelpers {
   }
 
   static int getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case "approved":
-        return 0xFF27AE60;
-      case "rejected":
-        return 0xFFE74C3C;
-      case "waiting":
-        return 0xFF1E88E5;
-      case "needs change":
-      case "needs_editing":
-      case "needs-editing":
-        return 0xFFFF9800;
-      case "fulfilled":
-        return 0xFF9C27B0;
-      default:
-        return 0xFF1E88E5;
-    }
+    return getStatusColorAsColor(status).value;
   }
 
   static int getPriorityColor(String priority) {
     switch (priority.toLowerCase()) {
-      case 'high':
-        return 0xFFE74C3C;
-      case 'medium':
-        return 0xFFFFB74D;
-      case 'low':
-        return 0xFF27AE60;
-      default:
-        return 0xFF7F8C8D;
+      case 'high':   return AppColors.accentRed.value;
+      case 'medium': return AppColors.accentYellow.value;
+      case 'low':    return AppColors.statusApproved.value;
+      default:       return AppColors.textMuted.value;
     }
   }
 }

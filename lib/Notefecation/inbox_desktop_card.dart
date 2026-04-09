@@ -44,7 +44,7 @@ class InboxDesktopCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 14, color: color),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Text(
               AppLocalizations.of(context)!.translate(text.toLowerCase().replaceAll(' ', '_')),
               style: TextStyle(
@@ -211,7 +211,7 @@ class InboxDesktopCard extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,7 +260,7 @@ class InboxDesktopCard extends StatelessWidget {
                               valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                             ),
                           ),
-                        if (isUpdating) const SizedBox(width: 6),
+                        if (isUpdating) SizedBox(width: 6),
                         Text(
                           statusLabel,
                           style: TextStyle(
@@ -274,12 +274,12 @@ class InboxDesktopCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
 
               Row(
                 children: [
                   Icon(Icons.calendar_today_rounded, size: 14, color: InboxColors.textSecondary),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       formattedDate,
@@ -290,14 +290,14 @@ class InboxDesktopCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
 
               Row(
                 children: [
                   _buildDesktopChip(context, type, Icons.category_outlined, InboxColors.primary),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   _buildDesktopChip(context, priority, Icons.flag_outlined, InboxHelpers.getPriorityColor(priority)),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   // عدد الملفات
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -309,7 +309,7 @@ class InboxDesktopCard extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(Icons.attach_file_rounded, size: 14, color: documentsCount > 0 ? Colors.blue : InboxColors.textSecondary),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4),
                         Text(
                           documentsCount > 0 
                               ? "$documentsCount" 
@@ -325,7 +325,7 @@ class InboxDesktopCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               // 4️⃣ أزرار الإجراءات
               if (isForwardChecking) ...[
@@ -343,7 +343,7 @@ class InboxDesktopCard extends StatelessWidget {
                           valueColor: AlwaysStoppedAnimation<Color>(InboxColors.primary.withOpacity(0.6)),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(width: 10),
                       Text(
                         '...',
                         style: TextStyle(fontSize: 13, color: InboxColors.textMuted),
@@ -358,7 +358,7 @@ class InboxDesktopCard extends StatelessWidget {
                       CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(InboxColors.primary),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Text(
                         AppLocalizations.of(context)!.translate('updating'),
                         style: TextStyle(
@@ -381,13 +381,13 @@ class InboxDesktopCard extends StatelessWidget {
                           onPressed: onReject,
                           color: InboxColors.accentRed,
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         _buildActionButton(
                           text: AppLocalizations.of(context)!.translate('approve'),
                           onPressed: onApprove,
                           color: InboxColors.accentGreen,
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         _buildActionButton(
                           text: AppLocalizations.of(context)!.translate('status_needs_editing'),
                           onPressed: onNeedChange,
@@ -395,7 +395,7 @@ class InboxDesktopCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     // زر التفاصيل فقط
                     SizedBox(
                       width: double.infinity,
@@ -426,7 +426,7 @@ class InboxDesktopCard extends StatelessWidget {
                       child: Row(
                         children: [
                           Icon(Icons.send_rounded, size: 16, color: InboxColors.primary),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               "${AppLocalizations.of(context)!.translate('forwarded_to_prefix')} ${lastForwardSentTo['receiverName']}",
@@ -444,8 +444,8 @@ class InboxDesktopCard extends StatelessWidget {
                                 value: 'cancel',
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
-                                    const SizedBox(width: 8),
+                                    Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
+                                    SizedBox(width: 8),
                                     Text(AppLocalizations.of(context)!.translate('cancel_forward')),
                                   ],
                                 ),
@@ -458,7 +458,7 @@ class InboxDesktopCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     // فقط أزرار Edit Request و View Details
                     Row(
                       children: [
@@ -468,7 +468,7 @@ class InboxDesktopCard extends StatelessWidget {
                           color: Colors.blue,
                           isOutlined: true,
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         _buildActionButton(
                           text: AppLocalizations.of(context)!.translate('view_details'),
                           onPressed: onViewDetails,
@@ -492,7 +492,7 @@ class InboxDesktopCard extends StatelessWidget {
                             color: Colors.deepPurple,
                             isOutlined: true,
                           ),
-                        if (onEditResponse != null) const SizedBox(width: 12),
+                        if (onEditResponse != null) SizedBox(width: 12),
                         _buildActionButton(
                           text: AppLocalizations.of(context)!.translate('forward'),
                           onPressed: onForward,
@@ -500,7 +500,7 @@ class InboxDesktopCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Row(
                       children: [
                         _buildActionButton(
@@ -509,7 +509,7 @@ class InboxDesktopCard extends StatelessWidget {
                           color: Colors.blue,
                           isOutlined: true,
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         _buildActionButton(
                           text: AppLocalizations.of(context)!.translate('view_details'),
                           onPressed: onViewDetails,
@@ -554,7 +554,7 @@ class InboxDesktopCard extends StatelessWidget {
                         child: Text(AppLocalizations.of(context)!.translate('edit_request')),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     // زر View Details
                     SizedBox(
                       width: double.infinity,

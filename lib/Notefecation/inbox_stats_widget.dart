@@ -84,7 +84,7 @@ class InboxStatsWidget extends StatelessWidget {
           BoxShadow(
             color: InboxColors.statShadow,
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
         border: Border.all(color: InboxColors.statBorder),

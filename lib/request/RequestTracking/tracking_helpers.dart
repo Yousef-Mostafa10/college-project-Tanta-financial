@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/app_colors.dart';
 
 class TrackingHelpers {
   // 🔹 دالة لتحويل التاريخ
@@ -12,20 +13,9 @@ class TrackingHelpers {
     }
   }
 
-  // 🔹 الحصول على لون الحالة
+  // 🔹 الحصول على لون الحالة — ديناميكي يتغير مع الثيم
   static int getStatusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'APPROVED':
-        return 0xFF27AE60;
-      case 'REJECTED':
-        return 0xFFE74C3C;
-      case 'NEEDS-EDITING':
-        return 0xFFFFB74D;
-      case 'WAITING':
-        return 0xFF1E88E5;
-      default:
-        return 0xFF7F8C8D;
-    }
+    return getStatusColorAsColor(status).value;
   }
 
   // 🔹 الحصول على أيقونة الحالة
@@ -36,6 +26,8 @@ class TrackingHelpers {
       case 'REJECTED':
         return "cancel_rounded";
       case 'NEEDS-EDITING':
+      case 'NEEDS_EDITING':
+      case 'NEEDS CHANGE':
         return "edit_note_rounded";
       case 'WAITING':
         return "hourglass_empty_rounded";
@@ -44,19 +36,21 @@ class TrackingHelpers {
     }
   }
 
-  // 🔹 الحصول على لون الحالة كـ Color
+  // 🔹 الحصول على لون الحالة كـ Color — مرتبط بـ AppColors
   static Color getStatusColorAsColor(String status) {
     switch (status.toUpperCase()) {
       case 'APPROVED':
-        return Color(0xFF27AE60);
+        return AppColors.statusApproved;
       case 'REJECTED':
-        return Color(0xFFE74C3C);
+        return AppColors.statusRejected;
       case 'NEEDS-EDITING':
-        return Color(0xFFFFB74D);
+      case 'NEEDS_EDITING':
+      case 'NEEDS CHANGE':
+        return AppColors.statusNeedsChange;
       case 'WAITING':
-        return Color(0xFF1E88E5);
+        return AppColors.statusWaiting;
       default:
-        return Color(0xFF7F8C8D);
+        return AppColors.textMuted;
     }
   }
 
@@ -68,6 +62,8 @@ class TrackingHelpers {
       case 'REJECTED':
         return Icons.cancel_rounded;
       case 'NEEDS-EDITING':
+      case 'NEEDS_EDITING':
+      case 'NEEDS CHANGE':
         return Icons.edit_note_rounded;
       case 'WAITING':
         return Icons.hourglass_empty_rounded;

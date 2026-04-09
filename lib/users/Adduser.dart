@@ -247,12 +247,12 @@ class _AddUserPageState extends State<AddUserPage> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 12),
+            Icon(Icons.check_circle, color: Colors.white),
+            SizedBox(width: 12),
             Expanded(
               child: Text(
                 AppLocalizations.of(context)!.translate('user_added_success'),
-                style: const TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 16),
               ),
             ),
           ],
@@ -278,12 +278,12 @@ class _AddUserPageState extends State<AddUserPage> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.error, color: Colors.white),
-            const SizedBox(width: 12),
+            Icon(Icons.error, color: Colors.white),
+            SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 16),
               ),
             ),
           ],
@@ -347,7 +347,7 @@ class _AddUserPageState extends State<AddUserPage> {
                       BoxShadow(
                         color: AppColors.primary.withOpacity(0.2),
                         blurRadius: 15,
-                        offset: const Offset(0, 4),
+                        offset: Offset(0, 4),
                       ),
                     ],
                   ),
@@ -463,7 +463,7 @@ class _AddUserPageState extends State<AddUserPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       backgroundColor: AppColors.cardBg,
@@ -491,7 +491,7 @@ class _AddUserPageState extends State<AddUserPage> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close_rounded),
+                        icon: Icon(Icons.close_rounded),
                         onPressed: () {
                           _departmentSearchDebounce?.cancel();
                           Navigator.pop(context);
@@ -499,18 +499,18 @@ class _AddUserPageState extends State<AddUserPage> {
                       ),
                     ],
                   ),
-                  const Divider(height: 1, thickness: 1),
-                  const SizedBox(height: 16),
+                  Divider(height: 1, thickness: 1),
+                  SizedBox(height: 16),
 
                   // شريط البحث
                   TextField(
                     controller: _departmentSearchController,
                     decoration: InputDecoration(
                       hintText: AppLocalizations.of(context)!.translate('search_departments') ?? 'Search departments...',
-                      prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                      prefixIcon: Icon(Icons.search, color: AppColors.primary),
                       suffixIcon: _departmentSearchController.text.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear),
+                              icon: Icon(Icons.clear),
                               onPressed: () {
                                 _departmentSearchController.clear();
                                 _departmentSearchDebounce?.cancel();
@@ -541,7 +541,7 @@ class _AddUserPageState extends State<AddUserPage> {
                       setStateSheet(() {}); // لتحديث أيقونة المسح
                     },
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
 
                   // قائمة الأقسام مع Scroll Listener
                   Expanded(
@@ -558,7 +558,7 @@ class _AddUserPageState extends State<AddUserPage> {
                         return false;
                       },
                       child: _departments.isEmpty && _isLoadingMoreDepartments
-                          ? const Center(
+                          ? Center(
                               child: CircularProgressIndicator(
                                 color: AppColors.primary,
                               ),
@@ -579,7 +579,7 @@ class _AddUserPageState extends State<AddUserPage> {
                                   itemBuilder: (context, index) {
                                     // عنصر اللودينج في الآخر
                                     if (index == _departments.length) {
-                                      return const Padding(
+                                      return Padding(
                                         padding: EdgeInsets.all(16),
                                         child: Center(
                                           child: SizedBox(
@@ -675,7 +675,7 @@ class _AddUserPageState extends State<AddUserPage> {
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
                   blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  offset: Offset(0, 4),
                 ),
               ],
             ),
@@ -747,7 +747,7 @@ class _AddUserPageState extends State<AddUserPage> {
               BoxShadow(
                 color: Colors.black.withOpacity(0.04),
                 blurRadius: 12,
-                offset: const Offset(0, 4),
+                offset: Offset(0, 4),
               ),
             ],
           ),
@@ -878,7 +878,7 @@ class _AddUserPageState extends State<AddUserPage> {
                     size: 20,
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -902,7 +902,7 @@ class _AddUserPageState extends State<AddUserPage> {
                   ),
                 ),
                 if (isSelected)
-                  const Icon(
+                  Icon(
                     Icons.check_circle,
                     color: AppColors.primary,
                     size: 22,
@@ -925,7 +925,7 @@ class _AddUserPageState extends State<AddUserPage> {
                     size: 24,
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Text(
                   title,
                   style: TextStyle(
@@ -935,7 +935,7 @@ class _AddUserPageState extends State<AddUserPage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: TextStyle(
@@ -967,7 +967,7 @@ class _AddUserPageState extends State<AddUserPage> {
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -992,15 +992,15 @@ class _AddUserPageState extends State<AddUserPage> {
           suffixIcon: suffix,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
-            borderSide: const BorderSide(color: AppColors.borderColor),
+            borderSide: BorderSide(color: AppColors.borderColor),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
-            borderSide: const BorderSide(color: AppColors.borderColor),
+            borderSide: BorderSide(color: AppColors.borderColor),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
-            borderSide: const BorderSide(
+            borderSide: BorderSide(
               color: AppColors.focusBorderColor,
               width: 1.5,
             ),
@@ -1027,7 +1027,7 @@ class _AddUserPageState extends State<AddUserPage> {
           BoxShadow(
             color: AppColors.primary.withOpacity(0.3),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
