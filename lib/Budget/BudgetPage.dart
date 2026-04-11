@@ -1015,7 +1015,7 @@ class _BudgetPageState extends State<BudgetPage> {
                                       : (width > 600 ? 3 : 2));
                               final double childAspectRatio = width > 600
                                   ? 1.1
-                                  : (isSmallMobile ? 0.85 : 0.9);
+                                  : (isSmallMobile ? 0.80 : 0.82);
 
                               return GridView.builder(
                                 controller: _scrollController,
@@ -1141,94 +1141,94 @@ class BudgetCategoryCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Content
-          Padding(
-            padding: EdgeInsets.all(isMobile ? 12 : 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Icon
-                Container(
-                  padding: EdgeInsets.all(isMobile ? 8 : 10),
-                  decoration: BoxDecoration(
-                    color: BudgetColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+          // Content — ClipRect silently clips any marginal overflow (no more exception)
+          ClipRect(
+            child: Padding(
+              padding: EdgeInsets.all(isMobile ? 10 : 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon
+                  Container(
+                    padding: EdgeInsets.all(isMobile ? 7 : 10),
+                    decoration: BoxDecoration(
+                      color: BudgetColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.account_balance_wallet,
+                      color: BudgetColors.primary,
+                      size: isMobile ? 18 : 28,
+                    ),
                   ),
-                  child: Icon(
-                    Icons.account_balance_wallet,
+                  SizedBox(height: isMobile ? 6 : 12),
+
+                  // Category Name
+                  Text(
+                    category['name'] ?? AppLocalizations.of(context)!.translate('untitled'),
+                    style: TextStyle(
+                      fontSize: isMobile ? 12 : 15,
+                      fontWeight: FontWeight.bold,
+                      color: BudgetColors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: isMobile ? 4 : 8),
+
+                  // Budget info rows
+                  _InfoRow(
+                    label: AppLocalizations.of(context)!.translate('total_budget'),
+                    value: '$budget',
+                    icon: Icons.monetization_on_outlined,
                     color: BudgetColors.primary,
-                    size: isMobile ? 22 : 28,
+                    isMobile: isMobile,
                   ),
-                ),
-                SizedBox(height: isMobile ? 8 : 12),
-
-                // Category Name
-                Text(
-                  category['name'] ?? AppLocalizations.of(context)!.translate('untitled'),
-                  style: TextStyle(
-                    fontSize: isMobile ? 13 : 15,
-                    fontWeight: FontWeight.bold,
-                    color: BudgetColors.textPrimary,
+                  _InfoRow(
+                    label: AppLocalizations.of(context)!.translate('allocated_amount'),
+                    value: '$allocated',
+                    icon: Icons.trending_up,
+                    color: BudgetColors.accentYellow,
+                    isMobile: isMobile,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: isMobile ? 6 : 8),
+                  _InfoRow(
+                    label: AppLocalizations.of(context)!.translate('available_balance'),
+                    value: '$available',
+                    icon: Icons.check_circle_outline,
+                    color: BudgetColors.accentGreen,
+                    isMobile: isMobile,
+                  ),
 
-                // Budget info rows
-                _InfoRow(
-                  label: AppLocalizations.of(context)!.translate('total_budget'),
-                  value: '$budget',
-                  icon: Icons.monetization_on_outlined,
-                  color: BudgetColors.primary,
-                  isMobile: isMobile,
-                ),
-                _InfoRow(
-                  label: AppLocalizations.of(context)!.translate('allocated_amount'),
-                  value: '$allocated',
-                  icon: Icons.trending_up,
-                  color: BudgetColors.accentYellow,
-                  isMobile: isMobile,
-                ),
-                _InfoRow(
-                  label: AppLocalizations.of(context)!.translate('available_balance'),
-                  value: '$available',
-                  icon: Icons.check_circle_outline,
-                  color: BudgetColors.accentGreen,
-                  isMobile: isMobile,
-                ),
-
-                if (budget > 0) ...[
-                  SizedBox(height: isMobile ? 6 : 8),
-                  // Progress bar
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: ratio,
-                      minHeight: 5,
-                      backgroundColor: BudgetColors.statBgLight,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        ratio >= 0.9
-                            ? BudgetColors.accentRed
-                            : ratio >= 0.7
-                                ? Colors.orange
-                                : ratio >= 0.4
-                                    ? BudgetColors.accentYellow
-                                    : BudgetColors.accentGreen,
+                  if (budget > 0) ...[
+                    SizedBox(height: isMobile ? 4 : 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: ratio,
+                        minHeight: 4,
+                        backgroundColor: BudgetColors.statBgLight,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          ratio >= 0.9
+                              ? BudgetColors.accentRed
+                              : ratio >= 0.7
+                                  ? Colors.orange
+                                  : ratio >= 0.4
+                                      ? BudgetColors.accentYellow
+                                      : BudgetColors.accentGreen,
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    '${(ratio * 100).toStringAsFixed(0)}% ' + AppLocalizations.of(context)!.translate('fulfilled_stat').toLowerCase(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: BudgetColors.textMuted,
+                    SizedBox(height: 2),
+                    Text(
+                      '${(ratio * 100).toStringAsFixed(0)}% ' +
+                          AppLocalizations.of(context)!.translate('fulfilled_stat').toLowerCase(),
+                      style: TextStyle(fontSize: 9, color: BudgetColors.textMuted),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
 

@@ -64,11 +64,7 @@ class MyApp extends StatelessWidget {
               onPrimary: AppColors.onPrimary,
               error: AppColors.accentRed,
             ),
-            textTheme: TextTheme(
-              headlineMedium: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
-              bodyLarge: TextStyle(color: AppColors.textPrimary),
-              bodyMedium: TextStyle(color: AppColors.textSecondary),
-            ),
+            textTheme: AppFonts.textTheme(isDark: false),
             inputDecorationTheme: InputDecorationTheme(
               filled: true,
               fillColor: AppColors.surfaceElevated,
@@ -115,11 +111,7 @@ class MyApp extends StatelessWidget {
               onBackground: AppColors.textPrimary,
               error: AppColors.accentRed,
             ),
-            textTheme: TextTheme(
-              headlineMedium: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
-              bodyLarge: TextStyle(color: AppColors.textPrimary),
-              bodyMedium: TextStyle(color: AppColors.textSecondary),
-            ),
+            textTheme: AppFonts.textTheme(isDark: true),
             inputDecorationTheme: InputDecorationTheme(
               filled: true,
               fillColor: AppColors.surfaceElevated,

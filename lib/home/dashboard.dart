@@ -19,6 +19,7 @@ import 'header_widget.dart';
 import 'empty_state.dart';
 import 'desktop_request_card.dart';
 import 'mobile_request_card.dart';
+import '../shared/paginated_type_picker.dart';
 
 class AdministrativeDashboardPage extends StatefulWidget {
   const AdministrativeDashboardPage({super.key});
@@ -102,9 +103,9 @@ class _AdministrativeDashboardPageState
 
   Future<void> fetchTypes() async {
     try {
-      final result = await _api.fetchTypes();
+      final result = await _api.fetchTypesPage(page: 1, perPage: 100);
       setState(() {
-        typeNames = ['All Types', ...result];
+        typeNames = ['All Types', ...result['types']];
       });
     } catch (e) {
       debugPrint("⚠️ Error fetching types: $e");
@@ -843,19 +844,18 @@ class _AdministrativeDashboardPageState
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildMobileFilterChip(
-                  label: AppLocalizations.of(context)!.translate('type'),
-                  value: selectedType,
-                  icon: Icons.category_outlined,
-                  onTap: () => _showMobileFilterDialog(
-                    AppLocalizations.of(context)!.translate('select_type'),
-                    typeNames,
-                    selectedType,
-                        (value) {
-                      setState(() => selectedType = value);
-                      fetchRequests(page: 1);
-                    },
-                  ),
+                child: PaginatedTypePicker(
+                  selectedType: selectedType,
+                  onTypeChanged: (value) {
+                    setState(() => selectedType = value!);
+                    fetchRequests(page: 1);
+                  },
+                  fetchPage: (page) => _api.fetchTypesPage(page: page),
+                  isMobile: true,
+                  primaryColor: AppColors.primary,
+                  borderColor: AppColors.primary.withOpacity(0.2),
+                  textColor: AppColors.textPrimary,
+                  cardBg: AppColors.cardBg,
                 ),
               ),
               const SizedBox(width: 8),

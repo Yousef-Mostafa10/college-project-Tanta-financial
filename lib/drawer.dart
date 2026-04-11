@@ -218,10 +218,10 @@ class _CustomDrawerState extends State<CustomDrawer> {
             Consumer<ThemeProvider>(
               builder: (context, themeProvider, child) {
                 return _buildMenuItem(
-                  icon: themeProvider.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  icon: themeProvider.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                   title: themeProvider.isDarkMode 
-                      ? AppLocalizations.of(context)!.translate('dark_mode')
-                      : AppLocalizations.of(context)!.translate('light_mode'),
+                      ? AppLocalizations.of(context)!.translate('light_mode')
+                      : AppLocalizations.of(context)!.translate('dark_mode'),
                   color: AppColors.accentYellow,
                   isMobile: isMobile,
                   onTap: () {

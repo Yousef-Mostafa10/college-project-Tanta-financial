@@ -618,6 +618,13 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       _fetchBudgets();
     }
 
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDarkMode ? Colors.white : AppColors.textPrimary;
+    final subTextColor = isDarkMode ? Colors.white70 : AppColors.textSecondary;
+    final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+    final inputFillColor = isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[50];
+    final borderColor = isDarkMode ? Colors.white24 : Colors.grey[300];
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -631,10 +638,14 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardColor,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
-                    BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 10))
+                    BoxShadow(
+                      color: isDarkMode ? Colors.black45 : Colors.black26, 
+                      blurRadius: 10, 
+                      offset: const Offset(0, 10)
+                    )
                   ],
                 ),
                 child: Column(
@@ -651,53 +662,81 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                           ),
                           child: Icon(Icons.check_circle_rounded, color: AppColors.accentGreen, size: 28),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'تأكيد اكتمال الطلب',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                            AppLocalizations.of(context)!.translate('confirm_completion') ?? 'تأكيد اكتمال الطلب',
+                            style: TextStyle(
+                              fontSize: 20, 
+                              fontWeight: FontWeight.bold, 
+                              color: textColor
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 24),
+                    const SizedBox(height: 24),
                     Text(
-                      'الميزانية المستخدمة',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      AppLocalizations.of(context)!.translate('budget_used') ?? 'الميزانية المستخدمة',
+                      style: TextStyle(
+                        fontSize: 14, 
+                        fontWeight: FontWeight.w600, 
+                        color: subTextColor
+                      ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: Colors.grey[50],
+                        color: inputFillColor,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
+                        border: Border.all(color: borderColor!),
                       ),
                       child: _isLoadingBudgets
                           ? Padding(
                               padding: const EdgeInsets.all(12),
                               child: Row(
                                 children: [
-                                  SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
-                                  SizedBox(width: 12),
-                                  Text('جاري تحميل الميزانيات...'),
+                                  SizedBox(
+                                    width: 20, 
+                                    height: 20, 
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2, 
+                                      color: isDarkMode ? AppColors.accentGreen : AppColors.primary
+                                    )
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    AppLocalizations.of(context)!.translate('loading_budgets') ?? 'جاري تحميل الميزانيات...',
+                                    style: TextStyle(color: textColor),
+                                  ),
                                 ],
                               ),
                             )
                           : DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
                                 value: selectedBudget,
-                                hint: Text('اختر الميزانية'),
+                                hint: Text(
+                                  AppLocalizations.of(context)!.translate('select_budget') ?? 'اختر الميزانية',
+                                  style: TextStyle(color: subTextColor),
+                                ),
                                 isExpanded: true,
-                                icon: Icon(Icons.account_balance_wallet_outlined, color: AppColors.primary),
+                                dropdownColor: cardColor,
+                                icon: Icon(Icons.account_balance_wallet_outlined, color: AppColors.accentGreen),
                                 items: _budgets.map((budget) {
                                   return DropdownMenuItem<String>(
                                     value: budget['name'],
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(budget['name'], style: TextStyle(fontSize: 14)),
-                                        Text('${budget['available']} متبقي', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                                        Text(
+                                          budget['name'], 
+                                          style: TextStyle(fontSize: 14, color: textColor)
+                                        ),
+                                        Text(
+                                          '${budget['available']} ${AppLocalizations.of(context)!.translate('remaining') ?? 'متبقي'}', 
+                                          style: TextStyle(fontSize: 12, color: subTextColor)
+                                        ),
                                       ],
                                     ),
                                   );
@@ -708,56 +747,71 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                               ),
                             ),
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     Text(
-                      'المبلغ المراد تخصيصه',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      AppLocalizations.of(context)!.translate('amount_to_allocate') ?? 'المبلغ المراد تخصيصه',
+                      style: TextStyle(
+                        fontSize: 14, 
+                        fontWeight: FontWeight.w600, 
+                        color: subTextColor
+                      ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     TextField(
                       controller: amountController,
                       keyboardType: TextInputType.number,
                       autofocus: true,
+                      style: TextStyle(color: textColor),
                       decoration: InputDecoration(
-                        hintText: 'أدخل المبلغ هنا',
+                        hintText: AppLocalizations.of(context)!.translate('enter_amount_hint') ?? 'أدخل المبلغ هنا',
+                        hintStyle: TextStyle(color: subTextColor.withOpacity(0.5)),
                         prefixIcon: Icon(Icons.monetization_on_outlined, color: AppColors.accentGreen),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.accentGreen)),
                         filled: true,
-                        fillColor: Colors.grey[50],
+                        fillColor: inputFillColor,
                       ),
                     ),
-                    SizedBox(height: 32),
+                    const SizedBox(height: 32),
                     Row(
                       children: [
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () => Navigator.pop(context),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[200],
-                              foregroundColor: AppColors.textPrimary,
+                              backgroundColor: isDarkMode ? Colors.white12 : Colors.grey[200],
+                              foregroundColor: textColor,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: Text('إلغاء', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: Text(
+                              AppLocalizations.of(context)!.translate('cancel') ?? 'إلغاء', 
+                              style: const TextStyle(fontWeight: FontWeight.bold)
+                            ),
                           ),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () {
                               if (selectedBudget == null) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('يرجى اختيار الميزانية'), backgroundColor: Colors.orange),
+                                  SnackBar(
+                                    content: Text(AppLocalizations.of(context)!.translate('please_select_budget') ?? 'يرجى اختيار الميزانية'), 
+                                    backgroundColor: Colors.orange
+                                  ),
                                 );
                                 return;
                               }
                               final amount = double.tryParse(amountController.text) ?? 0.0;
                               if (amount <= 0) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('يرجى إدخال مبلغ صحيح'), backgroundColor: Colors.orange),
+                                  SnackBar(
+                                    content: Text(AppLocalizations.of(context)!.translate('please_enter_valid_amount') ?? 'يرجى إدخال مبلغ صحيح'), 
+                                    backgroundColor: Colors.orange
+                                  ),
                                 );
                                 return;
                               }
@@ -771,7 +825,10 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: Text('تأكيد واكمال', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: Text(
+                              AppLocalizations.of(context)!.translate('confirm_and_complete') ?? 'تأكيد واكمال', 
+                              style: const TextStyle(fontWeight: FontWeight.bold)
+                            ),
                           ),
                         ),
                       ],

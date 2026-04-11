@@ -315,10 +315,16 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
       lastDate: DateTime(2030),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.light(
-            primary: EntryColors.primary,
-            onPrimary: Colors.white,
-          ),
+          colorScheme: Theme.of(context).brightness == Brightness.dark
+            ? ColorScheme.dark(
+                primary: EntryColors.primary,
+                onPrimary: Colors.white,
+                surface: EntryColors.cardBg,
+              )
+            : ColorScheme.light(
+                primary: EntryColors.primary,
+                onPrimary: Colors.white,
+              ),
         ),
         child: child!,
       ),
@@ -453,7 +459,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
   // ─── Filter Panel ───────────────────────────
   Widget _buildFilterPanel() {
     return Container(
-      color: Colors.white,
+      color: EntryColors.cardBg,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Column(
         children: [
@@ -578,7 +584,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
             const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         isDense: true,
         filled: true,
-        fillColor: EntryColors.bodyBg,
+        fillColor: EntryColors.bodyBg.withOpacity(0.5),
       ),
     );
   }
@@ -596,7 +602,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
         decoration: BoxDecoration(
           color: value != null
               ? EntryColors.primary.withOpacity(0.07)
-              : EntryColors.bodyBg,
+              : EntryColors.bodyBg.withOpacity(0.5),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: value != null
@@ -642,7 +648,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
   Widget _buildStatsBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      color: Colors.white,
+      color: EntryColors.cardBg,
       child: Row(
         children: [
           Container(
@@ -789,7 +795,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: EntryColors.cardBg,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
