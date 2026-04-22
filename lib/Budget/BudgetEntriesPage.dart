@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../app_config.dart';
 import '../l10n/app_localizations.dart';
 import '../core/app_colors.dart';
+import '../utils/app_error_handler.dart';
 
 
 // ─────────────────────────────────────────────
@@ -289,15 +291,34 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
       }
     } catch (e) {
       if (mounted) {
+        // استخراج الـ key من الباك أند مثل: NOT_LATEST_BUDGET_ENTRY, MISSING_ROLE
+        final errBody = (e is DioException)
+            ? _dioBodyToJson(e.response?.data)
+            : '';
+        final errMsg = AppErrorHandler.extractAndTranslate(
+          context, errBody,
+          fallback: AppLocalizations.of(context)!.translate('delete_entry_failed')
+              .replaceAll('{error}', ''),
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('فشل حذف السجل: ${e.toString()}'),
+            content: Text(errMsg),
             backgroundColor: EntryColors.accentRed,
             duration: const Duration(seconds: 4),
           ),
         );
       }
-      debugPrint('Error deleting entry: $e');
+    }
+  }
+
+  /// تحويل response body من Dio إلى JSON string
+  String _dioBodyToJson(dynamic body) {
+    if (body == null) return '';
+    if (body is String) return body;
+    try {
+      return jsonEncode(body);
+    } catch (_) {
+      return body.toString();
     }
   }
 

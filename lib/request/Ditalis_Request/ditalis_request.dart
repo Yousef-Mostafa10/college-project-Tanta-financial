@@ -10,6 +10,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:college_project/l10n/app_localizations.dart';
 
 import '../../app_config.dart';
+import '../../utils/app_error_handler.dart';
 import '../../utils/storage_permission_helper.dart';
 
 import '../../core/app_colors.dart';
@@ -141,14 +142,20 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           });
         }
       } else {
+        // استخراج الـ key الحقيقية من response وترجمتها
+        final errMsg = AppErrorHandler.extractAndTranslate(
+          context,
+          response.body,
+          fallback: AppLocalizations.of(context)!.translate('failed_load_requests'),
+        );
         setState(() {
-          _errorMessage = "${AppLocalizations.of(context)!.translate('failed_load_requests')}: ${response.statusCode}";
+          _errorMessage = errMsg;
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = "${AppLocalizations.of(context)!.translate('network_error')}: ${e.toString()}";
+        _errorMessage = AppErrorHandler.translateException(context, e);
         _isLoading = false;
       });
     }
@@ -592,13 +599,14 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           _fetchBudgets();
         }
       } else {
-        throw Exception("Status code: ${response.statusCode}");
+        // استخراج الـ key مثل: RESTRICTED_FIELD_UPDATE, TRANSACTION_ALREADY_FULFILLED
+        throw Exception(AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("${AppLocalizations.of(context)!.translate('failed_update_request_status')}: $e"),
+            content: Text(AppErrorHandler.translateException(context, e)),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -784,7 +792,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                               foregroundColor: textColor,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
                             ),
                             child: Text(
                               AppLocalizations.of(context)!.translate('cancel') ?? 'إلغاء', 
@@ -823,7 +831,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                               foregroundColor: Colors.white,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
                             ),
                             child: Text(
                               AppLocalizations.of(context)!.translate('confirm_and_complete') ?? 'تأكيد واكمال', 

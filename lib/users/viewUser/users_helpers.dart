@@ -1,8 +1,10 @@
 import 'dart:convert';
+import '../../utils/app_error_handler.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'users_colors.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/utils/app_error_handler.dart';
 
 class UsersHelpers {
   static String formatDate(String? iso, BuildContext context) {
@@ -54,97 +56,36 @@ class UsersHelpers {
     );
   }
 
-  /// 🛠️ استخراج رسالة مقروءة من أي نوع من الأخطاء
+  /// 🛠️ استخراج رسالة مقروءة من أي نوع من الأخطاء — يستخدم AppErrorHandler
   static String _extractReadableMessage(String raw, BuildContext context) {
-    // الخطوة 1: إزالة بادئات الـ Exception
-    String msg = raw
+    // إزالة بادئة Exception
+    final cleaned = raw
         .replaceAll('Exception: ', '')
         .replaceAll('FormatException: ', '')
         .trim();
 
-    // الخطوة 2: إزالة بادئة error_code: NNN: للوصول لجسم الخطأ
-    final errorCodeRegex = RegExp(r'^error_code:\s*\d+:\s*');
-    if (errorCodeRegex.hasMatch(msg)) {
-      msg = msg.replaceFirst(errorCodeRegex, '').trim();
+    // إذا كان النص يبدو كـ error key مباشرة
+    if (AppErrorHandler.isErrorKey(cleaned)) {
+      return AppErrorHandler.translateKey(context, cleaned);
     }
 
-    // الخطوة 3: إذا بقي نص فارغ أو قصير جداً بعد التنظيف، أرجع رسالة عامة
-    if (msg.isEmpty) {
+    // إذا كان يحتوي على JSON و key
+    final bodyStart = cleaned.indexOf('{');
+    if (bodyStart != -1) {
+      final jsonPart = cleaned.substring(bodyStart);
+      final key = AppErrorHandler.extractErrorKey(jsonPart);
+      if (key != null) return AppErrorHandler.translateKey(context, key);
+    }
+
+    // fallback: ترجمة مباشرة
+    final translated = AppLocalizations.of(context)?.translate(cleaned);
+    if (translated != null && translated != cleaned) return translated;
+
+    // fallback نهائي
+    if (cleaned.isEmpty || cleaned.length > 200) {
       return AppLocalizations.of(context)?.translate('unknown_error') ?? 'An error occurred';
     }
-
-    // الخطوة 4: محاولة تحليله كـ JSON
-    if (msg.contains('{') && msg.contains('}')) {
-      try {
-        final startIndex = msg.indexOf('{');
-        final endIndex = msg.lastIndexOf('}') + 1;
-        final jsonPart = msg.substring(startIndex, endIndex);
-        final dynamic data = jsonDecode(jsonPart);
-        final parsed = _parseApiError(data, context);
-        if (parsed != null) {
-          // ترجمة المفتاح إذا وجد في ملفات الترجمة
-          return AppLocalizations.of(context)?.translate(parsed) ?? parsed;
-        }
-      } catch (_) {
-        // JSON parsing failed - continue
-      }
-    }
-
-    // الخطوة 5: إذا كانت الرسالة مفتاح ترجمة معروف، ترجمه
-    final translated = AppLocalizations.of(context)?.translate(msg);
-    if (translated != null && translated != msg) {
-      return translated;
-    }
-
-    // الخطوة 6: إذا كانت الرسالة تبدو تقنية (تحتوي على {, }, :, _ بكثرة)، أرجع رسالة عامة
-    final technicalPattern = RegExp(r'[{}\[\]":,_]');
-    final technicalMatches = technicalPattern.allMatches(msg).length;
-    if (technicalMatches > 3 || msg.length > 200) {
-      return AppLocalizations.of(context)?.translate('unknown_error') ?? 'An error occurred';
-    }
-
-    return msg;
-  }
-
-  // 🛠️ Robust Error Parser - يرجع nullable String
-  static String? _parseApiError(dynamic data, BuildContext context) {
-    if (data == null) return null;
-
-    try {
-      if (data is Map) {
-        final msg = data['message'] ?? data['error'] ?? data['errors'] ?? data['msg'];
-
-        if (msg is String && msg.isNotEmpty) return msg;
-
-        if (msg is List) return msg.map((e) => e.toString()).join(', ');
-
-        if (msg is Map) {
-          // هيكل {key: "ERROR_KEY", args: {...}} من الباك اند
-          if (msg.containsKey('key')) return msg['key'].toString();
-          // محاولة اللغة الحالية
-          final locale = AppLocalizations.of(context)?.locale.languageCode ?? 'en';
-          if (msg.containsKey(locale)) return msg[locale].toString();
-          // أول قيمة في الـ Map
-          if (msg.values.isNotEmpty) {
-            final first = msg.values.first;
-            if (first is List) return first.join(', ');
-            return first.toString();
-          }
-        }
-
-        // لو مافيش message key، حاول أول قيمة String في الـ Map
-        if (msg == null) {
-          final locale = AppLocalizations.of(context)?.locale.languageCode ?? 'en';
-          if (data.containsKey(locale)) return data[locale]?.toString();
-        }
-      } else if (data is String) {
-        return data;
-      }
-    } catch (e) {
-      debugPrint('_parseApiError error: $e');
-    }
-
-    return null;
+    return cleaned;
   }
 
   static void showSuccessMessage(BuildContext context, String message) {

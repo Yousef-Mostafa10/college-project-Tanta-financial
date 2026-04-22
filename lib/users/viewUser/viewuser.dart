@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_error_handler.dart';
 import 'user_model.dart';
 import 'users_api.dart';
 import 'users_colors.dart';
@@ -126,7 +127,7 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      UsersHelpers.showErrorMessage(context, e.toString());
+      UsersHelpers.showErrorMessage(context, AppErrorHandler.translateException(context, e));
     }
   }
 

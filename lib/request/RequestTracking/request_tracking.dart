@@ -10,6 +10,7 @@ import 'tracking_empty_state.dart';
 import 'tracking_loading_state.dart';
 import 'tracking_error_state.dart';
 import 'tracking_timeline.dart';
+import '../../utils/app_error_handler.dart';
 
 class TransactionTrackingPage extends StatefulWidget {
   final String transactionId;
@@ -94,7 +95,7 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
         _currentPage = pagination?['currentPage'] ?? 1;
         _hasMore = pagination?['next'] != null;
       } else {
-        _errorMessage = result['error'];
+        _errorMessage = AppErrorHandler.translateException(context, result['error']?.toString() ?? '');
       }
       _isLoading = false;
     });

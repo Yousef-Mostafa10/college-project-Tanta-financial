@@ -20,7 +20,7 @@ import 'empty_state.dart';
 import 'desktop_request_card.dart';
 import 'mobile_request_card.dart';
 import '../shared/paginated_type_picker.dart';
-
+import '../utils/app_error_handler.dart';
 class AdministrativeDashboardPage extends StatefulWidget {
   const AdministrativeDashboardPage({super.key});
 
@@ -173,15 +173,9 @@ class _AdministrativeDashboardPageState
         );
       }
     } catch (e) {
-      final rawMsg = e.toString().replaceFirst('Exception: ', '');
-      // حاول ترجمة الـ key لو موجود في ملفات الترجمة
-      final localizations = AppLocalizations.of(context)!;
-      final translated = localizations.translate(rawMsg);
-      // لو الترجمة رجعت نفس الـ key معناه مش موجود → عرض الرسالة كما هي
-      final displayMsg = (translated != rawMsg) ? translated : rawMsg;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(displayMsg),
+          content: Text(AppErrorHandler.translateException(context, e)),
           backgroundColor: AppColors.accentRed,
         ),
       );
@@ -301,16 +295,13 @@ class _AdministrativeDashboardPageState
     } catch (e) {
       debugPrint('❌ Error loading more: $e');
       _lastRequestedPage = currentPage;
-      final rawMsg = e.toString().replaceFirst('Exception: ', '');
-      if (rawMsg.contains('Unauthorized')) {
+      if (e.toString().contains('Unauthorized')) {
         _handleTokenExpired();
       } else {
         if (mounted) {
-          final translated = AppLocalizations.of(context)!.translate(rawMsg);
-          final displayMsg = (translated != rawMsg) ? translated : rawMsg;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(displayMsg),
+              content: Text(AppErrorHandler.translateException(context, e)),
               backgroundColor: AppColors.accentRed,
             ),
           );

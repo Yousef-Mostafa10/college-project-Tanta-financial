@@ -109,9 +109,9 @@ class AppFonts {
   // ── Theme-level text theme (plug into ThemeData.textTheme) ──────────────
   /// Returns a complete TextTheme using Poppins for the given brightness.
   static TextTheme textTheme({required bool isDark}) {
-    final primary   = isDark ? const Color(0xFFE4F1FB) : const Color(0xFF0B3570);
-    final secondary = isDark ? const Color(0xFFBDD4E8) : const Color(0xFF1E5BA8);
-    final muted     = isDark ? const Color(0xFF82AECE) : const Color(0xFF7AAED8);
+    final primary   = isDark ? const Color(0xFFE4F1FB) : const Color(0xFF0F172A); // Slate 900
+    final secondary = isDark ? const Color(0xFFBDD4E8) : const Color(0xFF334155); // Slate 700
+    final muted     = isDark ? const Color(0xFF82AECE) : const Color(0xFF64748B); // Slate 500
     return GoogleFonts.poppinsTextTheme().copyWith(
       displayLarge : display(color: primary,   size: 57),
       displayMedium: display(color: primary,   size: 45),
@@ -165,15 +165,15 @@ class AppColors {
   static const Color _board9 = Color(0xFFBDD4E8); // top copper — primary text dim
   static const Color _boardA = Color(0xFFE4F1FB); // solder mask — primary text bright
 
-  // ·· Light Blueprint (private) ··
-  static const Color _paper0 = Color(0xFFF5F9FF); // blueprint paper — main bg
-  static const Color _paper1 = Color(0xFFFFFFFF); // bright surface — cards
-  static const Color _paper2 = Color(0xFFEAF3FF); // light tint — elevated
-  static const Color _paper3 = Color(0xFFD3E8FF); // grid line — hover / strong border
-  static const Color _paper4 = Color(0xFFB5D5F8); // construction line — border
-  static const Color _paper5 = Color(0xFF7AAED8); // annotation — muted text
-  static const Color _paper6 = Color(0xFF1E5BA8); // dimension text — secondary
-  static const Color _paper7 = Color(0xFF0B3570); // title block — primary text
+  // ·· Light Premium (Refined Blueprint) ··
+  static const Color _paper0 = Color(0xFFF8FAFC); // Slate 50 — clean, crisp background
+  static const Color _paper1 = Color(0xFFFFFFFF); // White — cards
+  static const Color _paper2 = Color(0xFFF1F5F9); // Slate 100 — light tint / elevated
+  static const Color _paper3 = Color(0xFFE2E8F0); // Slate 200 — grid line / hover
+  static const Color _paper4 = Color(0xFFCBD5E1); // Slate 300 — construction line / border
+  static const Color _paper5 = Color(0xFF64748B); // Slate 500 — clear prominent muted text
+  static const Color _paper6 = Color(0xFF334155); // Slate 700 — deep secondary text
+  static const Color _paper7 = Color(0xFF0F172A); // Slate 900 — crisp primary text
 
   // ══════════════════════════════════════════════════════════════════════════
   //  ② THE SIGNAL  — The live current. One chromatic event per focus zone.
@@ -197,34 +197,32 @@ class AppColors {
   // ── Ground plane (lowest energy — ambient space) ───────────────────────
   static Color get background      => _isDark ? _board1   : _paper0;
   static Color get surface         => _isDark ? _board2   : _paper1;
-  static Color get surfaceElevated => _isDark ? _board3   : _paper2;
-  static Color get surfaceHover    => _isDark ? _board4   : _paper3.withOpacity(0.5);
+  static Color get surfaceElevated => _isDark ? _board3   : _paper1;
+  static Color get surfaceHover    => _isDark ? _board4   : _paper2;
   static Color get surfacePressed  => _isDark ? _board5   : _paper3;
-  static Color get sidebarBg       => _isDark ? _board0   : _paper2;
+  static Color get sidebarBg       => _isDark ? _board0   : _paper1;
 
   // ── Live current (the signal — highest energy) ─────────────────────────
   static Color get primary          => _isDark ? _liveGlow : _live;
   static Color get primaryHover     => _isDark ? _liveHot  : _liveDeep;
   static Color get primaryPressed   => _isDark ? _live     : _liveSunk;
-  static Color get primaryDisabled  => _isDark ? _board5   : _paper4;
+  static Color get primaryDisabled  => _isDark ? _board5   : _paper3;
   static Color get primaryContainer => _isDark ? _board4   : _paper2;
   static Color get primaryLight     => _isDark ? _board3   : _paper3;
   static Color get onPrimary        => Colors.white;
   static Color get focusBorderColor => _isDark ? _liveGlow : _live;
 
   // ── Voltage (potential difference — creates readable text) ─────────────
-  // "Voltage = the gap between foreground and background.
-  //  More gap = more contrast = more readable."
-  static Color get textPrimary   => _isDark ? _boardA : _paper7;   // maximum gap
-  static Color get textSecondary => _isDark ? _board9 : _paper6;   // medium gap
-  static Color get textMuted     => _isDark ? _board8 : _paper5;   // low gap  (captions)
-  static Color get textDisabled  => _isDark ? _board6 : _paper4;   // nearly zero (disabled)
+  static Color get textPrimary   => _isDark ? _boardA : _paper7;
+  static Color get textSecondary => _isDark ? _board9 : _paper6;
+  static Color get textMuted     => _isDark ? _board8 : _paper5;
+  static Color get textDisabled  => _isDark ? _board6 : _paper4;
   static Color get textInverse   => _isDark ? _paper7 : Colors.white;
   static Color get textWhite     => Colors.white;
   static Color get sidebarText   => _isDark ? _board9 : _paper6;
 
   // ── Resistance (the structural skeleton) ───────────────────────────────
-  static Color get borderColor   => _isDark ? _board5 : _paper4;
+  static Color get borderColor   => _isDark ? _board5 : l_shade300; // Clear, visible premium blue
   static Color get dividerColor  => _isDark ? _board2 : _paper2;
 
   // ── Frequencies (gradients — the signal rendered as rhythm) ─────────────
@@ -283,7 +281,7 @@ class AppColors {
   static LinearGradient get panelGradient => LinearGradient(
     colors: _isDark
         ? [_board0, const Color(0xFF0B1828)]
-        : [_paper2, _paper3],
+        : [_paper1, _paper0],
     begin: Alignment.topLeft,
     end: Alignment.bottomCenter,
   );
@@ -321,11 +319,11 @@ class AppColors {
   static const Color statusError    = Color(0xFFE83D3D);
   static const Color accentRed      = Color(0xFFE83D3D);
 
-  // ⏳ 575nm — Amber. Deliberate. "Not yet." The frequency of patience.
-  static Color get statusPending      => _isDark ? const Color(0xFFFABD2F) : const Color(0xFFC07800);
+  // ⏳ 575nm — Amber. Deliberate.
+  static Color get statusPending      => _isDark ? const Color(0xFFFABD2F) : const Color(0xFFD97706);
   static Color get statusNeedsChange  => statusPending;
   static Color get statusNeedsEditing => statusPending;
-  static const Color accentYellow     = Color(0xFFFABD2F);
+  static const Color accentYellow     = Color(0xFFF59E0B);
 
   // ℹ️ THE BRAND — Information IS the signal. When waiting: show the live current.
   static Color get statusWaiting   => _isDark ? _liveGlow : _live;

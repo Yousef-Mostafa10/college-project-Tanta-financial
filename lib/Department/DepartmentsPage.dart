@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_config.dart';
 import '../l10n/app_localizations.dart';
 import '../core/app_colors.dart';
+import '../utils/app_error_handler.dart';
 
 class DepartmentsPage extends StatefulWidget {
   const DepartmentsPage({Key? key}) : super(key: key);
@@ -280,18 +282,18 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         }
       }
     } on DioException catch (e) {
-      String errorMessage = AppLocalizations.of(context)!.translate('dept_add_failed');
-      errorMessage = _parseApiError(e.response?.data, errorMessage);
-      
+      // استخراج الـ key من الـ response وترجمتها
+      final body = e.response?.data;
+      final rawBody = body is Map ? _dioBodyToJson(body) : body?.toString() ?? '';
+      final errorMsg = AppErrorHandler.extractAndTranslate(
+        context, rawBody,
+        fallback: AppLocalizations.of(context)!.translate('dept_add_failed'),
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: AppColors.accentRed,
-          ),
+          SnackBar(content: Text(errorMsg), backgroundColor: AppColors.accentRed),
         );
       }
-      print('Error adding department: $e');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -301,49 +303,18 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           ),
         );
       }
-      print('Error adding department: $e');
     }
   }
 
-  // 🛠️ Robust Error Parser
-  String _parseApiError(dynamic data, String defaultMessage) {
-    if (data == null) return defaultMessage;
-    
+  /// تحويل Map من Dio إلى JSON string لاستخدام AppErrorHandler
+  String _dioBodyToJson(dynamic body) {
+    if (body == null) return '';
+    if (body is String) return body;
     try {
-      if (data is Map) {
-        // 1. Try common top-level error keys
-        var msg = data['message'] ?? data['error'] ?? data['errors'] ?? data['msg'];
-        
-        if (msg == null && data.isNotEmpty) {
-          // If no common keys, but the map has something, maybe it's localized?
-          final locale = AppLocalizations.of(context)!.locale.languageCode;
-          if (data.containsKey(locale)) return data[locale].toString();
-        }
-
-        if (msg != null) {
-          if (msg is String) return msg;
-          if (msg is List) return msg.map((e) => e.toString()).join(', ');
-          if (msg is Map) {
-            // Nested localized search or validation errors
-            final locale = AppLocalizations.of(context)!.locale.languageCode;
-            if (msg.containsKey(locale)) return msg[locale].toString();
-            if (msg.values.isNotEmpty) {
-              final firstVal = msg.values.first;
-              if (firstVal is List) return firstVal.join(', ');
-              return firstVal.toString();
-            }
-            return msg.toString();
-          }
-          return msg.toString();
-        }
-      } else if (data is String) {
-        return data;
-      }
-    } catch (e) {
-      print("Error parsing API error response: $e");
+      return jsonEncode(body);
+    } catch (_) {
+      return body.toString();
     }
-    
-    return defaultMessage;
   }
 
   // ✏️ Update department
@@ -399,28 +370,24 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         }
       }
     } on DioException catch (e) {
-      String errorMessage = AppLocalizations.of(context)!.translate('dept_update_failed');
-      errorMessage = _parseApiError(e.response?.data, errorMessage);
-      
+      final errorMsg = AppErrorHandler.extractAndTranslate(
+        context, _dioBodyToJson(e.response?.data),
+        fallback: AppLocalizations.of(context)!.translate('dept_update_failed'),
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: AppColors.accentRed,
-          ),
+          SnackBar(content: Text(errorMsg), backgroundColor: AppColors.accentRed),
         );
       }
-      print('Error updating department: $e');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)!.translate('dept_update_failed')}: ${e.toString()}'),
+            content: Text(AppLocalizations.of(context)!.translate('dept_update_failed')),
             backgroundColor: AppColors.accentRed,
           ),
         );
       }
-      print('Error updating department: $e');
     }
   }
 
@@ -449,43 +416,30 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         }
       }
     } on DioException catch (e) {
-      String statusErrorMessage = AppLocalizations.of(context)!.translate('dept_delete_failed');
-      
-      if (e.response != null) {
-        if (e.response!.statusCode == 500) {
-          statusErrorMessage = AppLocalizations.of(context)!.translate('delete_associated_error');
-        } else if (e.response!.statusCode == 403) {
-          statusErrorMessage = AppLocalizations.of(context)!.translate('permission_error');
-        } else if (e.response!.statusCode == 404) {
-          statusErrorMessage = AppLocalizations.of(context)!.translate('user_not_found'); // Assuming user/dept sharing same key or just 'not found'
-        } else {
-          statusErrorMessage = _parseApiError(e.response?.data, 'Server error (${e.response!.statusCode})');
-        }
-      } else {
-        statusErrorMessage = '${AppLocalizations.of(context)!.translate('connection_error')}: ${e.message}';
-      }
-      
+      // استخراج الـ key الحقيقية من الباك أند
+      // مثل: DEPARTMENT_HAS_MEMBERS, MISSING_ROLE, DEPARTMENT_NOT_FOUND
+      final errorMsg = AppErrorHandler.extractAndTranslate(
+        context, _dioBodyToJson(e.response?.data),
+        fallback: AppLocalizations.of(context)!.translate('dept_delete_failed'),
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(statusErrorMessage),
+            content: Text(errorMsg),
             backgroundColor: AppColors.accentRed,
             duration: const Duration(seconds: 4),
           ),
         );
       }
-      print('Error deleting department: $e');
-      print('Response: ${e.response?.data}');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)!.translate('unknown_error')}: ${e.toString()}'),
+            content: Text(AppLocalizations.of(context)!.translate('unknown_error')),
             backgroundColor: AppColors.accentRed,
           ),
         );
       }
-      print('Error deleting department: $e');
     }
   }
 

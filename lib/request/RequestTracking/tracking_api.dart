@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../../utils/app_error_handler.dart';
 class TrackingApi {
   final String baseUrl;
   final String? userToken;
@@ -43,13 +43,13 @@ class TrackingApi {
       } else {
         return {
           'success': false,
-          'error': "Failed to load transaction data (Status: ${response.statusCode})",
+          'error': AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode),
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'error': "Network error: $e",
+        'error': e.toString(),
       };
     }
   }

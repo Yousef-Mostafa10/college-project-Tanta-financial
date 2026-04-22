@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_config.dart';
+import '../utils/app_error_handler.dart';
 
 /// خدمة Authentication تستخدم الـ endpoints الجديدة
 class AuthService {
@@ -24,47 +25,21 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
-        // حفظ التوكنات وبيانات المستخدم
         await _saveAuthData(data);
-        
-        return {
-          "success": true,
-          "data": data,
-          "message": "Login successful"
-        };
+        return {'success': true, 'data': data};
       } else {
-        // محاولة استخراج رسالة الخطأ من جسم الاستجابة
-        debugPrint('🔴 Login failed - Status: ${response.statusCode}');
-        debugPrint('🔴 Raw body: ${response.body}');
-        
-        String errorMsg = "Server error: ${response.statusCode}";
-        try {
-          final errorData = jsonDecode(response.body);
-          if (errorData is Map) {
-            final rawMsg = errorData['message'] ?? errorData['error'];
-            if (rawMsg is String && rawMsg.isNotEmpty) {
-              errorMsg = rawMsg;
-            } else if (rawMsg is List) {
-              // السيرفر بيرجع الرسائل كـ List مثل: ["Too short name"]
-              errorMsg = rawMsg.map((e) => e.toString()).join(', ');
-            } else if (rawMsg is Map) {
-              errorMsg = rawMsg['key']?.toString() ?? rawMsg.values.first?.toString() ?? errorMsg;
-            }
-          }
-        } catch (_) {}
-        
-        debugPrint('🔴 Extracted error: $errorMsg');
-        return {
-          "success": false,
-          "error": errorMsg,
-        };
+        // استخراج الـ key الحقيقية من response لترجمتها في الـ UI
+        // مثل: INVALID_CREDENTIALS
+        final errorKey = AppErrorHandler.extractKeyOrFallback(
+          response.body,
+          response.statusCode,
+        );
+        debugPrint('🔴 Login failed [صـ${response.statusCode}] key=$errorKey');
+        return {'success': false, 'errorKey': errorKey};
       }
     } catch (e) {
-      return {
-        "success": false,
-        "error": "Connection error: $e",
-      };
+      debugPrint('🔴 Login connection error: $e');
+      return {'success': false, 'errorKey': 'connection_error'};
     }
   }
 
@@ -93,34 +68,26 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
-        // تحديث التوكنات المحفوظة
         await _saveAuthData(data);
-        
-        return {
-          "success": true,
-          "data": data,
-          "message": "Token refreshed successfully"
-        };
+        return {'success': true, 'data': data};
       } else if (response.statusCode == 401) {
-        // Refresh token منتهي الصلاحية - يجب تسجيل الدخول مرة أخرى
+        // Refresh token منتهي الصلاحية
         await logout();
         return {
-          "success": false,
-          "error": "Session expired. Please login again.",
-          "requiresLogin": true,
+          'success': false,
+          'errorKey': 'INVALID_REFRESH_TOKEN',
+          'requiresLogin': true,
         };
       } else {
-        return {
-          "success": false,
-          "error": "Failed to refresh token: ${response.statusCode}",
-        };
+        final errorKey = AppErrorHandler.extractKeyOrFallback(
+          response.body,
+          response.statusCode,
+        );
+        return {'success': false, 'errorKey': errorKey};
       }
     } catch (e) {
-      return {
-        "success": false,
-        "error": "Connection error: $e",
-      };
+      debugPrint('🔴 Refresh token error: $e');
+      return {'success': false, 'errorKey': 'connection_error'};
     }
   }
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../utils/app_error_handler.dart';
 
 class MyRequestsApi {
   final String baseUrl;
@@ -13,26 +14,7 @@ class MyRequestsApi {
     required this.userName,
   });
 
-  /// استخراج رسالة خطأ قابلة للقراءة من أي شكل يرجعه الباك أند
-  String _extractErrorMessage(dynamic raw, String fallback) {
-    if (raw == null) return fallback;
-    if (raw is String && raw.isNotEmpty) return raw;
-    if (raw is Map) {
-      final ar = raw['ar'];
-      final en = raw['en'];
-      if (ar is String && ar.isNotEmpty) return ar;
-      if (en is String && en.isNotEmpty) return en;
-      final key = raw['key'];
-      if (key is String && key.isNotEmpty) return key;
-      for (final v in raw.values) {
-        if (v is String && v.isNotEmpty) return v;
-      }
-    }
-    if (raw is List && raw.isNotEmpty) {
-      return raw.map((e) => e.toString()).join(', ');
-    }
-    return fallback;
-  }
+  // ℹ️ _extractErrorMessage تم استبدالها بـ AppErrorHandler.extractKeyOrFallback
 
   // 🔹 جلب أنواع المعاملات مع Pagination (صفحة واحدة)
   Future<Map<String, dynamic>> fetchTypesPage({int page = 1, int perPage = 10}) async {
@@ -163,7 +145,7 @@ class MyRequestsApi {
       } else {
         return {
           'success': false,
-          'error': "Failed to load requests (Status: ${response.statusCode})",
+          'error': AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode),
         };
       }
     } catch (e) {
@@ -273,10 +255,11 @@ class MyRequestsApi {
       if (response.statusCode == 200) {
         return true;
       }
-      return false;
+      // استخراج الـ key: NOT_FORWARD_SENDER, FORWARD_ALREADY_SEEN
+      final key = AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode);
+      throw Exception(key);
     } catch (e) {
-      print("❌ Error canceling forward: $e");
-      return false;
+      rethrow;
     }
   }
 
@@ -304,28 +287,12 @@ class MyRequestsApi {
         }
       }
 
-      // ❌ فشل - استخراج رسالة الخطأ من الباك أند
-      String errorMsg = "فشل الحذف (كود: ${response.statusCode})";
-      try {
-        if (response.body.isNotEmpty) {
-          final errorData = json.decode(response.body);
-          if (errorData is Map) {
-            final rawMsg = errorData["message"] ??
-                errorData["error"] ??
-                errorData["msg"];
-            errorMsg = _extractErrorMessage(rawMsg, errorMsg);
-          }
-        }
-      } catch (_) {
-        if (response.body.isNotEmpty && response.body.length < 300) {
-          errorMsg = response.body;
-        }
-      }
-
-      throw Exception(errorMsg);
+      // ❌ فشل - استخراج الـ key الحقيقية من الباك أند
+      // مثل: TRANSACTION_HAS_FORWARDS, MISSING_ROLE, NOT_TRANSACTION_CREATOR
+      final key = AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode);
+      throw Exception(key);
     } catch (e) {
-      print("❌ Error deleting request: $e");
-      rethrow; // إعادة رمي الخطأ للـ UI
+      rethrow;
     }
   }
 
@@ -417,8 +384,7 @@ class MyRequestsApi {
 
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      print("❌ Error in forwardTransaction: $e");
-      return false;
+      rethrow;
     }
   }
 

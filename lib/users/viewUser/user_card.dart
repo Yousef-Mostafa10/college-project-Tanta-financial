@@ -1,4 +1,5 @@
 import 'package:college_project/users/viewUser/users_api.dart';
+import '../../utils/app_error_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import 'user_model.dart';
@@ -283,7 +284,7 @@ class UserCard extends StatelessWidget {
                 }
               } catch (e) {
                 if (scaffoldContext.mounted) {
-                  UsersHelpers.showErrorMessage(scaffoldContext, e.toString());
+                  UsersHelpers.showErrorMessage(scaffoldContext, AppErrorHandler.translateException(scaffoldContext, e));
                 }
                 debugPrint("Delete user error: $e");
               }

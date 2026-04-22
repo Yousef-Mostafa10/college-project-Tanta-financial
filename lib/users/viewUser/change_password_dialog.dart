@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_error_handler.dart';
 import 'users_api.dart';
 import 'users_colors.dart';
 import 'users_helpers.dart';
@@ -151,7 +152,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
       }
     } catch (e) {
       if (mounted) {
-        UsersHelpers.showErrorMessage(context, e.toString());
+        UsersHelpers.showErrorMessage(context, AppErrorHandler.translateException(context, e));
       }
     } finally {
       if (mounted) {

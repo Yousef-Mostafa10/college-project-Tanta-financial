@@ -53,7 +53,7 @@ class MyApp extends StatelessWidget {
             cardTheme: CardThemeData(
               color: AppColors.surface,
               elevation: 1,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
             ),
             colorScheme: ColorScheme.fromSeed(
               seedColor: AppColors.primary,
@@ -86,7 +86,7 @@ class MyApp extends StatelessWidget {
             popupMenuTheme: PopupMenuThemeData(
               color: AppColors.surfaceElevated,
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
               textStyle: TextStyle(color: AppColors.textPrimary),
             ),
             iconTheme: IconThemeData(color: AppColors.primary),
@@ -99,7 +99,7 @@ class MyApp extends StatelessWidget {
             cardTheme: CardThemeData(
               color: AppColors.surface,
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
             ),
             colorScheme: ColorScheme.dark(
               primary: AppColors.primary,
@@ -133,7 +133,7 @@ class MyApp extends StatelessWidget {
             popupMenuTheme: PopupMenuThemeData(
               color: AppColors.surfaceElevated,
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
               textStyle: TextStyle(color: AppColors.textPrimary),
             ),
             iconTheme: IconThemeData(color: AppColors.primary),

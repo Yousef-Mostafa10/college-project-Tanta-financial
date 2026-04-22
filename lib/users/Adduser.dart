@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import 'package:college_project/core/app_colors.dart';
+import 'package:college_project/utils/app_error_handler.dart';
 import '../app_config.dart';
 
 
@@ -180,9 +181,12 @@ class _AddUserPageState extends State<AddUserPage> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         _showSuccessMessage();
       } else {
-        // ✅ محاولة استخراج رسالة الخطأ من السيرفر
-        String errorMessage = AppLocalizations.of(context)!.translate('unknown_error') ?? "Error: ${response.statusCode}";
-        errorMessage = _parseApiError(response.body, errorMessage);
+        // ✅ استخراج الـ key من الباك أند وترجمتها
+        final errorMessage = AppErrorHandler.extractAndTranslate(
+          context,
+          response.body,
+          fallback: AppLocalizations.of(context)!.translate('unknown_error'),
+        );
         _showErrorMessage(errorMessage);
       }
     } catch (e) {
@@ -193,50 +197,7 @@ class _AddUserPageState extends State<AddUserPage> {
     }
   }
 
-  // 🛠️ Robust Error Parser for http response (Modified for AddUser)
-  String _parseApiError(String responseBody, String defaultMessage) {
-    if (responseBody.isEmpty) return defaultMessage;
-    
-    try {
-      final dynamic data = jsonDecode(responseBody);
-      
-      if (data is Map) {
-        // 1. Try common top-level error keys
-        var msg = data['message'] ?? data['error'] ?? data['errors'] ?? data['msg'];
-        
-        if (msg == null && data.isNotEmpty) {
-          // If no common keys, but the map has something, maybe it's localized?
-          final locale = AppLocalizations.of(context)!.locale.languageCode;
-          if (data.containsKey(locale)) return data[locale].toString();
-        }
-
-        if (msg != null) {
-          if (msg is String) return msg;
-          if (msg is List) return msg.map((e) => e.toString()).join(', ');
-          if (msg is Map) {
-            // Nested localized search or validation errors
-            final locale = AppLocalizations.of(context)!.locale.languageCode;
-            if (msg.containsKey(locale)) return msg[locale].toString();
-            if (msg.values.isNotEmpty) {
-              final firstVal = msg.values.first;
-              if (firstVal is List) return firstVal.join(', ');
-              return firstVal.toString();
-            }
-            return msg.toString();
-          }
-          return msg.toString();
-        }
-      } else if (data is String) {
-        return data;
-      }
-    } catch (e) {
-      debugPrint("Error parsing API error response: $e");
-      // JSON parsing failed, return body if it's a simple string
-      if (responseBody.length < 100) return responseBody;
-    }
-    
-    return defaultMessage;
-  }
+  // 🛠️ Removed _parseApiError — replaced by AppErrorHandler.extractAndTranslate
 
   // ✅ رسائل النجاح والخطأ
   void _showSuccessMessage() {

@@ -1,8 +1,10 @@
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:college_project/l10n/app_localizations.dart';
+import '../app_config.dart';
+import '../utils/app_error_handler.dart';
 
 class UserDetailsPage extends StatefulWidget {
   final int userId;
@@ -25,37 +27,42 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
   Future<void> fetchUserDetails() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? "";
-    final url = Uri.parse("http://192.168.1.19:3000/users/${widget.userId}");
+    final token = prefs.getString('token') ?? '';
+    final url = Uri.parse("${AppConfig.baseUrl}/users/\${widget.userId}");
 
     try {
       final response = await http.get(
         url,
-        headers: {"Authorization": "Bearer $token"},
+        headers: {'Authorization': 'Bearer \$token'},
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          userDetails = data['user'] ?? {}; // ⚡ هنا ناخد object المستخدم
+          userDetails = data['user'] ?? {};
           isLoading = false;
         });
-      }
-      else {
-        setState(() {
-          isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to load user details")),
-        );
+      } else {
+        setState(() => isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppErrorHandler.extractAndTranslate(
+                context,
+                response.body,
+                fallback: AppLocalizations.of(context)!.translate('user_not_found'),
+              )),
+            ),
+          );
+        }
       }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      setState(() => isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorHandler.translateException(context, e))),
+        );
+      }
     }
   }
 
@@ -63,7 +70,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("User Details"),
+        title: Text(AppLocalizations.of(context)!.translate('view_profile')),
         backgroundColor: Colors.teal,
       ),
       body: isLoading
@@ -73,9 +80,10 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("ID: ${userDetails['id']}", style: const TextStyle(fontSize: 18)),
+            Text("ID: \${userDetails['id']}", style: const TextStyle(fontSize: 18)),
             const SizedBox(height: 8),
-            Text("Name: ${userDetails['name']}", style: const TextStyle(fontSize: 18)),
+            Text("${AppLocalizations.of(context)!.translate('name_label')}: \${userDetails['name']}",
+                style: const TextStyle(fontSize: 18)),
           ],
         ),
       ),

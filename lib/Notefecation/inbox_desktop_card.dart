@@ -163,7 +163,13 @@ class InboxDesktopCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
         elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: AppColors.borderColor,
+            width: 1,
+          ),
+        ),
         color: InboxColors.cardBg,
         child: Padding(
           padding: const EdgeInsets.all(16),

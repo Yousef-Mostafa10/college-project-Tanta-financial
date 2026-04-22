@@ -1,6 +1,8 @@
 import 'dart:convert';
+import '../../utils/app_error_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../app_config.dart';
+import '../../utils/app_error_handler.dart';
 import 'user_model.dart';
 import '../../Auth/authenticated_http_client.dart';
 
@@ -68,7 +70,7 @@ class UsersApiService {
     } else if (response.statusCode == 401) {
       throw Exception('unauthorized_error');
     } else {
-      throw Exception('error_code: ${response.statusCode}');
+      throw Exception(AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode));
     }
   }
 
@@ -118,9 +120,9 @@ class UsersApiService {
     } else if (response.statusCode == 401) {
       throw Exception('unauthorized_error');
     } else if (response.statusCode == 404) {
-      throw Exception('user_not_found');
+      throw Exception(AppErrorHandler.extractKeyOrFallback(response.body, 404));
     } else {
-      throw Exception('error_code: ${response.statusCode}');
+      throw Exception(AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode));
     }
   }
 
@@ -176,16 +178,9 @@ class UsersApiService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final data = jsonDecode(response.body);
       return User.fromJson(data);
-    } else if (response.statusCode == 403) {
-      throw Exception('permission_error');
-    } else if (response.statusCode == 404) {
-      throw Exception('user_not_found');
-    } else if (response.statusCode == 401) {
-      throw Exception('unauthorized_error');
-    } else if (response.statusCode == 409) {
-      throw Exception('user_already_exists');
     } else {
-      throw Exception('error_code: ${response.statusCode}: ${response.body}');
+      // استخراج الـ key الحقيقية من الباك أند وإرماؤها
+      throw Exception(AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode));
     }
   }
 
@@ -279,14 +274,9 @@ class UsersApiService {
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
-    } else if (response.statusCode == 403) {
-      throw Exception('permission_error');
-    } else if (response.statusCode == 404) {
-      throw Exception('user_not_found');
-    } else if (response.statusCode == 401) {
-      throw Exception('unauthorized_error');
     } else {
-      throw Exception('error_code: ${response.statusCode}: ${response.body}');
+      // استخراج الـ key الحقيقية من الباك أند (USER_ENGAGED_IN_SYSTEM, MISSING_ROLE, etc.)
+      throw Exception(AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode));
     }
   }
 
@@ -328,14 +318,9 @@ class UsersApiService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       final data = jsonDecode(response.body);
       return User.fromJson(data);
-    } else if (response.statusCode == 409) {
-      throw Exception('user_already_exists');
-    } else if (response.statusCode == 403) {
-      throw Exception('permission_error');
-    } else if (response.statusCode == 401) {
-      throw Exception('unauthorized_error');
     } else {
-      throw Exception('error_code: ${response.statusCode}: ${response.body}');
+      // استخراج الـ key الحقيقية من الباك أند
+      throw Exception(AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode));
     }
   }
 
@@ -398,7 +383,7 @@ class UsersApiService {
     } else if (response.statusCode == 401) {
       throw Exception('unauthorized_error');
     } else {
-      throw Exception('error_code: ${response.statusCode}');
+      throw Exception(AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode));
     }
   }
 }

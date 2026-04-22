@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/utils/app_error_handler.dart';
 import '../request/Ditalis_Request/ditalis_request.dart';
 import '../request/creatrequest.dart';
 import '../request/editerequest.dart';
@@ -252,14 +253,14 @@ class _InboxPageState extends State<InboxPage> {
       setState(() {
         _isLoading = false;
         _isRefreshing = false;
-        _errorMessage = "${AppLocalizations.of(context)!.translate('failed_load_requests')}: ${e.toString()}";
+        _errorMessage = AppErrorHandler.translateException(context, e);
       });
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${AppLocalizations.of(context)!.translate('network_error')}: ${e.toString()}'),
+              content: Text(AppErrorHandler.translateException(context, e)),
               backgroundColor: InboxColors.accentRed,
             ),
           );
@@ -506,31 +507,16 @@ class _InboxPageState extends State<InboxPage> {
   }
 
   void _handleApiError(http.Response response, String fallbackKey) {
-    String errorKey = fallbackKey;
-    try {
-      if (response.body.isNotEmpty) {
-        final data = json.decode(response.body);
-        if (data is Map) {
-          final rawMsg = data["message"] ?? data["error"] ?? data["msg"];
-          if (rawMsg is Map) {
-            if (rawMsg['key'] != null) errorKey = rawMsg['key'];
-          } else if (rawMsg is String) {
-             errorKey = rawMsg;
-          }
-        }
-      }
-    } catch (_) {}
-
-    String translatedMsg = AppLocalizations.of(context)?.translate(errorKey) ?? errorKey;
-    if (translatedMsg == errorKey && errorKey != fallbackKey) {
-       // if we couldn't translate the key, try to translate the fallback just in case
-       translatedMsg = AppLocalizations.of(context)?.translate(fallbackKey) ?? fallbackKey;
-    }
-
+    // استخراج الـ key من الباك أند وترجمتها
+    final errorMsg = AppErrorHandler.extractAndTranslate(
+      context,
+      response.body,
+      fallback: AppLocalizations.of(context)?.translate(fallbackKey) ?? fallbackKey,
+    );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(translatedMsg),
+          content: Text(errorMsg),
           backgroundColor: InboxColors.accentRed,
           behavior: SnackBarBehavior.floating,
         ),
@@ -635,7 +621,7 @@ class _InboxPageState extends State<InboxPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)!.translate('failed_to_perform_action')}: ${e.toString()}'),
+            content: Text(AppErrorHandler.translateException(context, e)),
             backgroundColor: InboxColors.accentRed,
           ),
         );
@@ -891,7 +877,7 @@ class _InboxPageState extends State<InboxPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)!.translate('failed_to_send_change_request')}: ${e.toString()}'),
+            content: Text(AppErrorHandler.translateException(context, e)),
             backgroundColor: InboxColors.accentRed,
           ),
         );
@@ -1409,7 +1395,7 @@ class _InboxPageState extends State<InboxPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)!.translate('failed_to_forward')}: ${e.toString()}'),
+            content: Text(AppErrorHandler.translateException(context, e)),
             backgroundColor: InboxColors.accentRed,
           ),
         );
@@ -1520,7 +1506,7 @@ class _InboxPageState extends State<InboxPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)!.translate('failed_to_cancel_forward')}: ${e.toString()}'),
+            content: Text(AppErrorHandler.translateException(context, e)),
             backgroundColor: InboxColors.accentRed,
           ),
         );

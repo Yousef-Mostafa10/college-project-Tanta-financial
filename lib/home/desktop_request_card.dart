@@ -64,7 +64,13 @@ class DesktopRequestCard extends StatelessWidget {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: AppColors.borderColor,
+          width: 1,
+        ),
+      ),
       color: AppColors.cardBg,
       child: Padding(
         padding: const EdgeInsets.all(16),

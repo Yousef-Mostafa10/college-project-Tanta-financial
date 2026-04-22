@@ -9,8 +9,7 @@ import '../app_config.dart';
 import 'transaction_type_model.dart';
 
 import '../core/app_colors.dart';
-
-
+import '../utils/app_error_handler.dart';
 
 class EditRequestPage extends StatefulWidget {
   final String requestId;
@@ -675,23 +674,13 @@ class _EditRequestPageState extends State<EditRequestPage> {
   }
 
   void _handleApiError(http.Response response, String fallback) {
-    String errorMsg = fallback;
-    try {
-      if (response.body.isNotEmpty) {
-        final data = json.decode(response.body);
-        if (data is Map) {
-          final rawMsg = data["message"] ?? data["error"] ?? data["msg"];
-          if (rawMsg is Map) {
-            if (rawMsg['ar'] != null) errorMsg = rawMsg['ar'];
-            else if (rawMsg['en'] != null) errorMsg = rawMsg['en'];
-            else if (rawMsg['key'] != null) errorMsg = rawMsg['key'];
-          } else if (rawMsg is String) {
-             errorMsg = rawMsg;
-          }
-        }
-      }
-    } catch (_) {}
-    _showErrorSnackBar(errorMsg);
+    // استخراج الـ key وترجمتها
+    final errMsg = AppErrorHandler.extractAndTranslate(
+      context,
+      response.body,
+      fallback: AppLocalizations.of(context)?.translate(fallback) ?? fallback,
+    );
+    _showErrorSnackBar(errMsg);
   }
 
   void _showErrorSnackBar(String message) {

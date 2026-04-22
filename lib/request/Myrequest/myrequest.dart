@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import '../../utils/app_error_handler.dart';
 
 import '../../app_config.dart';
 import 'my_requests_colors.dart';
@@ -376,12 +377,15 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${AppLocalizations.of(context)!.translate('network_error')}: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        // ترجمة الـ key: TRANSACTION_HAS_FORWARDS, NOT_TRANSACTION_CREATOR, MISSING_ROLE
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppErrorHandler.translateException(context, e)),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

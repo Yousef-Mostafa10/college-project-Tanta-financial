@@ -41,7 +41,13 @@ Widget buildArchiveMobileCard({
     margin: const EdgeInsets.only(bottom: 8),
     child: Card(
       elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: AppColors.borderColor,
+          width: 1,
+        ),
+      ),
       color: ArchiveColors.cardBg,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

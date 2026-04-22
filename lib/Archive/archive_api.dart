@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../utils/app_error_handler.dart';
 class ArchiveApi {
   final String baseUrl;
   final String? userToken;
@@ -140,14 +140,14 @@ class ArchiveApi {
       } else {
         return {
           'success': false,
-          'error': "Failed to load requests (Status: ${response.statusCode})",
+          'error': AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode),
         };
       }
     } catch (e) {
       print("❌ Error fetching archive requests: $e");
       return {
         'success': false,
-        'error': "Network error: $e",
+        'error': e.toString(),
       };
     }
   }

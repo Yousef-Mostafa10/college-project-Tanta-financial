@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_config.dart';
 import '../l10n/app_localizations.dart';
 import '../core/app_colors.dart';
+import '../utils/app_error_handler.dart';
 import 'BudgetEntriesPage.dart';
 
 class BudgetPage extends StatefulWidget {
@@ -289,14 +291,17 @@ class _BudgetPageState extends State<BudgetPage> {
       }
     } catch (e) {
       if (mounted) {
+        // استخراج الـ key من DioException أو Exception
+        final errMsg = (e is DioException)
+          ? AppErrorHandler.extractAndTranslate(
+              context, _dioBodyToJson(e.response?.data),
+              fallback: AppLocalizations.of(context)!.translate('budget_add_failed'),
+            )
+          : AppLocalizations.of(context)!.translate('budget_add_failed');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('budget_add_failed')),
-            backgroundColor: BudgetColors.accentRed,
-          ),
+          SnackBar(content: Text(errMsg), backgroundColor: BudgetColors.accentRed),
         );
       }
-      debugPrint('Error adding category: $e');
     }
   }
 
@@ -331,15 +336,20 @@ class _BudgetPageState extends State<BudgetPage> {
       }
     } catch (e) {
       if (mounted) {
+        final errMsg = (e is DioException)
+          ? AppErrorHandler.extractAndTranslate(
+              context, _dioBodyToJson(e.response?.data),
+              fallback: AppLocalizations.of(context)!.translate('budget_rename_failed').replaceAll('{error}', ''),
+            )
+          : AppLocalizations.of(context)!.translate('budget_rename_failed').replaceAll('{error}', '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('budget_rename_failed').replaceAll('{error}', e.toString())),
+            content: Text(errMsg),
             backgroundColor: BudgetColors.accentRed,
             duration: const Duration(seconds: 4),
           ),
         );
       }
-      debugPrint('Error renaming category: $e');
     }
   }
 
@@ -473,15 +483,20 @@ class _BudgetPageState extends State<BudgetPage> {
       }
     } catch (e) {
       if (mounted) {
+        final errMsg = (e is DioException)
+          ? AppErrorHandler.extractAndTranslate(
+              context, _dioBodyToJson(e.response?.data),
+              fallback: AppLocalizations.of(context)!.translate('budget_delete_failed').replaceAll('{error}', ''),
+            )
+          : AppLocalizations.of(context)!.translate('budget_delete_failed').replaceAll('{error}', '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('budget_delete_failed').replaceAll('{error}', e.toString())),
+            content: Text(errMsg),
             backgroundColor: BudgetColors.accentRed,
             duration: const Duration(seconds: 4),
           ),
         );
       }
-      debugPrint('Error deleting category: $e');
     }
   }
 
@@ -508,15 +523,31 @@ class _BudgetPageState extends State<BudgetPage> {
       }
     } catch (e) {
       if (mounted) {
+        final errMsg = (e is DioException)
+          ? AppErrorHandler.extractAndTranslate(
+              context, _dioBodyToJson(e.response?.data),
+              fallback: AppLocalizations.of(context)!.translate('add_amount_failed').replaceAll('{error}', ''),
+            )
+          : AppLocalizations.of(context)!.translate('add_amount_failed').replaceAll('{error}', '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('add_amount_failed').replaceAll('{error}', e.toString())),
+            content: Text(errMsg),
             backgroundColor: BudgetColors.accentRed,
             duration: const Duration(seconds: 4),
           ),
         );
       }
-      debugPrint('Error adding entry: $e');
+    }
+  }
+
+  /// تحويل response body من Dio إلى JSON string لاستخدام AppErrorHandler
+  String _dioBodyToJson(dynamic body) {
+    if (body == null) return '';
+    if (body is String) return body;
+    try {
+      return jsonEncode(body);
+    } catch (_) {
+      return body.toString();
     }
   }
 
@@ -1239,8 +1270,7 @@ class BudgetCategoryCard extends StatelessWidget {
             child: PopupMenuButton<String>(
               icon: Icon(Icons.more_vert,
                   color: BudgetColors.textMuted, size: 20),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
               onSelected: (value) {
                 if (value == 'edit') {
                   onEdit();

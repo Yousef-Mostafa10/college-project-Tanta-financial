@@ -7,6 +7,7 @@ import '../home/dashboard.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
 import '../core/app_colors.dart';
+import '../utils/app_error_handler.dart';
 import 'auth_service.dart';
 import '../request/Myrequest/myrequest.dart';
 
@@ -28,7 +29,9 @@ class _LoginPageState extends State<LoginPage> {
 
   // 🎨 COLORS - Using Centralized AppColors
   static Color get primaryColor => AppColors.primary;
-  static Color get primaryLight => AppColors.primaryLight;
+  static Color get labelColor => AppColors.textPrimary;
+  static Color get iconColor => AppColors.textSecondary;
+  static Color get borderColor => AppColors.borderColor;
   static Color get backgroundColor => AppColors.bodyBg;
   static Color get cardColor => AppColors.cardBg;
 
@@ -61,21 +64,19 @@ class _LoginPageState extends State<LoginPage> {
         if (userRole.toUpperCase() == 'ADMIN') {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (_) => const AdministrativeDashboardPage(),
-            ),
+            MaterialPageRoute(builder: (_) => const AdministrativeDashboardPage()),
           );
         } else {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (_) => const MyRequestsPage(),
-            ),
+            MaterialPageRoute(builder: (_) => const MyRequestsPage()),
           );
         }
       } else {
-        final errorMessage = result['error']?.toString() ?? 'Login failed';
-        debugPrint('🔴 Login error: $errorMessage');
+        // ترجمة الـ errorKey القادم من auth_service
+        // مثل: INVALID_CREDENTIALS → "اسم المستخدم أو كلمة المرور غير صحيحة"
+        final errorKey = result['errorKey'] as String? ?? result['error']?.toString() ?? 'login_failed';
+        final errorMessage = AppErrorHandler.translateKey(context, errorKey);
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -88,19 +89,18 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       if (!mounted) return;
+      final errMsg = AppErrorHandler.translateException(context, e);
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Error: ${e.toString()}"),
+          content: Text(errMsg),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -282,19 +282,21 @@ class _LoginPageState extends State<LoginPage> {
                 AppLocalizations.of(context)!.translate('username'),
                 style: TextStyle(
                   fontSize: min(screenWidth * 0.035, 16),
-                  fontWeight: FontWeight.w500,
-                  color: primaryLight,
+                  fontWeight: FontWeight.w600,
+                  color: labelColor,
                 ),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: emailController,
+                style: TextStyle(color: labelColor),
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context)!.translate('enter_username_hint'),
-                  prefixIcon: Icon(Icons.person, color: primaryLight),
+                  hintStyle: TextStyle(color: iconColor.withValues(alpha: 0.5)),
+                  prefixIcon: Icon(Icons.person, color: iconColor),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: primaryLight),
+                    borderSide: BorderSide(color: borderColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -315,21 +317,23 @@ class _LoginPageState extends State<LoginPage> {
                 AppLocalizations.of(context)!.translate('password'),
                 style: TextStyle(
                   fontSize: min(screenWidth * 0.035, 16),
-                  fontWeight: FontWeight.w500,
-                  color: primaryLight,
+                  fontWeight: FontWeight.w600,
+                  color: labelColor,
                 ),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: passwordController,
                 obscureText: !isPasswordVisible,
+                style: TextStyle(color: labelColor),
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context)!.translate('enter_password_hint'),
-                  prefixIcon: Icon(Icons.lock, color: primaryLight),
+                  hintStyle: TextStyle(color: iconColor.withValues(alpha: 0.5)),
+                  prefixIcon: Icon(Icons.lock, color: iconColor),
                   suffixIcon: IconButton(
                     icon: Icon(
                       isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                      color: primaryLight,
+                      color: iconColor,
                     ),
                     onPressed: () {
                       setState(() {
@@ -339,7 +343,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: primaryLight),
+                    borderSide: BorderSide(color: borderColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),

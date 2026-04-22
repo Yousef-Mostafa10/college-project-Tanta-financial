@@ -10,6 +10,7 @@ import '../app_config.dart';
 import 'transaction_type_model.dart';
 
 import '../core/app_colors.dart';
+import '../utils/app_error_handler.dart';
 
 // 🎨 COLOR PALETTE - Consistent with Dashboard and Inbox
 class CreateRequestColors {
@@ -500,7 +501,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         _handleApiError(response, 'Failed to create type');
       }
     } catch (e) {
-      _showErrorMessage(e.toString().replaceFirst('Exception: ', ''));
+      _showErrorMessage(AppErrorHandler.translateException(context, e));
     }
   }
 
@@ -521,7 +522,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         _handleApiError(response, 'Failed to delete type');
       }
     } catch (e) {
-      _showErrorMessage(e.toString().replaceFirst('Exception: ', ''));
+      _showErrorMessage(AppErrorHandler.translateException(context, e));
     }
   }
 
@@ -663,23 +664,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   }
 
   void _handleApiError(http.Response response, String fallback) {
-    String errorMsg = fallback;
-    try {
-      if (response.body.isNotEmpty) {
-        final data = json.decode(response.body);
-        if (data is Map) {
-          final rawMsg = data["message"] ?? data["error"] ?? data["msg"];
-          if (rawMsg is Map) {
-            if (rawMsg['ar'] != null) errorMsg = rawMsg['ar'];
-            else if (rawMsg['en'] != null) errorMsg = rawMsg['en'];
-            else if (rawMsg['key'] != null) errorMsg = rawMsg['key'];
-          } else if (rawMsg is String) {
-             errorMsg = rawMsg;
-          }
-        }
-      }
-    } catch (_) {}
-    _showErrorMessage(errorMsg);
+    // استخراج الـ key وترجمتها من response
+    final errMsg = AppErrorHandler.extractAndTranslate(
+      context,
+      response.body,
+      fallback: AppLocalizations.of(context)?.translate(fallback) ?? fallback,
+    );
+    _showErrorMessage(errMsg);
   }
 
   Future<void> _uploadNewFiles() async {
@@ -783,7 +774,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         _handleApiError(response, 'Failed to delete file "$fileName"');
       }
     } catch (e) {
-      _showErrorMessage(e.toString().replaceFirst('Exception: ', ''));
+      _showErrorMessage(AppErrorHandler.translateException(context, e));
     }
   }
 
@@ -1102,7 +1093,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
                           padding: EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
                         ),
                         child: Center(
                           child: Text(
@@ -1244,7 +1235,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
           _handleApiError(response, 'failed_create_request');
         }
       } catch (e) {
-         _showErrorMessage(e.toString().replaceFirst('Exception: ', ''));
+         _showErrorMessage(AppErrorHandler.translateException(context, e));
       } finally {
         setState(() => _isSubmitting = false);
       }
@@ -1750,7 +1741,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   vertical: isMobile ? 14 : 18,
                 ),
                 side: BorderSide(color: CreateRequestColors.primary, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
                 foregroundColor: CreateRequestColors.primary,
               ),
               child: Text(
@@ -1786,7 +1777,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   padding: EdgeInsets.symmetric(
                     vertical: isMobile ? 14 : 18,
                   ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
                 ),
                 child: _isSubmitting
                     ? SizedBox(

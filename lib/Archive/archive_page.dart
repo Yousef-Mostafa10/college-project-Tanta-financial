@@ -7,6 +7,7 @@ import 'archive_colors.dart';
 import 'archive_api.dart';
 import 'archive_mobile_card.dart';
 import 'archive_desktop_card.dart';
+import '../utils/app_error_handler.dart';
 
 // نستخدم نفس widgets الإحصائيات والفلاتر من MyRequests
 import '../request/Myrequest/my_requests_mobile_stats.dart';
@@ -184,7 +185,8 @@ class _ArchivePageState extends State<ArchivePage> {
       } else {
         setState(() {
           _isLoading = false;
-          _errorMessage = result['error'] ?? AppLocalizations.of(context)!.translate('failed_load_requests');
+          final String errString = result['error']?.toString() ?? 'failed_load_requests';
+          _errorMessage = AppErrorHandler.translateException(context, errString);
         });
       }
     } catch (e) {

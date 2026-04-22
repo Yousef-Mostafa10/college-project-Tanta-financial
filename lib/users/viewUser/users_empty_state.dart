@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_error_handler.dart';
 import 'users_colors.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 
