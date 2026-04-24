@@ -719,6 +719,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         }
       } catch (e) {
         debugPrint('❌ Exception upload: $e');
+        if (mounted) {
+          _showErrorMessage(AppErrorHandler.translateException(context, e));
+        }
       }
     }
   }
@@ -1183,6 +1186,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       }
     } catch (e) {
       debugPrint("❌ Error forwarding transaction: $e");
+      if (mounted) {
+        _showErrorMessage(AppErrorHandler.translateException(context, e));
+      }
     }
   }
 
@@ -1658,12 +1664,16 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         child: Icon(icon, color: CreateRequestColors.primary, size: 20),
       ),
       SizedBox(width: 12),
-      Text(
-        title,
-        style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: CreateRequestColors.primary),
+      Expanded(
+        child: Text(
+          title,
+          style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: CreateRequestColors.primary),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     ],
   );
@@ -2059,38 +2069,6 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                           ? AppLocalizations.of(context)!.translate('description_error')
                           : null,
                     ),
-                    SizedBox(height: isMobile ? 16 : 20),
-
-                    _buildLabel(AppLocalizations.of(context)!.translate('comment_label')),
-                    SizedBox(height: 8),
-                    TextFormField(
-                      controller: _commentController,
-                      maxLines: 2,
-                      style: TextStyle(fontSize: 15, color: CreateRequestColors.textPrimary),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: CreateRequestColors.bodyBg.withOpacity(0.5),
-                        hintText: AppLocalizations.of(context)!.translate('comment_hint'),
-                        hintStyle: TextStyle(color: CreateRequestColors.textMuted, fontSize: 14),
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.only(bottom: 24),
-                          child: Icon(Icons.comment_outlined, color: CreateRequestColors.primary, size: 20),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 1.5),
-                        ),
-                        contentPadding: EdgeInsets.all(16),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -2114,7 +2092,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     _buildSectionHeader(AppLocalizations.of(context)!.translate('send_request_section'), Icons.send_rounded),
                     SizedBox(height: isMobile ? 12 : 16),
 
-                    _buildLabel('${AppLocalizations.of(context)!.translate('send_to_user_label')} ${AppLocalizations.of(context)!.locale.languageCode == 'ar' ? '(اختياري)' : '(Optional)'}'),
+                    _buildLabel(AppLocalizations.of(context)!.translate('send_to_user_label')),
                     SizedBox(height: 8),
 
                     _isLoadingUsers
@@ -2202,6 +2180,38 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                             ),
                           ],
                         ),
+                      ),
+                    ),
+                    SizedBox(height: isMobile ? 16 : 20),
+
+                    _buildLabel(AppLocalizations.of(context)!.translate('comment_label')),
+                    SizedBox(height: 8),
+                    TextFormField(
+                      controller: _commentController,
+                      maxLines: 2,
+                      style: TextStyle(fontSize: 15, color: CreateRequestColors.textPrimary),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: CreateRequestColors.bodyBg.withOpacity(0.5),
+                        hintText: AppLocalizations.of(context)!.translate('comment_hint'),
+                        hintStyle: TextStyle(color: CreateRequestColors.textMuted, fontSize: 14),
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: Icon(Icons.comment_outlined, color: CreateRequestColors.primary, size: 20),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.borderColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: CreateRequestColors.focusBorderColor, width: 1.5),
+                        ),
+                        contentPadding: EdgeInsets.all(16),
                       ),
                     ),
                   ],

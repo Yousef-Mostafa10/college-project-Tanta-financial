@@ -89,46 +89,49 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
             SizedBox(height: isMobile ? 8 : 10),
 
-            // قسم Management - يظهر فقط للادمن
-            if (_userType.toLowerCase() == 'admin') ...[
+            // قسم Management - يظهر للادمن وللمحاسب (بشكل محدود)
+            if (_userType.toLowerCase() == 'admin' || _userType.toLowerCase() == 'accountant') ...[
               _buildSectionHeader(AppLocalizations.of(context)!.translate('management'), Icons.admin_panel_settings_rounded, isMobile),
 
-              _buildMenuItem(
-                icon: Icons.person_add_alt_1_rounded,
-                title: AppLocalizations.of(context)!.translate('add_user'),
-                color: AppColors.accentGreen,
-                isMobile: isMobile,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => AddUserPage()),
-                  );
-                },
-              ),
+              if (_userType.toLowerCase() == 'admin') ...[
+                _buildMenuItem(
+                  icon: Icons.person_add_alt_1_rounded,
+                  title: AppLocalizations.of(context)!.translate('add_user'),
+                  color: AppColors.accentGreen,
+                  isMobile: isMobile,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => AddUserPage()),
+                    );
+                  },
+                ),
 
-              _buildMenuItem(
-                icon: Icons.people_alt_rounded,
-                title: AppLocalizations.of(context)!.translate('view_users'),
-                color: AppColors.accentBlue,
-                isMobile: isMobile,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => ViewUsersPage()),
-                  );
-                },
-              ),
+                _buildMenuItem(
+                  icon: Icons.people_alt_rounded,
+                  title: AppLocalizations.of(context)!.translate('view_users'),
+                  color: AppColors.accentBlue,
+                  isMobile: isMobile,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => ViewUsersPage()),
+                    );
+                  },
+                ),
 
-              _buildMenuItem(
-                icon: Icons.corporate_fare,
-                title: AppLocalizations.of(context)!.translate('departments'),
-                color: AppColors.accentGreen,
-                isMobile: isMobile,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => DepartmentsPage()),
-                  );
-                },
-              ),
+                _buildMenuItem(
+                  icon: Icons.corporate_fare,
+                  title: AppLocalizations.of(context)!.translate('departments'),
+                  color: AppColors.accentGreen,
+                  isMobile: isMobile,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => DepartmentsPage()),
+                    );
+                  },
+                ),
+              ],
 
+              // المحاسب والادمن يشوفوا الميزانية
               _buildMenuItem(
                 icon: Icons.account_balance_wallet_rounded,
                 title: AppLocalizations.of(context)!.translate('budget_categories'),
@@ -214,38 +217,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
             _buildSectionHeader(AppLocalizations.of(context)!.translate('settings'), Icons.settings_rounded, isMobile),
 
-            // تبديل الوضع (Dark/Light)
-            Consumer<ThemeProvider>(
-              builder: (context, themeProvider, child) {
-                return _buildMenuItem(
-                  icon: themeProvider.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                  title: themeProvider.isDarkMode 
-                      ? AppLocalizations.of(context)!.translate('light_mode')
-                      : AppLocalizations.of(context)!.translate('dark_mode'),
-                  color: AppColors.accentYellow,
-                  isMobile: isMobile,
-                  onTap: () {
-                    themeProvider.toggleTheme(!themeProvider.isDarkMode);
-                  },
-                );
-              },
-            ),
-
-            // تبديل اللغة
-            Consumer<LanguageProvider>(
-              builder: (context, languageProvider, child) {
-                final isArabic = languageProvider.currentLocale.languageCode == 'ar';
-                return _buildMenuItem(
-                  icon: Icons.language_rounded,
-                  title: isArabic ? 'English' : 'العربية',
-                  color: AppColors.accentBlue,
-                  isMobile: isMobile,
-                  onTap: () {
-                    languageProvider.changeLanguage(isArabic ? const Locale('en') : const Locale('ar'));
-                  },
-                );
-              },
-            ),
+            _buildSettingsExpansionTile(isMobile),
 
             // تسجيل الخروج
             _buildLogoutButton(isMobile),
@@ -530,6 +502,178 @@ class _CustomDrawerState extends State<CustomDrawer> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // 🔹 بناء قسم الإعدادات التوسعي
+  Widget _buildSettingsExpansionTile(bool isMobile) {
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 16,
+        vertical: isMobile ? 2 : 4,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+        color: AppColors.cardBg,
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.1),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.03),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          iconColor: AppColors.primary,
+          collapsedIconColor: AppColors.primary.withOpacity(0.5),
+          leading: Container(
+            padding: EdgeInsets.all(isMobile ? 8 : 10),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+            ),
+            child: Icon(
+              Icons.tune_rounded, // أيقونة إعدادات مميزة
+              color: AppColors.primary,
+              size: isMobile ? 20 : 22,
+            ),
+          ),
+          title: Text(
+            AppLocalizations.of(context)!.translate('general') ?? 'General',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: isMobile ? 14 : 16,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          children: [
+            // 1️⃣ اختيار اللغة
+            Consumer<LanguageProvider>(
+              builder: (context, languageProvider, child) {
+                final isArabic = languageProvider.currentLocale.languageCode == 'ar';
+                return _buildSubExpansionTile(
+                  title: AppLocalizations.of(context)!.translate('language'),
+                  icon: Icons.language_rounded,
+                  isMobile: isMobile,
+                  children: [
+                    _buildSelectionItem(
+                      title: 'العربية',
+                      isSelected: isArabic,
+                      isMobile: isMobile,
+                      onTap: () => languageProvider.changeLanguage(const Locale('ar')),
+                    ),
+                    _buildSelectionItem(
+                      title: 'English',
+                      isSelected: !isArabic,
+                      isMobile: isMobile,
+                      onTap: () => languageProvider.changeLanguage(const Locale('en')),
+                    ),
+                  ],
+                );
+              },
+            ),
+
+            // 2️⃣ اختيار الإضاءة / الوضع
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return _buildSubExpansionTile(
+                  title: themeProvider.isDarkMode 
+                      ? AppLocalizations.of(context)!.translate('dark_mode')
+                      : AppLocalizations.of(context)!.translate('light_mode'),
+                  icon: themeProvider.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  isMobile: isMobile,
+                  children: [
+                    _buildSelectionItem(
+                      title: AppLocalizations.of(context)!.translate('dark_mode'),
+                      icon: Icons.dark_mode_rounded,
+                      isSelected: themeProvider.isDarkMode,
+                      isMobile: isMobile,
+                      onTap: () => themeProvider.toggleTheme(true),
+                    ),
+                    _buildSelectionItem(
+                      title: AppLocalizations.of(context)!.translate('light_mode'),
+                      icon: Icons.light_mode_rounded,
+                      isSelected: !themeProvider.isDarkMode,
+                      isMobile: isMobile,
+                      onTap: () => themeProvider.toggleTheme(false),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // دالة مساعدة لبناء العناصر الفرعية التوسعية
+  Widget _buildSubExpansionTile({
+    required String title,
+    required IconData icon,
+    required bool isMobile,
+    required List<Widget> children,
+  }) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+        leading: Icon(icon, color: AppColors.primary.withOpacity(0.7), size: isMobile ? 18 : 20),
+        iconColor: AppColors.primary,
+        collapsedIconColor: AppColors.primary.withOpacity(0.5),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: isMobile ? 13 : 15,
+            color: AppColors.textPrimary.withOpacity(0.8),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        children: children,
+      ),
+    );
+  }
+
+  // دالة مساعدة لبناء عناصر الاختيار النهائي
+  Widget _buildSelectionItem({
+    required String title,
+    IconData? icon,
+    required bool isSelected,
+    required bool isMobile,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: isMobile ? 24 : 32, vertical: 2),
+      decoration: BoxDecoration(
+        color: isSelected ? AppColors.primary.withOpacity(0.05) : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListTile(
+        dense: true,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16),
+        leading: icon != null 
+            ? Icon(icon, size: 16, color: isSelected ? AppColors.primary : AppColors.textSecondary) 
+            : null,
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: isMobile ? 12 : 14,
+            color: isSelected ? AppColors.primary : AppColors.textSecondary,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        trailing: isSelected 
+            ? Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 16) 
+            : null,
+        onTap: onTap,
       ),
     );
   }

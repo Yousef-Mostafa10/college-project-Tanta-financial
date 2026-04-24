@@ -82,6 +82,9 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
       });
     } catch (e) {
       debugPrint("Error fetching departments: $e");
+      if (mounted) {
+        UsersHelpers.showErrorMessage(context, AppErrorHandler.translateException(context, e));
+      }
     }
   }
 
@@ -163,6 +166,9 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
       });
     } catch (e) {
       setState(() => _isLoadingMore = false);
+      if (mounted) {
+        UsersHelpers.showErrorMessage(context, AppErrorHandler.translateException(context, e));
+      }
     }
   }
 

@@ -25,6 +25,11 @@ class _EditRequestPageState extends State<EditRequestPage> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _senderCommentController = TextEditingController();
+  
+  // مفاتيح للتحكم في السكرول عند وجود خطأ
+  final _titleKey = GlobalKey();
+  final _typeKey = GlobalKey();
+  final _descriptionKey = GlobalKey();
 
   String? _userToken;
   String? _userName;
@@ -525,8 +530,10 @@ class _EditRequestPageState extends State<EditRequestPage> {
           _titleController.text = data["title"] ?? '';
           _descriptionController.text = data["description"] ?? '';
 
-          final typeName = data["typeName"];
-          if (typeName != null && _requestTypes.contains(typeName)) {
+          final dynamic typeData = data["type"];
+          final String? typeName = data["typeName"] ?? (typeData is Map ? typeData["name"]?.toString() : null);
+          
+          if (typeName != null && typeName.trim().isNotEmpty) {
             _selectedRequestType = typeName;
           }
 
@@ -543,7 +550,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
         _showErrorSnackBar(AppLocalizations.of(context)!.translate('failed_load_request_details').replaceFirst('{error}', response.statusCode.toString()));
       }
     } catch (e) {
-      _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
+      _showErrorSnackBar(AppErrorHandler.translateException(context, e));
     }
   }
 
@@ -1330,7 +1337,17 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
   // ✅ تعديل: تحديث الطلب مع معالجة الملفات
   Future<void> _updateRequest() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      // البحث عن أول حقل به خطأ والسكرول إليه
+      if (_titleController.text.trim().isEmpty) {
+        Scrollable.ensureVisible(_titleKey.currentContext!, duration: Duration(milliseconds: 400), curve: Curves.easeInOut);
+      } else if (_selectedRequestType == 'Request Type') {
+        Scrollable.ensureVisible(_typeKey.currentContext!, duration: Duration(milliseconds: 400), curve: Curves.easeInOut);
+      } else if (_descriptionController.text.trim().isEmpty) {
+        Scrollable.ensureVisible(_descriptionKey.currentContext!, duration: Duration(milliseconds: 400), curve: Curves.easeInOut);
+      }
+      return;
+    }
 
     setState(() {
       _isUpdating = true;
@@ -1838,6 +1855,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
             SizedBox(height: isMobile ? 6 : 8),
             TextFormField(
+              key: _titleKey,
               controller: _titleController,
               decoration: InputDecoration(
                 filled: true,
@@ -1885,6 +1903,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     InkWell(
+                      key: _typeKey,
                       onTap: _isCreator ? _showTypeSelectionDialog : null,
                       child: InputDecorator(
                         decoration: InputDecoration(
@@ -1985,6 +2004,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ),
             SizedBox(height: isMobile ? 6 : 8),
             TextFormField(
+              key: _descriptionKey,
               controller: _descriptionController,
               maxLines: isMobile ? 4 : 5,
               decoration: InputDecoration(

@@ -180,29 +180,36 @@ class InboxDesktopFilters extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
             items: items
-                .map((item) => DropdownMenuItem(
-              value: item,
-              child: Row(
-                children: [
-                  Icon(
-                    _getStatusIcon(context, label, item),
-                    size: 18,
-                    color: _getStatusColor(context, label, item),
-                  ),
-                  SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(context)!.translate(item.toLowerCase().replaceAll(' ', '_')),
-                      style: TextStyle(
-                        color: _getStatusTextColor(context, label, item),
-                        fontWeight: _getStatusFontWeight(label, item),
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                .map((item) {
+                  String displayText = AppLocalizations.of(context)!.translate(item.toLowerCase().replaceAll(' ', '_'));
+                  if (item.toLowerCase() == 'all') {
+                    displayText = "$label: ${AppLocalizations.of(context)!.translate('all')}";
+                  }
+
+                  return DropdownMenuItem(
+                    value: item,
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getStatusIcon(context, label, item),
+                          size: 18,
+                          color: _getStatusColor(context, label, item),
+                        ),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            displayText,
+                            style: TextStyle(
+                              color: _getStatusTextColor(context, label, item),
+                              fontWeight: _getStatusFontWeight(label, item),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ))
+                  );
+                })
                 .toList(),
             onChanged: onChanged,
           ),
@@ -215,7 +222,7 @@ class InboxDesktopFilters extends StatelessWidget {
     if (label == AppLocalizations.of(context)!.translate('status')) {
       return _getStatusFilterIcon(item);
     } else if (label == AppLocalizations.of(context)!.translate('priority')) {
-      return Icons.flag_outlined;
+      return _getPriorityIcon(item);
     } else {
       return Icons.category_outlined;
     }
@@ -243,11 +250,36 @@ class InboxDesktopFilters extends StatelessWidget {
     }
   }
 
+  IconData _getPriorityIcon(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return Icons.priority_high_rounded;
+      case 'medium':
+        return Icons.low_priority_rounded;
+      case 'low':
+        return Icons.flag_rounded;
+      case 'all':
+        return Icons.filter_list_rounded;
+      default:
+        return Icons.flag_outlined;
+    }
+  }
+
   Color _getStatusColor(BuildContext context, String label, String item) {
+    if (item.toLowerCase() == 'all' || item.toLowerCase() == 'all types') {
+      return InboxColors.primary;
+    }
+
+    if (label == AppLocalizations.of(context)!.translate('priority')) {
+      switch (item.toLowerCase()) {
+        case 'high': return InboxColors.statusRejected;
+        case 'medium': return InboxColors.statusPending;
+        case 'low': return InboxColors.statusApproved;
+      }
+    }
+
     if (label == AppLocalizations.of(context)!.translate('status')) {
       switch (item.toLowerCase()) {
-        case 'all':
-          return InboxColors.primary;
         case 'approved':
           return InboxColors.statusApproved;
         case 'rejected':
@@ -273,26 +305,7 @@ class InboxDesktopFilters extends StatelessWidget {
       return InboxColors.primary;
     }
 
-    if (label == AppLocalizations.of(context)!.translate('status')) {
-      switch (item.toLowerCase()) {
-        case 'approved':
-          return InboxColors.statusApproved;
-        case 'rejected':
-          return InboxColors.statusRejected;
-        case 'waiting':
-        case 'not-assigned':
-          return InboxColors.statusWaiting;
-        case 'needs change':
-        case 'needs_change':
-          return Colors.orange;
-        case 'fulfilled':
-          return InboxColors.statusFulfilled;
-        default:
-          return InboxColors.textPrimary;
-      }
-    } else {
-      return InboxColors.textPrimary;
-    }
+    return _getStatusColor(context, label, item);
   }
 
   FontWeight _getStatusFontWeight(String label, String item) {

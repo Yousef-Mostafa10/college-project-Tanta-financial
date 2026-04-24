@@ -33,6 +33,7 @@ class _InboxPageState extends State<InboxPage> {
   final InboxApi _apiService = InboxApi();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _searchFocusNode = FocusNode(); // ✅ للتحكم في بقاء التركيز على البحث
   Timer? _searchTimer;
 
   List<dynamic> _requests = [];
@@ -105,6 +106,7 @@ class _InboxPageState extends State<InboxPage> {
     _scrollController.dispose();
     _searchTimer?.cancel();
     _searchController.dispose();
+    _searchFocusNode.dispose(); // ✅ تنظيف الـ FocusNode
     super.dispose();
   }
 
@@ -143,7 +145,7 @@ class _InboxPageState extends State<InboxPage> {
     }
   }
 
-  Future<void> _fetchInboxRequests() async {
+  Future<void> _fetchInboxRequests({bool fullLoad = true}) async {
     if (_isRefreshing) {
       print('⏸️ fetchInboxRequests already in progress');
       return;
@@ -160,7 +162,7 @@ class _InboxPageState extends State<InboxPage> {
     print('🔄 fetchInboxRequests started');
 
     setState(() {
-      _isLoading = true;
+      if (fullLoad) _isLoading = true;
       _isRefreshing = true;
       _errorMessage = null;
       _currentPage = 1;
@@ -363,13 +365,27 @@ class _InboxPageState extends State<InboxPage> {
     print('🔍 Filtered requests set - Showing ${_filteredRequests.length} requests');
   }
 
-  // ✅ جلب حالة الـ forward لكل الطلبات بشكل متوازي من الـ forward API
-  // هذا يضمن دقة بيانات hasForwarded و lastForwardSentTo بغض النظر عن isForwardedByMe
-  void _loadForwardStatusForAllRequests(List<dynamic> requests) {
-    // نشغل كل request بشكل مستقل بدون await عشان نكون متوازيين
-    for (final req in requests) {
-      final requestId = req['id'].toString();
-      _loadForwardStatusForRequest(requestId);
+  // ✅ جلب حالة الـ forward لكل الطلبات بشكل تسلسلي (لتفادي إغراق السيرفر)
+  Future<void> _loadForwardStatusForAllRequests(List<dynamic> requests) async {
+    // نشغّل الطلبات في مجموعات صغيرة (2 في وقت واحد) مع تأخير بسيط بين كل مجموعة
+    // هذا يمنع مشكلة "Connection closed before full header was received"
+    const int batchSize = 2;
+    const Duration delayBetweenBatches = Duration(milliseconds: 300);
+
+    for (int i = 0; i < requests.length; i += batchSize) {
+      if (!mounted) return;
+
+      final batch = requests.skip(i).take(batchSize).toList();
+
+      // نشغّل المجموعة الحالية بشكل متوازي مع بعض
+      await Future.wait(
+        batch.map((req) => _loadForwardStatusForRequest(req['id'].toString())),
+      );
+
+      // تأخير بسيط قبل المجموعة التالية لتخفيف الضغط على السيرفر
+      if (i + batchSize < requests.length) {
+        await Future.delayed(delayBetweenBatches);
+      }
     }
   }
 
@@ -436,11 +452,10 @@ class _InboxPageState extends State<InboxPage> {
     }
   }
 
-  void _onSearchChanged(String value) {
-    // استخدام debounce لمنع تحديث الفلاتر مع كل حرف
-    _searchTimer?.cancel();
+  void _onSearchChanged(String query) {
+    if (_searchTimer?.isActive ?? false) _searchTimer!.cancel();
     _searchTimer = Timer(const Duration(milliseconds: 500), () {
-      _fetchInboxRequests();
+      _fetchInboxRequests(fullLoad: false);
     });
   }
 
@@ -1081,6 +1096,7 @@ class _InboxPageState extends State<InboxPage> {
                       // شريط البحث
                       TextField(
                         controller: searchController,
+                        focusNode: _searchFocusNode, // ✅ ربط الـ FocusNode
                         decoration: InputDecoration(
                           hintText: AppLocalizations.of(context)!.translate('search_users'),
                           prefixIcon: Icon(Icons.search_rounded, color: CreateRequestColors.primary),
@@ -2113,14 +2129,14 @@ class _InboxPageState extends State<InboxPage> {
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: min(width * 0.04, 20),
-            color: InboxColors.sidebarText,
+            color: Colors.white,
           ),
         ),
         backgroundColor: InboxColors.primary,
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh_rounded, color: InboxColors.sidebarText),
+            icon: Icon(Icons.refresh_rounded, color: Colors.white),
             onPressed: _fetchInboxRequests,
             tooltip: AppLocalizations.of(context)!.translate('refresh'),
           ),
@@ -2132,7 +2148,7 @@ class _InboxPageState extends State<InboxPage> {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(InboxColors.sidebarText),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               ),
             ),
@@ -2143,19 +2159,14 @@ class _InboxPageState extends State<InboxPage> {
           : isMobile
           ? _buildMobileOptimizedBody()
           : _buildDesktopBody(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _showBackToTop
-          ? SizedBox(
-              width: MediaQuery.of(context).size.width,
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: FloatingActionButton(
-                  heroTag: 'inbox_scroll_top',
-                  mini: true,
-                  onPressed: _scrollToTop,
-                  backgroundColor: InboxColors.primary.withOpacity(0.8),
-                  child: Icon(Icons.arrow_upward, color: Colors.white),
-                ),
-              ),
+          ? FloatingActionButton(
+              heroTag: 'inbox_scroll_top',
+              mini: true,
+              onPressed: _scrollToTop,
+              backgroundColor: InboxColors.primary.withOpacity(0.8),
+              child: Icon(Icons.arrow_upward, color: Colors.white),
             )
           : null,
     );

@@ -29,6 +29,7 @@ class _BudgetPageState extends State<BudgetPage> {
   List<Map<String, dynamic>> filteredCategories = [];
   TextEditingController searchController = TextEditingController();
   bool isLoading = true;
+  bool isRefreshing = false;
   String? errorMessage;
 
   // Pagination
@@ -94,14 +95,18 @@ class _BudgetPageState extends State<BudgetPage> {
   }
 
   // 📥 Fetch all categories (page 1)
-  Future<void> fetchAllCategories() async {
+  Future<void> fetchAllCategories({bool fullLoad = true}) async {
     setState(() {
-      isLoading = true;
+      if (fullLoad) {
+        isLoading = true;
+      } else {
+        isRefreshing = true;
+      }
       errorMessage = null;
-      _currentPage = 1;
-      _hasMorePages = true;
-      allCategories = [];
     });
+
+    // تأخير بسيط لإعطاء إيحاء بالتحديث البصري
+    await Future.delayed(const Duration(milliseconds: 400));
 
     try {
       final headers = await _getAuthHeaders();
@@ -117,7 +122,6 @@ class _BudgetPageState extends State<BudgetPage> {
         Map<String, dynamic>? pagination;
 
         if (responseData is List) {
-          // API returned a plain list
           data = responseData;
         } else if (responseData is Map) {
           data = responseData['data'] ?? [];
@@ -126,31 +130,42 @@ class _BudgetPageState extends State<BudgetPage> {
           data = [];
         }
 
-        setState(() {
-          allCategories = data.map((c) => _mapCategory(c)).toList();
-          filteredCategories = allCategories;
-          _totalCategories = pagination != null
-              ? ((pagination['total'] as num?)?.toInt() ?? allCategories.length)
-              : allCategories.length;
+        if (mounted) {
+          setState(() {
+            _currentPage = 1;
+            allCategories = data.map((c) => _mapCategory(c)).toList();
+            filteredCategories = allCategories;
+            _totalCategories = pagination != null
+                ? ((pagination['total'] as num?)?.toInt() ?? allCategories.length)
+                : allCategories.length;
 
-          if (pagination != null && pagination['next'] != null) {
-            _currentPage = (pagination['next'] as num).toInt();
-            _hasMorePages = true;
-          } else {
-            _hasMorePages = false;
-          }
+            if (pagination != null && pagination['next'] != null) {
+              _currentPage = (pagination['next'] as num).toInt();
+              _hasMorePages = true;
+            } else {
+              _hasMorePages = false;
+            }
 
-          isLoading = false;
-        });
+            isLoading = false;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           isLoading = false;
-          errorMessage = AppLocalizations.of(context)!.translate('failed_load_budget');
+          isRefreshing = false;
+          errorMessage = AppErrorHandler.translateException(context, e);
         });
       }
       debugPrint('Error fetching budget categories: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRefreshing = false;
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -325,6 +340,8 @@ class _BudgetPageState extends State<BudgetPage> {
           if (filtIdx != -1) filteredCategories[filtIdx] = updated;
         });
 
+        fetchAllCategories(fullLoad: false);
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -471,6 +488,8 @@ class _BudgetPageState extends State<BudgetPage> {
           filteredCategories.removeWhere((c) => c['name'] == name);
           _totalCategories = (_totalCategories - 1).clamp(0, _totalCategories);
         });
+
+        fetchAllCategories(fullLoad: false);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -900,15 +919,24 @@ class _BudgetPageState extends State<BudgetPage> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: BudgetColors.sidebarBg,
+        backgroundColor: BudgetColors.primary,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh, color: Colors.white),
+            onPressed: () => fetchAllCategories(fullLoad: false),
+            tooltip: AppLocalizations.of(context)!.translate('refresh'),
+          ),
+        ],
       ),
-      body: Column(
+      body: Stack(
         children: [
+          Column(
+            children: [
           // 🔍 Search Bar
           Container(
             padding: const EdgeInsets.all(24),
@@ -1039,14 +1067,12 @@ class _BudgetPageState extends State<BudgetPage> {
                             builder: (context, constraints) {
                               final double width = constraints.maxWidth;
                               final bool isSmallMobile = width < 360;
-                              final int crossAxisCount = width > 1200
-                                  ? 5
-                                  : (width > 900
-                                      ? 4
-                                      : (width > 600 ? 3 : 2));
+                              final int crossAxisCount = width > 900
+                                  ? 4
+                                  : (width > 600 ? 3 : 2);
                               final double childAspectRatio = width > 600
-                                  ? 1.1
-                                  : (isSmallMobile ? 0.80 : 0.82);
+                                  ? 1.0
+                                  : (isSmallMobile ? 0.72 : 0.75);
 
                               return GridView.builder(
                                 controller: _scrollController,
@@ -1089,11 +1115,19 @@ class _BudgetPageState extends State<BudgetPage> {
                               );
                             },
                           ),
+                  ),
+                ],
+              ),
+              if (isRefreshing)
+                const Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: LinearProgressIndicator(),
+                ),
+            ],
           ),
-        ],
-      ),
-      floatingActionButtonLocation:
-          FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: SizedBox(
         width: MediaQuery.of(context).size.width,
         child: Stack(
@@ -1105,7 +1139,7 @@ class _BudgetPageState extends State<BudgetPage> {
                 child: FloatingActionButton(
                   heroTag: 'budget_add_btn',
                   onPressed: _showAddCategoryDialog,
-                  backgroundColor: BudgetColors.accentYellow,
+                  backgroundColor: BudgetColors.primary,
                   child: Icon(Icons.add, color: Colors.white, size: 28),
                 ),
               ),
@@ -1175,7 +1209,7 @@ class BudgetCategoryCard extends StatelessWidget {
           // Content — ClipRect silently clips any marginal overflow (no more exception)
           ClipRect(
             child: Padding(
-              padding: EdgeInsets.all(isMobile ? 10 : 16),
+              padding: EdgeInsets.all(isMobile ? 8 : 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1200,7 +1234,7 @@ class BudgetCategoryCard extends StatelessWidget {
                   Text(
                     category['name'] ?? AppLocalizations.of(context)!.translate('untitled'),
                     style: TextStyle(
-                      fontSize: isMobile ? 12 : 15,
+                      fontSize: isMobile ? 12 : 17, // زيادة الخط للديسكتوب
                       fontWeight: FontWeight.bold,
                       color: BudgetColors.textPrimary,
                     ),
@@ -1264,9 +1298,9 @@ class BudgetCategoryCard extends StatelessWidget {
           ),
 
           // Three-dot menu
-          Positioned(
+          PositionedDirectional(
             top: 8,
-            right: 8,
+            end: 8,
             child: PopupMenuButton<String>(
               icon: Icon(Icons.more_vert,
                   color: BudgetColors.textMuted, size: 20),
@@ -1380,7 +1414,7 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               value,
               style: TextStyle(
-                fontSize: isMobile ? 10 : 12,
+                fontSize: isMobile ? 10 : 13, // زيادة طفيفة للديسكتوب
                 fontWeight: FontWeight.w600,
                 color: BudgetColors.textPrimary,
               ),

@@ -112,7 +112,10 @@ class MyRequestsApi {
         }
       }
 
-      final uri = Uri.parse("$baseUrl/transactions").replace(queryParameters: queryParams);
+      final uri = Uri.parse("$baseUrl/transactions").replace(queryParameters: {
+        ...queryParams,
+        '_t': DateTime.now().millisecondsSinceEpoch.toString(),
+      });
 
       final response = await http.get(
         uri,

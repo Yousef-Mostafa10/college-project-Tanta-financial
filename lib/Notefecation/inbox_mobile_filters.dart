@@ -44,43 +44,54 @@ class InboxMobileFilters extends StatelessWidget {
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    // تحديد لون النص حسب الحالة
+    // تحديد لون النص حسب الحالة أو الأولوية
     Color getTextColor() {
-      if (label == AppLocalizations.of(context)!.translate('status')) {
+      final isStatus = label == AppLocalizations.of(context)!.translate('status');
+      final isPriority = label == AppLocalizations.of(context)!.translate('priority');
+
+      if (isStatus) {
         switch (value.toLowerCase()) {
-          case 'waiting':
-            return InboxColors.statusWaiting;
-          case 'approved':
-            return InboxColors.statusApproved;
-          case 'rejected':
-            return InboxColors.statusRejected;
-          case 'fulfilled': // حالة جديدة - الفيل فيلد
-            return InboxColors.statusFulfilled;
-          case 'needs change': // حالة جديدة - النيد اشانج
-            return InboxColors.statusPending;
-          default:
-            return InboxColors.textPrimary;
+          case 'waiting': return InboxColors.statusWaiting;
+          case 'approved': return InboxColors.statusApproved;
+          case 'rejected': return InboxColors.statusRejected;
+          case 'fulfilled': return InboxColors.statusFulfilled;
+          case 'needs change': 
+          case 'needs_change': return Colors.orange;
+          default: return InboxColors.textPrimary;
+        }
+      } else if (isPriority) {
+        switch (value.toLowerCase()) {
+          case 'high': return InboxColors.statusRejected;
+          case 'medium': return InboxColors.statusPending;
+          case 'low': return InboxColors.statusApproved;
+          default: return InboxColors.primary;
         }
       }
       return InboxColors.textPrimary;
     }
 
-    // تحديد أيقونة حسب الحالة
+    // تحديد أيقونة حسب الحالة أو الأولوية
     IconData getStatusIcon() {
-      if (label == AppLocalizations.of(context)!.translate('status')) {
+      final isStatus = label == AppLocalizations.of(context)!.translate('status');
+      final isPriority = label == AppLocalizations.of(context)!.translate('priority');
+
+      if (isStatus) {
         switch (value.toLowerCase()) {
-          case 'waiting':
-            return Icons.hourglass_empty_rounded;
-          case 'approved':
-            return Icons.check_circle_rounded;
-          case 'rejected':
-            return Icons.cancel_rounded;
-          case 'fulfilled': // حالة جديدة - الفيل فيلد
-            return Icons.task_alt_rounded;
-          case 'needs change': // حالة جديدة - النيد اشانج
-            return Icons.edit_note_rounded;
-          default:
-            return icon;
+          case 'waiting': return Icons.hourglass_empty_rounded;
+          case 'approved': return Icons.check_circle_rounded;
+          case 'rejected': return Icons.cancel_rounded;
+          case 'fulfilled': return Icons.task_alt_rounded;
+          case 'needs change': 
+          case 'needs_change': return Icons.edit_note_rounded;
+          default: return icon;
+        }
+      } else if (isPriority) {
+        switch (value.toLowerCase()) {
+          case 'high': return Icons.priority_high_rounded;
+          case 'medium': return Icons.low_priority_rounded;
+          case 'low': return Icons.flag_rounded;
+          case 'all': return Icons.filter_list_rounded;
+          default: return icon;
         }
       }
       return icon;
@@ -88,7 +99,9 @@ class InboxMobileFilters extends StatelessWidget {
 
     // تحديد لون الأيقونة
     Color getIconColor() {
-      if (label == AppLocalizations.of(context)!.translate('status')) {
+      final isStatus = label == AppLocalizations.of(context)!.translate('status');
+      final isPriority = label == AppLocalizations.of(context)!.translate('priority');
+      if (isStatus || isPriority) {
         return getTextColor();
       }
       return InboxColors.primary;

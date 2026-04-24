@@ -34,7 +34,7 @@ class InboxMobileCard extends StatelessWidget {
 
   Widget _buildMobileChip(BuildContext context, String text, IconData icon, Color color) {
     return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 6,2 -> 8,4
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(6),
@@ -43,12 +43,12 @@ class InboxMobileCard extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 10, color: color),
-            SizedBox(width: 2),
+            Icon(icon, size: 13, color: color), // 10 -> 13
+            SizedBox(width: 4), // 2 -> 4
             Text(
               AppLocalizations.of(context)!.translate(text.toLowerCase()),
               style: TextStyle(
-                fontSize: 9,
+                fontSize: 11, // 9 -> 11
                 color: color,
                 fontWeight: FontWeight.w500,
               ),
@@ -190,7 +190,7 @@ class InboxMobileCard extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: Border.all(color: statusColor.withOpacity(0.3)),
                         ),
-                        child: Icon(getStatusIcon(), color: statusColor, size: 16),
+                        child: Icon(getStatusIcon(), color: statusColor, size: 18), // 16 -> 18
                       ),
                       if (isUpdating)
                         Positioned(
@@ -285,12 +285,12 @@ class InboxMobileCard extends StatelessWidget {
               // التاريخ
               Row(
                 children: [
-                  Icon(Icons.calendar_today_rounded, size: 12, color: InboxColors.textSecondary),
-                  SizedBox(width: 4),
+                  Icon(Icons.calendar_today_rounded, size: 14, color: InboxColors.textSecondary), // 12 -> 14
+                  SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       formattedDate.length > 16 ? formattedDate.substring(0, 16) : formattedDate,
-                      style: TextStyle(fontSize: 11, color: InboxColors.textSecondary),
+                      style: TextStyle(fontSize: 13, color: InboxColors.textSecondary), // 11 -> 13
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -315,14 +315,14 @@ class InboxMobileCard extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.attach_file_rounded, size: 12, color: documentsCount > 0 ? Colors.blue : InboxColors.textSecondary),
-                        SizedBox(width: 2),
+                        Icon(Icons.attach_file_rounded, size: 13, color: documentsCount > 0 ? Colors.blue : InboxColors.textSecondary), // 12 -> 13
+                        SizedBox(width: 4), // 2 -> 4
                         Text(
                           documentsCount > 0 
                               ? "$documentsCount" 
                               : AppLocalizations.of(context)!.translate('no_attachments'),
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 11, // 10 -> 11
                             fontWeight: FontWeight.w500,
                             color: documentsCount > 0 ? Colors.blue : InboxColors.textSecondary,
                           ),

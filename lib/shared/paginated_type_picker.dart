@@ -48,7 +48,7 @@ class _PaginatedTypePickerState extends State<PaginatedTypePicker> {
   Widget build(BuildContext context) {
     String displayText = widget.selectedType;
     if (displayText.toLowerCase() == 'all types') {
-      displayText = AppLocalizations.of(context)!.translate('all_types');
+      displayText = "${AppLocalizations.of(context)!.translate('request_type_label')}: ${AppLocalizations.of(context)!.translate('all_types')}";
     }
 
     return InkWell(

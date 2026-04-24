@@ -92,6 +92,13 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
               ),
             ),
             SizedBox(height: widget.isMobile ? 8 : 12),
+            
+            // ✅ الرقم التعريفي (ID)
+            _buildProfileDetail(
+              "ID",
+              _userData!.id.toString(),
+              Icons.fingerprint_rounded,
+            ),
 
             // ✅ الدور
             _buildProfileDetail(

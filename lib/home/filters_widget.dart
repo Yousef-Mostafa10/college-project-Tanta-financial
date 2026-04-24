@@ -185,7 +185,10 @@ class FiltersWidget extends StatelessWidget {
             items: items
                 .map((item) {
                   String displayText = item;
-                  if (item.toLowerCase() == 'all') displayText = AppLocalizations.of(context)!.translate('all');
+                  if (item.toLowerCase() == 'all') {
+                    final labelKey = label.toLowerCase() == 'priority' ? 'priority_label' : 'status_label';
+                    displayText = "${AppLocalizations.of(context)!.translate(labelKey)}: ${AppLocalizations.of(context)!.translate('all')}";
+                  }
                   else if (item.toLowerCase() == 'all types') displayText = AppLocalizations.of(context)!.translate('all_types');
                   else if (item.toLowerCase() == 'high') displayText = AppLocalizations.of(context)!.translate('high');
                   else if (item.toLowerCase() == 'medium') displayText = AppLocalizations.of(context)!.translate('medium');
@@ -201,11 +204,13 @@ class FiltersWidget extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(
-                          label == "Status" ? _getStatusFilterIcon(item) : icon,
+                          label == "Status" 
+                              ? _getStatusFilterIcon(item) 
+                              : (label == "Priority" ? _getPriorityIcon(item) : icon),
                           size: isMobile ? 14 : 18,
                           color: label == "Status"
                               ? _getStatusColor(item)
-                              : AppColors.primary,
+                              : (label == "Priority" ? _getPriorityColor(item) : AppColors.primary),
                         ),
                         const SizedBox(width: 6),
                         Expanded(
@@ -213,13 +218,13 @@ class FiltersWidget extends StatelessWidget {
                             displayText,
                             style: TextStyle(
                               color: label == "Status"
-                                  ? _getStatusColor(item) // حالة خاصة للحالة
-                                  : (item == 'All Types' || item == 'All' ||
-                                  item == 'All Priorities'
-                                  ? AppColors.primary
-                                  : AppColors.textPrimary),
-                              fontWeight: item == 'All Types' || item == 'All' ||
-                                  item == 'All Priorities'
+                                  ? _getStatusColor(item)
+                                  : (label == "Priority" 
+                                      ? _getPriorityColor(item) 
+                                      : (item == 'All Types' || item.toLowerCase() == 'all' || item == 'All Priorities'
+                                          ? AppColors.primary
+                                          : AppColors.textPrimary)),
+                              fontWeight: item == 'All Types' || item.toLowerCase() == 'all' || item == 'All Priorities'
                                   ? FontWeight.w600
                                   : FontWeight.w500,
                             ),
@@ -275,6 +280,38 @@ class FiltersWidget extends StatelessWidget {
         return Icons.edit_note_rounded;
       default:
         return Icons.hourglass_top_outlined;
+    }
+  }
+
+  // دالة إرجاع لون الأولوية
+  Color _getPriorityColor(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return AppColors.statusError; // أحمر
+      case 'medium':
+        return AppColors.statusPending; // برتقالي
+      case 'low':
+        return AppColors.statusApproved; // أخضر
+      case 'all':
+        return AppColors.primary;
+      default:
+        return AppColors.textPrimary;
+    }
+  }
+
+  // دالة إرجاع أيقونة الأولوية
+  IconData _getPriorityIcon(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return Icons.priority_high_rounded;
+      case 'medium':
+        return Icons.low_priority_rounded;
+      case 'low':
+        return Icons.flag_rounded;
+      case 'all':
+        return Icons.filter_list_rounded;
+      default:
+        return Icons.flag_outlined;
     }
   }
 }

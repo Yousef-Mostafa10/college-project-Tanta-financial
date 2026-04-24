@@ -90,7 +90,7 @@ class MobileRequestCard extends StatelessWidget {
                       shape: BoxShape.circle,
                       border: Border.all(color: statusColor.withOpacity(0.5)),
                     ),
-                    child: Icon(statusIcon, color: statusColor, size: 16),
+                    child: Icon(statusIcon, color: statusColor, size: 18), // 16 -> 18
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -128,11 +128,11 @@ class MobileRequestCard extends StatelessWidget {
               // معلومات المرسل والتاريخ
               Row(
                 children: [
-                  Icon(Icons.calendar_today_rounded, size: 10, color: AppColors.textSecondary),
-                  const SizedBox(width: 2),
+                  Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary), // 10 -> 14
+                  const SizedBox(width: 6), // 2 -> 6
                   Text(
                     formattedDate,
-                    style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary), // 10 -> 13
                   ),
                 ],
               ),
@@ -229,7 +229,7 @@ class MobileRequestCard extends StatelessWidget {
 
   Widget _buildChip(String text, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 6,2 -> 8,4
       decoration: BoxDecoration(
         color: color.withOpacity(0.2),
         borderRadius: BorderRadius.circular(6),
@@ -238,12 +238,12 @@ class MobileRequestCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 10, color: color),
-          const SizedBox(width: 2),
+          Icon(icon, size: 13, color: color), // 10 -> 13
+          const SizedBox(width: 4), // 2 -> 4
           Text(
-            text.length > 6 ? '${text.substring(0, 6)}...' : text,
+            text.length > 8 ? '${text.substring(0, 8)}...' : text, // 6 -> 8
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 11, // 9 -> 11
               color: color,
               fontWeight: FontWeight.w500,
             ),
@@ -257,7 +257,7 @@ class MobileRequestCard extends StatelessWidget {
     final color = documentsCount > 0 ? AppColors.accentBlue : AppColors.textMuted;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 6,2 -> 8,4
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
@@ -266,12 +266,12 @@ class MobileRequestCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.attach_file_rounded, size: 10, color: color),
-          const SizedBox(width: 2),
+          Icon(Icons.attach_file_rounded, size: 13, color: color), // 10 -> 13
+          const SizedBox(width: 4), // 2 -> 4
           Text(
             documentsCount.toString(),
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 11, // 9 -> 11
               color: color,
               fontWeight: FontWeight.w600,
             ),

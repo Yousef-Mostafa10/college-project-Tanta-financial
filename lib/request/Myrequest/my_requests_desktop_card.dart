@@ -82,7 +82,16 @@ class _MyRequestDesktopCardState extends State<MyRequestDesktopCard> {
     _fetchForwardInfo();
   }
 
+  @override
+  void didUpdateWidget(MyRequestDesktopCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != widget.id || oldWidget.statusText != widget.statusText) {
+      _fetchForwardInfo();
+    }
+  }
+
   Future<void> _fetchForwardInfo() async {
+    setState(() => isLoading = true);
     final data = await widget.api.fetchLastForwardData(widget.id);
     if (mounted) {
       setState(() {

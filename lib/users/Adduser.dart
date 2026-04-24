@@ -128,8 +128,11 @@ class _AddUserPageState extends State<AddUserPage> {
         setState(() => _isLoadingMoreDepartments = false);
       }
     } catch (e) {
-      debugPrint("Error fetching departments: $e");
-      setState(() => _isLoadingMoreDepartments = false);
+      debugPrint("Error: $e");
+      if (mounted) {
+        _showErrorMessage(AppErrorHandler.translateException(context, e));
+        setState(() => _isLoadingMoreDepartments = false);
+      }
     }
   }
 
@@ -191,7 +194,7 @@ class _AddUserPageState extends State<AddUserPage> {
       }
     } catch (e) {
       debugPrint("Error: $e");
-      _showErrorMessage("${AppLocalizations.of(context)!.translate('connection_error')}: $e");
+      _showErrorMessage(AppErrorHandler.translateException(context, e));
     } finally {
       setState(() => _isLoading = false);
     }

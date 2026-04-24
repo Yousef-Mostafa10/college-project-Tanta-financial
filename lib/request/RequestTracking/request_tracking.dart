@@ -68,37 +68,45 @@ class _TransactionTrackingPageState extends State<TransactionTrackingPage> {
   }
 
   Future<void> _fetchTransactionForwards() async {
-    if (_userToken == null) {
-      setState(() {
-        _errorMessage = AppLocalizations.of(context)!.translate('please_login_first');
-        _isLoading = false;
-      });
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _forwards = [];
-      _currentPage = 1;
-      _hasMore = true;
     });
+
+    // إضافة تأخير بسيط للتأكد من ظهور الـ Loading في حالة الضغط على "إعادة المحاولة"
+    // وضمان عدم حدوث الـ UI flicker
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    // جلب التوكن مجدداً للتأكد (خاصة عند إعادة المحاولة بعد الخطأ)
+    await _getUserToken();
+
+    if (_userToken == null) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = AppLocalizations.of(context)!.translate('please_login_first');
+          _isLoading = false;
+        });
+      }
+      return;
+    }
 
     _api = TrackingApi(baseUrl: baseUrl, userToken: _userToken);
     final result = await _api.fetchTransactionForwards(widget.transactionId, page: 1, perPage: 10);
 
-    setState(() {
-      if (result['success'] == true) {
-        _transactionInfo = result['transaction'];
-        _forwards = result['forwards'];
-        final pagination = result['pagination'] as Map<String, dynamic>?;
-        _currentPage = pagination?['currentPage'] ?? 1;
-        _hasMore = pagination?['next'] != null;
-      } else {
-        _errorMessage = AppErrorHandler.translateException(context, result['error']?.toString() ?? '');
-      }
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        if (result['success'] == true) {
+          _transactionInfo = result['transaction'];
+          _forwards = result['forwards'];
+          final pagination = result['pagination'] as Map<String, dynamic>?;
+          _currentPage = pagination?['currentPage'] ?? 1;
+          _hasMore = pagination?['next'] != null;
+        } else {
+          _errorMessage = AppErrorHandler.translateException(context, result['error']);
+        }
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadMoreForwards() async {

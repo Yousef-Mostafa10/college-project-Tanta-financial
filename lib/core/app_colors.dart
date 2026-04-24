@@ -257,6 +257,15 @@ class AppColors {
     end: Alignment.bottomCenter,
   );
 
+  /// FULFILLED — Dedicated gradient for completed/finalized transactions.
+  static LinearGradient get fulfilledGradient => LinearGradient(
+    colors: _isDark
+        ? [const Color(0xFFD48FFF), const Color(0xFF7C3AED)] // Soft Purple to Deep Indigo
+        : [const Color(0xFF818CF8), const Color(0xFF4F46E5)], // Indigo light to deep
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
   /// HALO FIELD — Stat cards and chart headers. Electromagnetic aura above key data.
   static LinearGradient get haloGradient => LinearGradient(
     colors: [
@@ -328,7 +337,7 @@ class AppColors {
   // ℹ️ THE BRAND — Information IS the signal. When waiting: show the live current.
   static Color get statusWaiting   => _isDark ? _liveGlow : _live;
   static Color get statusInfo      => statusWaiting;
-  static Color get statusFulfilled => primary;
+  static Color get statusFulfilled => _isDark ? const Color(0xFFAB8FFF) : const Color(0xFF6366F1);
 
   // ── Companion accents ─────────────────────────────────────────────────
   static Color get accentBlue   => _isDark ? _liveGlow : _live;
@@ -337,7 +346,7 @@ class AppColors {
 
   // ── Role badges ───────────────────────────────────────────────────────
   static Color get roleAdmin      => _isDark ? const Color(0xFFFABD2F) : const Color(0xFF9A5F00);
-  static Color get roleUser       => _isDark ? _board7                  : _paper5;
+  static Color get roleUser       => accentPurple;
   static Color get roleAccountant => accentBlue;
 
   // ── File type identifiers ─────────────────────────────────────────────

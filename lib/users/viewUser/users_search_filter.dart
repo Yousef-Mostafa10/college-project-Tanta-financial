@@ -146,10 +146,33 @@ class _UsersSearchFilterState extends State<UsersSearchFilter> {
           isExpanded: true,
           icon: Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
           items: [
-            DropdownMenuItem(value: 'all', child: Text(AppLocalizations.of(context)!.translate('all'))),
-            DropdownMenuItem(value: 'admin', child: Text(AppLocalizations.of(context)!.translate('administrator'))),
-            DropdownMenuItem(value: 'user', child: Text(AppLocalizations.of(context)!.translate('regular_user'))),
-            DropdownMenuItem(value: 'accountant', child: Text(AppLocalizations.of(context)!.translate('accountant'))),
+            DropdownMenuItem(
+              value: 'all',
+              child: Text(
+                AppLocalizations.of(context)!.locale.languageCode == 'ar' ? 'جميع الصلاحيات' : 'All Roles',
+              ),
+            ),
+            DropdownMenuItem(
+              value: 'admin',
+              child: Text(
+                AppLocalizations.of(context)!.translate('administrator'),
+                style: TextStyle(color: AppColors.roleAdmin, fontWeight: FontWeight.bold),
+              ),
+            ),
+            DropdownMenuItem(
+              value: 'user',
+              child: Text(
+                AppLocalizations.of(context)!.translate('regular_user'),
+                style: TextStyle(color: AppColors.roleUser, fontWeight: FontWeight.bold),
+              ),
+            ),
+            DropdownMenuItem(
+              value: 'accountant',
+              child: Text(
+                AppLocalizations.of(context)!.translate('accountant'),
+                style: TextStyle(color: AppColors.roleAccountant, fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
           onChanged: (val) => widget.onRoleChanged(val!),
         ),
@@ -201,9 +224,26 @@ class _UsersSearchFilterState extends State<UsersSearchFilter> {
           isExpanded: true,
           icon: Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
           items: [
-            DropdownMenuItem(value: 'all', child: Text(AppLocalizations.of(context)!.translate('all'))),
-            DropdownMenuItem(value: 'true', child: Text(AppLocalizations.of(context)!.translate('active') ?? "Active")),
-            DropdownMenuItem(value: 'false', child: Text(AppLocalizations.of(context)!.translate('inactive') ?? "Inactive")),
+            DropdownMenuItem(
+              value: 'all',
+              child: Text(
+                AppLocalizations.of(context)!.locale.languageCode == 'ar' ? 'جميع الحالات' : 'All Statuses',
+              ),
+            ),
+            DropdownMenuItem(
+              value: 'true',
+              child: Text(
+                AppLocalizations.of(context)!.translate('active') ?? "Active",
+                style: TextStyle(color: AppColors.statusApproved, fontWeight: FontWeight.bold),
+              ),
+            ),
+            DropdownMenuItem(
+              value: 'false',
+              child: Text(
+                AppLocalizations.of(context)!.translate('inactive') ?? "Inactive",
+                style: TextStyle(color: AppColors.statusRejected, fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
           onChanged: (val) {
             if (val == 'all') widget.onActiveChanged(null);
@@ -298,7 +338,12 @@ class _DepartmentPickerDialogState extends State<DepartmentPickerDialog> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorHandler.translateException(context, e))),
+        );
+      }
     }
   }
 
@@ -323,7 +368,12 @@ class _DepartmentPickerDialogState extends State<DepartmentPickerDialog> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoadingMore = false);
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorHandler.translateException(context, e))),
+        );
+      }
     }
   }
 

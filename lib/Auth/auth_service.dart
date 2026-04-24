@@ -39,7 +39,7 @@ class AuthService {
       }
     } catch (e) {
       debugPrint('🔴 Login connection error: $e');
-      return {'success': false, 'errorKey': 'connection_error'};
+      return {'success': false, 'errorKey': 'no_internet_error'};
     }
   }
 
@@ -87,7 +87,7 @@ class AuthService {
       }
     } catch (e) {
       debugPrint('🔴 Refresh token error: $e');
-      return {'success': false, 'errorKey': 'connection_error'};
+      return {'success': false, 'errorKey': 'no_internet_error'};
     }
   }
 

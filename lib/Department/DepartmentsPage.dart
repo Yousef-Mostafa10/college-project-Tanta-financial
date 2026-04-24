@@ -28,6 +28,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   List<Map<String, dynamic>> filteredDepartments = [];
   TextEditingController searchController = TextEditingController();
   bool isLoading = true;
+  bool isRefreshing = false;
   String? errorMessage;
 
   // Pagination
@@ -89,19 +90,23 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   }
 
   // 📥 Fetch departments with pagination
-  Future<void> fetchAllDepartments() async {
+  Future<void> fetchAllDepartments({bool fullLoad = true}) async {
     setState(() {
-      isLoading = true;
+      if (fullLoad) {
+        isLoading = true;
+      } else {
+        isRefreshing = true;
+      }
       errorMessage = null;
-      _currentPage = 1;
-      _hasMorePages = true;
-      allDepartments = [];
     });
+
+    // تأخير بسيط لمنح المستخدم إيحاء ببدء العملية خاصة عند تكرار "إعادة المحاولة"
+    await Future.delayed(const Duration(milliseconds: 400));
 
     try {
       final headers = await _getAuthHeaders();
       final response = await _dio.get(
-        '/departments?page=$_currentPage&perPage=10',
+        '/departments?page=1&perPage=10',
         options: Options(headers: headers),
       );
 
@@ -110,30 +115,43 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         List<dynamic> data = responseData['data'] ?? [];
         final pagination = responseData['pagination'];
 
+        if (mounted) {
+          setState(() {
+            _currentPage = 1;
+            allDepartments = data.map((dept) => {
+              'name': dept['name'] ?? '',
+              'managerId': dept['managerId'],
+            }).toList();
+            filteredDepartments = allDepartments;
+            _totalDepartments = pagination?['total'] ?? allDepartments.length;
+
+            if (pagination != null && pagination['next'] != null) {
+              _currentPage = pagination['next'];
+              _hasMorePages = true;
+            } else {
+              _hasMorePages = false;
+            }
+
+            isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
-          allDepartments = data.map((dept) => {
-            'name': dept['name'] ?? '',
-            'managerId': dept['managerId'],
-          }).toList();
-          filteredDepartments = allDepartments;
-          _totalDepartments = pagination?['total'] ?? allDepartments.length;
-
-          if (pagination != null && pagination['next'] != null) {
-            _currentPage = pagination['next'];
-            _hasMorePages = true;
-          } else {
-            _hasMorePages = false;
-          }
-
+          isLoading = false;
+          isRefreshing = false;
+          errorMessage = AppErrorHandler.translateException(context, e);
+        });
+      }
+      print('Error fetching departments: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRefreshing = false;
           isLoading = false;
         });
       }
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-        errorMessage = AppLocalizations.of(context)!.translate('failed_load_depts');
-      });
-      print('Error fetching departments: $e');
     }
   }
 
@@ -206,7 +224,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
     }
 
     setState(() {
-      isLoading = true;
+      isRefreshing = true;
     });
 
     try {
@@ -243,6 +261,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
       setState(() {
         filteredDepartments = [];
         isLoading = false;
+        errorMessage = AppErrorHandler.translateException(context, e);
       });
       print('Search error: $e');
     }
@@ -271,6 +290,8 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           });
           filteredDepartments = allDepartments;
         });
+        
+        fetchAllDepartments(fullLoad: false);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -298,7 +319,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('dept_add_failed')),
+            content: Text(AppErrorHandler.translateException(context, e)),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -356,7 +377,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           if (searchController.text.isEmpty) {
             filteredDepartments = List.from(allDepartments);
           } else {
-            _searchDepartments();
+            fetchAllDepartments(fullLoad: false);
           }
         });
 
@@ -405,6 +426,8 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
           allDepartments.removeWhere((dept) => dept['name'] == name);
           filteredDepartments.removeWhere((dept) => dept['name'] == name);
         });
+
+        fetchAllDepartments(fullLoad: false);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -532,7 +555,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton(
+                          child: ElevatedButton.icon(
                             onPressed: () {
                               if (nameController.text.isNotEmpty) {
                                 addDepartment(
@@ -542,28 +565,38 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                                 Navigator.pop(context);
                               }
                             },
+                            icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 20),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              elevation: 2,
                             ),
-                            child: Text(AppLocalizations.of(context)!.translate('add'), style: TextStyle(color: Colors.black)),
+                            label: Text(
+                              AppLocalizations.of(context)!.translate('add'),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
                           ),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              side: BorderSide(color: AppColors.textMuted),
+                              side: BorderSide(color: AppColors.primary, width: 1.5),
+                              foregroundColor: AppColors.primary,
                             ),
-                            child: Text(AppLocalizations.of(context)!.translate('cancel')),
+                            child: Text(
+                              AppLocalizations.of(context)!.translate('cancel'),
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
                           ),
                         ),
                       ],
@@ -667,7 +700,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton(
+                          child: ElevatedButton.icon(
                             onPressed: () {
                               updateDepartment(
                                 department['name'],
@@ -676,28 +709,38 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                               );
                               Navigator.pop(context);
                             },
+                            icon: const Icon(Icons.save_outlined, color: Colors.white, size: 20),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              elevation: 2,
                             ),
-                            child: Text(AppLocalizations.of(context)!.translate('save_changes')),
+                            label: Text(
+                              AppLocalizations.of(context)!.translate('save_changes'),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
                           ),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              side: BorderSide(color: AppColors.textMuted),
+                              side: BorderSide(color: AppColors.primary, width: 1.5),
+                              foregroundColor: AppColors.primary,
                             ),
-                            child: Text('Cancel'),
+                            child: Text(
+                              AppLocalizations.of(context)!.locale.languageCode == 'ar' ? 'إلغاء' : 'Cancel',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
                           ),
                         ),
                       ],
@@ -1111,13 +1154,15 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh, color: Colors.white),
-            onPressed: fetchAllDepartments,
+            onPressed: () => fetchAllDepartments(fullLoad: false),
             tooltip: AppLocalizations.of(context)!.translate('refresh'),
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
+          Column(
+            children: [
           // 🔍 Search Bar
           Container(
             padding: const EdgeInsets.all(24),
@@ -1213,12 +1258,27 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     ),
                   ),
                   SizedBox(height: 16),
-                  ElevatedButton(
+                  ElevatedButton.icon(
                     onPressed: fetchAllDepartments,
+                    icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 4,
+                      shadowColor: AppColors.primary.withOpacity(0.4),
                     ),
-                    child: Text(AppLocalizations.of(context)!.translate('retry')),
+                    label: Text(
+                      AppLocalizations.of(context)!.translate('retry'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1240,7 +1300,25 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                         : AppLocalizations.of(context)!.translate('no_search_results'),
                     style: TextStyle(
                       fontSize: 16,
-                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: fetchAllDepartments,
+                    icon: const Icon(Icons.sync, color: Colors.white, size: 20),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    label: Text(
+                      AppLocalizations.of(context)!.locale.languageCode == 'ar' ? 'إعادة تحميل' : 'Reload',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ),
                 ],
@@ -1250,10 +1328,10 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                     builder: (context, constraints) {
                       double width = constraints.maxWidth;
                       bool isSmallMobile = width < 360;
-                      int crossAxisCount = width > 1200 ? 5 : (width > 900 ? 4 : (width > 600 ? 3 : 2));
+                      int crossAxisCount = width > 900 ? 4 : (width > 600 ? 3 : 2);
                       
                       // Calculate aspect ratio based on width to ensure content fits
-                      double childAspectRatio = width > 600 ? 1.2 : (isSmallMobile ? 0.8 : 0.95);
+                      double childAspectRatio = width > 600 ? 1.1 : (isSmallMobile ? 0.72 : 0.85);
 
                       return GridView.builder(
                         controller: _scrollController,
@@ -1288,9 +1366,18 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                       );
                     },
                   ),
+            ),
+          ],
+        ),
+        if (isRefreshing)
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(),
           ),
-        ],
-      ),
+      ],
+    ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: SizedBox(
         width: MediaQuery.of(context).size.width,
@@ -1303,7 +1390,7 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
                 child: FloatingActionButton(
                   heroTag: 'dept_add_btn',
                   onPressed: _showAddDepartmentDialog,
-                  backgroundColor: AppColors.accentYellow,
+                  backgroundColor: AppColors.primary,
                   child: Icon(
                     Icons.add,
                     color: Colors.white,
@@ -1364,7 +1451,7 @@ class DepartmentCard extends StatelessWidget {
         children: [
           // Content
           Padding(
-            padding: EdgeInsets.all(isMobile ? 12 : 20),
+            padding: EdgeInsets.all(isMobile ? 10 : 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1387,7 +1474,7 @@ class DepartmentCard extends StatelessWidget {
                 Text(
                   department['name'] ?? AppLocalizations.of(context)!.translate('untitled_dept'),
                   style: TextStyle(
-                    fontSize: isMobile ? 14 : 16,
+                    fontSize: isMobile ? 14 : 18, // زيادة الخط للديسكتوب
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
                   ),
@@ -1424,9 +1511,9 @@ class DepartmentCard extends StatelessWidget {
           ),
 
           // Three dots menu
-          Positioned(
+          PositionedDirectional(
             top: 12,
-            right: 12,
+            end: 12,
             child: PopupMenuButton<String>(
               icon: Icon(
                 Icons.more_vert,

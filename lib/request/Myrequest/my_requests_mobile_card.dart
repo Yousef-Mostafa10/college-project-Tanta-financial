@@ -82,7 +82,16 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
     _fetchForwardInfo();
   }
 
+  @override
+  void didUpdateWidget(MyRequestMobileCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != widget.id || oldWidget.statusText != widget.statusText) {
+      _fetchForwardInfo();
+    }
+  }
+
   Future<void> _fetchForwardInfo() async {
+    setState(() => isLoading = true);
     final data = await widget.api.fetchLastForwardData(widget.id);
     if (mounted) {
       setState(() {
@@ -140,7 +149,7 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
                       shape: BoxShape.circle,
                       border: Border.all(color: widget.statusColor.withOpacity(0.3)),
                     ),
-                    child: Icon(widget.statusIcon, color: widget.statusColor, size: 16),
+                    child: Icon(widget.statusIcon, color: widget.statusColor, size: 18), // 16 -> 18
                   ),
                   SizedBox(width: 8),
                   Expanded(
@@ -178,12 +187,12 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
               // التاريخ
               Row(
                 children: [
-                  Icon(Icons.calendar_today_rounded, size: 12, color: MyRequestsColors.textSecondary),
-                  SizedBox(width: 4),
+                  Icon(Icons.calendar_today_rounded, size: 14, color: MyRequestsColors.textSecondary), // 12 -> 14
+                  SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       widget.date,
-                      style: TextStyle(fontSize: 11, color: MyRequestsColors.textSecondary),
+                      style: TextStyle(fontSize: 13, color: MyRequestsColors.textSecondary), // 11 -> 13
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -488,7 +497,7 @@ Widget _buildMobileActionButton({
 
 Widget _buildMobileChip(String text, IconData icon, Color color) {
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // horizontal 6 -> 8, vertical 2 -> 4
     decoration: BoxDecoration(
       color: color.withOpacity(0.1),
       borderRadius: BorderRadius.circular(6),
@@ -497,12 +506,12 @@ Widget _buildMobileChip(String text, IconData icon, Color color) {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 10, color: color),
-        SizedBox(width: 2),
+        Icon(icon, size: 13, color: color), // 10 -> 13
+        SizedBox(width: 4), // 2 -> 4
         Text(
-          text.length > 6 ? text.substring(0, 6) + '...' : text,
+          text.length > 8 ? text.substring(0, 8) + '...' : text, // 6 -> 8 chars allowed
           style: TextStyle(
-            fontSize: 9,
+            fontSize: 11, // 9 -> 11
             color: color,
             fontWeight: FontWeight.w500,
           ),

@@ -6,6 +6,7 @@ import '../../shared/paginated_type_picker.dart';
 Widget buildMobileFilterSection({
   required BuildContext context,
   required TextEditingController searchController,
+  FocusNode? searchFocusNode, // ✅ إضافة الـ FocusNode
   required String selectedPriority,
   required String selectedType,
   required String selectedStatus,
@@ -38,6 +39,7 @@ Widget buildMobileFilterSection({
         // شريط البحث
         TextField(
           controller: searchController,
+          focusNode: searchFocusNode, // ✅ ربط الـ FocusNode
           decoration: InputDecoration(
             hintText: AppLocalizations.of(context)!.translate('search_transactions'),
             hintStyle: TextStyle(color: MyRequestsColors.textMuted),
@@ -112,45 +114,53 @@ Widget _buildMobileFilterChip({
   required IconData icon,
   required VoidCallback onTap,
 }) {
-  // تحديد لون النص حسب الحالة
+  // تحديد لون النص حسب الحالة أو الأولوية
   Color getTextColor() {
-    if (label == AppLocalizations.of(context)!.translate('status_filter')) {
+    final isStatus = label == AppLocalizations.of(context)!.translate('status_filter');
+    final isPriority = label == AppLocalizations.of(context)!.translate('priority_filter');
+
+    if (isStatus) {
       switch (value.toLowerCase()) {
-        case 'waiting':
-          return MyRequestsColors.statusWaiting;
-        case 'approved':
-          return MyRequestsColors.statusApproved;
-        case 'rejected':
-          return MyRequestsColors.statusRejected;
-        case 'needs change':
-          return MyRequestsColors.statusNeedsChange;
-        case 'fulfilled':
-          return MyRequestsColors.statusFulfilled;
-        default:
-          return MyRequestsColors.textPrimary;
+        case 'waiting': return MyRequestsColors.statusWaiting;
+        case 'approved': return MyRequestsColors.statusApproved;
+        case 'rejected': return MyRequestsColors.statusRejected;
+        case 'needs change': return MyRequestsColors.statusNeedsChange;
+        case 'fulfilled': return MyRequestsColors.statusFulfilled;
+        default: return MyRequestsColors.textPrimary;
+      }
+    } else if (isPriority) {
+      switch (value.toLowerCase()) {
+        case 'high': return MyRequestsColors.statusRejected;
+        case 'medium': return MyRequestsColors.statusPending;
+        case 'low': return MyRequestsColors.statusApproved;
+        default: return MyRequestsColors.primary;
       }
     }
     return MyRequestsColors.textPrimary;
   }
 
-  // تحديد أيقونة حسب الحالة
+  // تحديد أيقونة حسب الحالة أو الأولوية
   IconData getStatusIcon() {
-    if (label == AppLocalizations.of(context)!.translate('status_filter')) {
+    final isStatus = label == AppLocalizations.of(context)!.translate('status_filter');
+    final isPriority = label == AppLocalizations.of(context)!.translate('priority_filter');
+
+    if (isStatus) {
       switch (value.toLowerCase()) {
-        case "approved":
-          return Icons.check_circle_rounded;
-        case "rejected":
-          return Icons.cancel_rounded;
-        case "waiting":
-          return Icons.hourglass_empty_rounded;
-        case "needs change":
-          return Icons.edit_note_rounded;
-        case "fulfilled":
-          return Icons.task_alt_rounded;
-        case "all":
-          return Icons.filter_list_rounded;
-        default:
-          return icon;
+        case "approved": return Icons.check_circle_rounded;
+        case "rejected": return Icons.cancel_rounded;
+        case "waiting": return Icons.hourglass_empty_rounded;
+        case "needs change": return Icons.edit_note_rounded;
+        case "fulfilled": return Icons.task_alt_rounded;
+        case "all": return Icons.filter_list_rounded;
+        default: return icon;
+      }
+    } else if (isPriority) {
+      switch (value.toLowerCase()) {
+        case "high": return Icons.priority_high_rounded;
+        case "medium": return Icons.low_priority_rounded;
+        case "low": return Icons.flag_rounded;
+        case "all": return Icons.filter_list_rounded;
+        default: return icon;
       }
     }
     return icon;
@@ -158,7 +168,9 @@ Widget _buildMobileFilterChip({
 
   // تحديد لون الأيقونة
   Color getIconColor() {
-    if (label == AppLocalizations.of(context)!.translate('status_filter')) {
+    final isStatus = label == AppLocalizations.of(context)!.translate('status_filter');
+    final isPriority = label == AppLocalizations.of(context)!.translate('priority_filter');
+    if (isStatus || isPriority) {
       return getTextColor();
     }
     return MyRequestsColors.primary;

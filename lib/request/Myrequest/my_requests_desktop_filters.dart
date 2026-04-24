@@ -11,6 +11,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
   final List<String> typeNames;
   final List<String> statuses;
   final TextEditingController searchController;
+  final FocusNode? searchFocusNode; // ✅ إضافة الـ FocusNode
   final Function(String?) onPriorityChanged;
   final Function(String?) onTypeChanged;
   final Function(String?) onStatusChanged;
@@ -26,6 +27,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
     required this.typeNames,
     required this.statuses,
     required this.searchController,
+    this.searchFocusNode, // ✅ إضافة الـ FocusNode
     required this.onPriorityChanged,
     required this.onTypeChanged,
     required this.onStatusChanged,
@@ -52,6 +54,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
           ),
           child: TextField(
             controller: searchController,
+            focusNode: searchFocusNode, // ✅ ربط الـ FocusNode
             decoration: InputDecoration(
               hintText: AppLocalizations.of(context)!.translate('search_transactions'),
               hintStyle: TextStyle(color: MyRequestsColors.textMuted),
@@ -179,16 +182,18 @@ class MyRequestsDesktopFilters extends StatelessWidget {
             items: items
                 .map((item) {
                   String displayText = item;
-                  if (item == 'All') displayText = AppLocalizations.of(context)!.translate('all_filter');
-                  if (item == 'All Types') displayText = AppLocalizations.of(context)!.translate('all_types_filter');
-                  if (item == 'Waiting') displayText = AppLocalizations.of(context)!.translate('status_waiting');
-                  if (item == 'Approved') displayText = AppLocalizations.of(context)!.translate('status_approved');
-                  if (item == 'Rejected') displayText = AppLocalizations.of(context)!.translate('status_rejected');
-                  if (item == 'Needs Change') displayText = AppLocalizations.of(context)!.translate('status_needs_editing');
-                  if (item == 'Fulfilled') displayText = AppLocalizations.of(context)!.translate('status_fulfilled');
-                  if (item == 'High') displayText = AppLocalizations.of(context)!.translate('priority_high');
-                  if (item == 'Medium') displayText = AppLocalizations.of(context)!.translate('priority_medium');
-                  if (item == 'Low') displayText = AppLocalizations.of(context)!.translate('priority_low');
+                  if (item == 'All') {
+                    displayText = "$label: ${AppLocalizations.of(context)!.translate('all_filter')}";
+                  }
+                  else if (item == 'All Types') displayText = AppLocalizations.of(context)!.translate('all_types_filter');
+                  else if (item == 'Waiting') displayText = AppLocalizations.of(context)!.translate('status_waiting');
+                  else if (item == 'Approved') displayText = AppLocalizations.of(context)!.translate('status_approved');
+                  else if (item == 'Rejected') displayText = AppLocalizations.of(context)!.translate('status_rejected');
+                  else if (item == 'Needs Change') displayText = AppLocalizations.of(context)!.translate('status_needs_editing');
+                  else if (item == 'Fulfilled') displayText = AppLocalizations.of(context)!.translate('status_fulfilled');
+                  else if (item == 'High') displayText = AppLocalizations.of(context)!.translate('priority_high');
+                  else if (item == 'Medium') displayText = AppLocalizations.of(context)!.translate('priority_medium');
+                  else if (item == 'Low') displayText = AppLocalizations.of(context)!.translate('priority_low');
 
                   return DropdownMenuItem(
                     value: item,
@@ -197,14 +202,14 @@ class MyRequestsDesktopFilters extends StatelessWidget {
                         Icon(
                           _getStatusIcon(context, label, item),
                           size: 18,
-                          color: _getStatusColor(label, item),
+                          color: _getStatusColor(context, label, item),
                         ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             displayText,
                             style: TextStyle(
-                              color: _getStatusTextColor(label, item),
+                              color: _getStatusTextColor(context, label, item),
                               fontWeight: _getStatusFontWeight(label, item),
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -226,7 +231,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
     if (label == AppLocalizations.of(context)!.translate('status_filter')) {
       return _getStatusFilterIcon(item);
     } else if (label == AppLocalizations.of(context)!.translate('priority_filter')) {
-      return Icons.flag_outlined;
+      return _getPriorityIcon(item);
     } else {
       return Icons.category_outlined;
     }
@@ -251,10 +256,35 @@ class MyRequestsDesktopFilters extends StatelessWidget {
     }
   }
 
-  Color _getStatusColor(String label, String item) {
+  IconData _getPriorityIcon(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return Icons.priority_high_rounded;
+      case 'medium':
+        return Icons.low_priority_rounded;
+      case 'low':
+        return Icons.flag_rounded;
+      case 'all':
+        return Icons.filter_list_rounded;
+      default:
+        return Icons.flag_outlined;
+    }
+  }
+
+  Color _getStatusColor(BuildContext context, String label, String item) {
     if (item.toLowerCase() == 'all' || item.toLowerCase() == 'all types') {
       return MyRequestsColors.primary;
     }
+    
+    // Priority colors
+    if (label == AppLocalizations.of(context)!.translate('priority_filter')) {
+        switch (item.toLowerCase()) {
+          case 'high': return MyRequestsColors.statusRejected; // Red
+          case 'medium': return MyRequestsColors.statusPending; // Amber/Orange
+          case 'low': return MyRequestsColors.statusApproved; // Green
+        }
+    }
+
     switch (item.toLowerCase()) {
       case 'approved':
         return MyRequestsColors.statusApproved;
@@ -272,26 +302,12 @@ class MyRequestsDesktopFilters extends StatelessWidget {
     }
   }
 
-  Color _getStatusTextColor(String label, String item) {
+  Color _getStatusTextColor(BuildContext context, String label, String item) {
     if (item == 'All Types' || item == 'All' || item == 'All Priorities') {
       return MyRequestsColors.primary;
     }
 
-    switch (item.toLowerCase()) {
-      case 'approved':
-        return MyRequestsColors.statusApproved;
-      case 'rejected':
-        return MyRequestsColors.statusRejected;
-      case 'waiting':
-        return MyRequestsColors.statusWaiting;
-      case 'needs_change':
-      case 'needs change':
-        return MyRequestsColors.statusNeedsChange;
-      case 'fulfilled':
-        return MyRequestsColors.statusFulfilled;
-      default:
-        return MyRequestsColors.textPrimary;
-    }
+    return _getStatusColor(context, label, item);
   }
 
   FontWeight _getStatusFontWeight(String label, String item) {

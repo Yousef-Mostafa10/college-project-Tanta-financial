@@ -43,6 +43,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   int _currentPage = 1;
   String? _errorMessage;
   bool _showBackToTop = false;
+  final FocusNode _searchFocusNode = FocusNode(); // ✅ للتحكم في حقل البحث
   String? _userName;
   String? _userToken;
   String? _userRole;
@@ -90,6 +91,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     _scrollController.dispose();
     _searchController.dispose();
     _searchDebounce?.cancel();
+    _searchFocusNode.dispose(); // ✅ تنظيف
     super.dispose();
   }
 
@@ -164,22 +166,27 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   }
 
   // 🔹 جلب الطلبات - صفحة واحدة
-  Future<void> _fetchMyRequests() async {
+  Future<void> _fetchMyRequests({bool fullLoad = true}) async {
     if (_userToken == null || _userName == null) {
-      setState(() {
-        _errorMessage = AppLocalizations.of(context)!.translate('please_login_first');
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = AppLocalizations.of(context)!.translate('please_login_first');
+          _isLoading = false;
+        });
+      }
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _requests = [];
-      _currentPage = 1;
-      _hasMore = true;
-    });
+    if (fullLoad) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    } else {
+      setState(() {
+        _errorMessage = null;
+      });
+    }
 
     try {
       final result = await _api.fetchMyRequests(
@@ -212,7 +219,6 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
           _requests = updatedRequests;
           _currentPage = pagination?['currentPage'] ?? 1;
           _hasMore = pagination?['next'] != null;
-          _totalCount = pagination?['total'] ?? _requests.length;
 
           if (summary != null) {
             _waitingCount = summary['WAITING'] ?? 0;
@@ -220,10 +226,12 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
             _rejectedCount = summary['REJECTED'] ?? 0;
             _needsEditingCount = summary['NEEDS_EDITING'] ?? 0;
             _totalCount = _waitingCount + _approvedCount + _rejectedCount + _needsEditingCount;
+          } else {
+             _totalCount = pagination?['total'] ?? _requests.length;
           }
 
-          _applyFilters();
           _isLoading = false;
+          _filteredRequests = List.from(_requests);
         });
 
       } else {
@@ -233,7 +241,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         });
       }
     } catch (e) {
-      print("❌ Error fetching requests: $e");
+      print("❌ Error fetching my requests: $e");
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -285,28 +293,28 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       }
     } catch (e) {
       print("❌ Error loading more: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingMore = false);
     }
-
-    if (mounted) setState(() => _isLoadingMore = false);
   }
 
-  // 🆕 تحديث كارت واحد فقط
+  // 🆕 تحديث كارت واحد فقط في مكانه - بدون إعادة تحميل
   void _updateRequestInList(String requestId, Map<String, dynamic> updates) {
     if (!mounted) return;
     setState(() {
       int index = _requests.indexWhere((r) => r['id'].toString() == requestId);
       if (index != -1) {
         _requests[index] = {..._requests[index], ...updates};
-        _applyFilters();
       }
+      // تحديث القائمة المعروضة مباشرة بدون setState متداخل
+      _filteredRequests = List.from(_requests);
     });
   }
-
 
   // 🔹 تطبيق الفلاتر
   void _applyFilters() {
     setState(() {
-      _filteredRequests = _requests;
+      _filteredRequests = List.from(_requests);
     });
   }
 
@@ -360,14 +368,26 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       final success = await _api.deleteRequest(requestId);
 
       if (success) {
-        _fetchMyRequests(); // إعادة جلب البيانات من السيرفر
+        if (mounted) {
+          setState(() {
+            _requests.removeWhere((r) => r['id'].toString() == requestId);
+            _applyFilters();
+            // تحديث العدد الإجمالي تقريبياً حتى يتم الجلب من السيرفر
+            if (_totalCount > 0) _totalCount--;
+          });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('request_deleted_success')),
-            backgroundColor: Colors.green,
-          ),
-        );
+          // تأخير بسيط لمنح تجربة بصرية سلسة قبل التحديث من السيرفر
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) _fetchMyRequests(fullLoad: false);
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.translate('request_deleted_success')),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -378,7 +398,6 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       }
     } catch (e) {
       if (mounted) {
-        // ترجمة الـ key: TRANSACTION_HAS_FORWARDS, NOT_TRANSACTION_CREATOR, MISSING_ROLE
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppErrorHandler.translateException(context, e)),
@@ -576,18 +595,32 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       },
     ).then((confirmed) async {
       if (confirmed == true && selectedUser != null) {
-        final success = await _api.forwardTransaction(transactionId, selectedUser!, comment: forwardComment);
-        if (success) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(AppLocalizations.of(context)!.translate('transaction_forwarded_success') ?? 'Forwarded successfully'), backgroundColor: Colors.green),
-            );
-            _fetchMyRequests();
+        try {
+          final success = await _api.forwardTransaction(transactionId, selectedUser!, comment: forwardComment);
+          if (success) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(AppLocalizations.of(context)!.translate('transaction_forwarded_success') ?? 'Forwarded successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              _fetchMyRequests(fullLoad: true);
+            }
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(AppLocalizations.of(context)!.translate('failed_to_forward') ?? 'Failed to forward'), backgroundColor: Colors.red),
+              );
+            }
           }
-        } else {
+        } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(AppLocalizations.of(context)!.translate('failed_to_forward') ?? 'Failed to forward'), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(AppErrorHandler.translateException(context, e)),
+                backgroundColor: Colors.red,
+              ),
             );
           }
         }
@@ -706,7 +739,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh_rounded, size: isMobile ? 20 : 24),
-            onPressed: _fetchMyRequests,
+            onPressed: () => _fetchMyRequests(fullLoad: true),
             tooltip: AppLocalizations.of(context)!.translate('refresh'),
           ),
         ],
@@ -734,7 +767,6 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         width: MediaQuery.of(context).size.width,
         child: Stack(
           children: [
-            // زر إضافة طلب - أصبح الآن في جهة اليمين مع مسافة بسيطة عن الحافة
             Align(
               alignment: Alignment.bottomRight,
               child: Padding(
@@ -753,7 +785,6 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                 ),
               ),
             ),
-            // زر الصعود للأعلى - أصبح الآن في المنتصف ويظهر عند السكرول
             if (_showBackToTop)
               Align(
                 alignment: Alignment.bottomCenter,
@@ -775,11 +806,11 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   Widget _buildMobileBody() {
     return Column(
       children: [
-        // 1️⃣ الجزء الثابت عند الأعلى - الإحصائيات من الـ Summary
         buildMobileStatsSection(context, _totalCount, _approvedCount, _rejectedCount, _waitingCount, _needsEditingCount),
         buildMobileFilterSection(
           context: context,
           searchController: _searchController,
+          searchFocusNode: _searchFocusNode,
           selectedPriority: _selectedPriority,
           selectedType: _selectedType,
           selectedStatus: _selectedStatus,
@@ -855,10 +886,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         final id = req["id"].toString();
         final title = req["title"] ?? AppLocalizations.of(context)!.translate('no_title');
         final type = req["typeName"] ?? req["type"]?["name"] ?? AppLocalizations.of(context)!.translate('not_available');
-        String priority = req["priority"] ?? AppLocalizations.of(context)!.translate('not_available');
-        if (priority.toUpperCase() == 'HIGH') priority = AppLocalizations.of(context)!.translate('priority_high');
-        else if (priority.toUpperCase() == 'MEDIUM') priority = AppLocalizations.of(context)!.translate('priority_medium');
-        else if (priority.toUpperCase() == 'LOW') priority = AppLocalizations.of(context)!.translate('priority_low');
+        final priority = req["priority"]?.toString() ?? "low";
 
         final createdAt = req["createdAt"] ?? req["created_at"];
         final formattedDate = MyRequestsHelpers.formatDate(context, createdAt);
@@ -941,6 +969,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
               typeNames: typeNames,
               statuses: statuses,
               searchController: _searchController,
+              searchFocusNode: _searchFocusNode, // ✅ ربط
               onPriorityChanged: (value) {
                 setState(() => _selectedPriority = value!);
                 _fetchMyRequests();
@@ -1005,10 +1034,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
           final id = req["id"].toString();
           final title = req["title"] ?? AppLocalizations.of(context)!.translate('no_title');
           final type = req["typeName"] ?? req["type"]?["name"] ?? AppLocalizations.of(context)!.translate('not_available');
-          String priority = req["priority"] ?? AppLocalizations.of(context)!.translate('not_available');
-          if (priority.toUpperCase() == 'HIGH') priority = AppLocalizations.of(context)!.translate('priority_high');
-          else if (priority.toUpperCase() == 'MEDIUM') priority = AppLocalizations.of(context)!.translate('priority_medium');
-          else if (priority.toUpperCase() == 'LOW') priority = AppLocalizations.of(context)!.translate('priority_low');
+          final priority = req["priority"]?.toString() ?? "low";
 
           final createdAt = req["createdAt"] ?? req["created_at"];
           final formattedDate = MyRequestsHelpers.formatDate(context, createdAt);

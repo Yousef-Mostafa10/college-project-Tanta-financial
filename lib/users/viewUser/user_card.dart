@@ -119,12 +119,14 @@ class UserCard extends StatelessWidget {
                             ? AppLocalizations.of(context)!.translate('accountant')
                             : AppLocalizations.of(context)!.translate('regular_user'),
                     style: TextStyle(
-                      fontSize: isMobile ? 9 : 10,
-                      fontWeight: FontWeight.w600,
+                      fontSize: isMobile ? 8 : 10,
+                      fontWeight: FontWeight.bold,
                       color: UsersHelpers.getRoleColor(user.role),
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
+                // ❌ تم إزالة كلمة اكتف وان اكتف بناء على طلب المستخدم
               ],
             ),
             SizedBox(height: isMobile ? 4 : 6),

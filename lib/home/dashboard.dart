@@ -34,6 +34,7 @@ class _AdministrativeDashboardPageState
   final DashboardAPI _api = DashboardAPI();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _searchFocusNode = FocusNode(); // ✅ للتحكم في بقاء التركيز على البحث
 
   List<dynamic> requests = [];
   List<dynamic> filteredRequests = [];
@@ -98,6 +99,7 @@ class _AdministrativeDashboardPageState
     _scrollController.dispose();
     _searchDebounce?.cancel();
     _searchController.dispose();
+    _searchFocusNode.dispose(); // ✅ تنظيف الـ FocusNode
     super.dispose();
   }
 
@@ -156,14 +158,24 @@ class _AdministrativeDashboardPageState
     try {
       final success = await _api.deleteRequest(requestId);
       if (success) {
-        fetchRequests(page: currentPage);
+        if (mounted) {
+          setState(() {
+            paginatedRequests.removeWhere((r) => r['id'].toString() == requestId);
+            requests.removeWhere((r) => r['id'].toString() == requestId);
+            filteredRequests.removeWhere((r) => r['id'].toString() == requestId);
+            // تحديث العدد الإجمالي تقريبياً
+            if (total > 0) total--;
+          });
+          
+          fetchRequests(page: currentPage, fullLoad: false);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('request_deleted_success')),
-            backgroundColor: AppColors.accentGreen,
-          ),
-        );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.translate('request_deleted_success')),
+              backgroundColor: AppColors.accentGreen,
+            ),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -183,7 +195,7 @@ class _AdministrativeDashboardPageState
   }
 
   Future<void> fetchRequests({int page = 1, bool fullLoad = false}) async {
-    if (fullLoad || requests.isEmpty) {
+    if (fullLoad) {
       setState(() => isLoading = true);
     } else {
       setState(() => isRefreshing = true);
@@ -226,16 +238,16 @@ class _AdministrativeDashboardPageState
       debugPrint("✅ Loaded page $currentPage/$totalPages - ${fetchedTransactions.length} items");
     } catch (e) {
       debugPrint("❌ Exception while fetching data: $e");
-      final rawMsg = e.toString().replaceFirst('Exception: ', '');
-      if (rawMsg.contains('Unauthorized')) {
-        _handleTokenExpired();
-      } else {
-        if (mounted) {
-          final translated = AppLocalizations.of(context)!.translate(rawMsg);
-          final displayMsg = (translated != rawMsg) ? translated : rawMsg;
+      if (mounted) {
+        final errorMsg = AppErrorHandler.translateException(context, e);
+        
+        // Handle token expiration specifically if needed
+        if (e.toString().contains('Unauthorized')) {
+          _handleTokenExpired();
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(displayMsg),
+              content: Text(errorMsg),
               backgroundColor: AppColors.accentRed,
             ),
           );
@@ -318,7 +330,8 @@ class _AdministrativeDashboardPageState
   void _onSearchChanged(String value) {
     if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 500), () {
-      fetchRequests(page: 1, fullLoad: true);
+      // ✅ نستخدم fullLoad: false هنا حتى لا تختفى الواجهة أثناء البحث ويفقد التركيز
+      fetchRequests(page: 1, fullLoad: false);
     });
   }
 
@@ -416,18 +429,18 @@ class _AdministrativeDashboardPageState
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: min(width * 0.04, 20),
-            color: AppColors.sidebarText,
+            color: Colors.white,
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh_rounded, color: AppColors.sidebarText),
+            icon: Icon(Icons.refresh_rounded, color: Colors.white),
             onPressed: fetchRequests,
             tooltip: AppLocalizations.of(context)!.translate('refresh'),
           ),
           IconButton(
             icon: Icon(Icons.notifications_outlined,
-                color: AppColors.sidebarText),
+                color: Colors.white),
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const InboxPage())),
             tooltip: AppLocalizations.of(context)!.translate('notifications'),
@@ -541,6 +554,7 @@ class _AdministrativeDashboardPageState
       ),
       child: TextField(
         controller: _searchController,
+        focusNode: _searchFocusNode, // ✅ ربط الـ FocusNode
         decoration: InputDecoration(
           hintText: AppLocalizations.of(context)!.translate('search_transactions'),
           hintStyle: TextStyle(color: AppColors.textMuted),
@@ -789,6 +803,7 @@ class _AdministrativeDashboardPageState
         children: [
           TextField(
             controller: _searchController,
+            focusNode: _searchFocusNode, // ✅ ربط الـ FocusNode
             decoration: InputDecoration(
               hintText: AppLocalizations.of(context)!.translate('search_transactions'),
               hintStyle: TextStyle(color: AppColors.textMuted),
@@ -880,49 +895,59 @@ class _AdministrativeDashboardPageState
     required VoidCallback onTap,
   }) {
     Color getTextColor() {
-      if (label == AppLocalizations.of(context)!.translate('status')) {
+      final isStatus = label == AppLocalizations.of(context)!.translate('status');
+      final isPriority = label == AppLocalizations.of(context)!.translate('priority');
+      
+      if (isStatus) {
         switch (value.toLowerCase()) {
-          case 'waiting':
-            return AppColors.statusWaiting;
-          case 'approved':
-            return AppColors.statusApproved;
-          case 'rejected':
-            return AppColors.statusRejected;
-          case 'needs change':
-            return AppColors.statusNeedsChange;
-          case 'fulfilled':
-            return AppColors.statusFulfilled;
-          default:
-            return AppColors.textPrimary;
+          case 'waiting': return AppColors.statusWaiting;
+          case 'approved': return AppColors.statusApproved;
+          case 'rejected': return AppColors.statusRejected;
+          case 'needs change': return AppColors.statusNeedsChange;
+          case 'fulfilled': return AppColors.statusFulfilled;
+          default: return AppColors.primary;
+        }
+      } else if (isPriority) {
+        switch (value.toLowerCase()) {
+          case 'high': return AppColors.statusError;
+          case 'medium': return AppColors.statusPending;
+          case 'low': return AppColors.statusApproved;
+          default: return AppColors.primary;
         }
       }
       return AppColors.textPrimary;
     }
 
     IconData getStatusIcon() {
-      if (label == AppLocalizations.of(context)!.translate('status')) {
+      final isStatus = label == AppLocalizations.of(context)!.translate('status');
+      final isPriority = label == AppLocalizations.of(context)!.translate('priority');
+
+      if (isStatus) {
         switch (value.toLowerCase()) {
-          case "approved":
-            return Icons.check_circle_rounded;
-          case "rejected":
-            return Icons.cancel_rounded;
-          case "waiting":
-            return Icons.hourglass_empty_rounded;
-          case "needs change":
-            return Icons.edit_note_rounded;
-          case "fulfilled":
-            return Icons.task_alt_rounded;
-          case "all":
-            return Icons.filter_list_rounded;
-          default:
-            return icon;
+          case "approved": return Icons.check_circle_rounded;
+          case "rejected": return Icons.cancel_rounded;
+          case "waiting": return Icons.hourglass_empty_rounded;
+          case "needs change": return Icons.edit_note_rounded;
+          case "fulfilled": return Icons.task_alt_rounded;
+          case "all": return Icons.filter_list_rounded;
+          default: return icon;
+        }
+      } else if (isPriority) {
+        switch (value.toLowerCase()) {
+          case "high": return Icons.priority_high_rounded;
+          case "medium": return Icons.low_priority_rounded;
+          case "low": return Icons.flag_rounded;
+          case "all": return Icons.filter_list_rounded;
+          default: return icon;
         }
       }
       return icon;
     }
 
     Color getIconColor() {
-      if (label == AppLocalizations.of(context)!.translate('status')) {
+      final isStatus = label == AppLocalizations.of(context)!.translate('status');
+      final isPriority = label == AppLocalizations.of(context)!.translate('priority');
+      if (isStatus || isPriority) {
         return getTextColor();
       }
       return AppColors.primary;
@@ -1005,22 +1030,37 @@ class _AdministrativeDashboardPageState
                     ),
                   ),
                 ),
-                ...options.map((option) => ListTile(
-                  leading: Icon(
-                    Icons.check_rounded,
-                    color: option == currentValue
-                        ? AppColors.primary
-                        : Colors.transparent,
-                  ),
-                  title: Text(
-                      AppLocalizations.of(context)!.translate(option.toLowerCase().replaceAll(' ', '_')),
-                      style: TextStyle(color: AppColors.textPrimary)
-                  ),
-                  onTap: () {
-                    onSelected(option);
-                    Navigator.pop(context);
-                  },
-                )),
+                const Divider(),
+                ...options.map((option) {
+                  bool isSelected = option == currentValue;
+                  Color itemColor = AppColors.textPrimary;
+                  IconData itemIcon = Icons.circle_outlined;
+
+                  // تحديد الألوان والأيقونات للقائمة
+                  if (title == AppLocalizations.of(context)!.translate('select_status')) {
+                    itemColor = _getStatusColor(option);
+                    itemIcon = _getStatusFilterIcon(option);
+                  } else if (title == AppLocalizations.of(context)!.translate('select_priority')) {
+                    itemColor = _getPriorityColor(option);
+                    itemIcon = _getPriorityIcon(option);
+                  }
+
+                  return ListTile(
+                    leading: Icon(itemIcon, color: itemColor, size: 22),
+                    title: Text(
+                      AppLocalizations.of(context)?.translate(option.toLowerCase().replaceAll(' ', '_')) ?? option,
+                      style: TextStyle(
+                        color: isSelected ? AppColors.primary : itemColor,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      ),
+                    ),
+                    trailing: isSelected ? Icon(Icons.check_circle, color: AppColors.primary, size: 20) : null,
+                    onTap: () {
+                      onSelected(option);
+                      Navigator.pop(context);
+                    },
+                  );
+                }),
                 const SizedBox(height: 16),
               ],
             ),
@@ -1111,5 +1151,76 @@ class _AdministrativeDashboardPageState
     );
   }
 
+  // دالة إرجاع لون الحالة
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'all':
+        return AppColors.primary; // أزرق
+      case 'waiting':
+        return AppColors.statusWaiting; // أصفر
+      case 'approved':
+        return AppColors.statusApproved; // أخضر
+      case 'rejected':
+        return AppColors.statusRejected; // أحمر
+      case 'fulfilled':
+        return AppColors.statusFulfilled; // بنفسجي
+      case 'needs change':
+        return AppColors.statusNeedsChange; // برتقالي
+      default:
+        return AppColors.textPrimary; // رمادي
+    }
+  }
+
+  // دالة إرجاع أيقونة الحالة
+  IconData _getStatusFilterIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'all':
+        return Icons.filter_list_rounded;
+      case 'waiting':
+        return Icons.hourglass_empty_rounded;
+      case 'approved':
+        return Icons.check_circle_rounded;
+      case 'rejected':
+        return Icons.cancel_rounded;
+      case 'fulfilled':
+        return Icons.task_alt_rounded;
+      case 'needs change':
+        return Icons.edit_note_rounded;
+      default:
+        return Icons.hourglass_top_outlined;
+    }
+  }
+
+  // دالة إرجاع لون الأولوية
+  Color _getPriorityColor(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return AppColors.statusError; // أحمر
+      case 'medium':
+        return AppColors.statusPending; // برتقالي
+      case 'low':
+        return AppColors.statusApproved; // أخضر
+      case 'all':
+        return AppColors.primary;
+      default:
+        return AppColors.textPrimary;
+    }
+  }
+
+  // دالة إرجاع أيقونة الأولوية
+  IconData _getPriorityIcon(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return Icons.priority_high_rounded;
+      case 'medium':
+        return Icons.low_priority_rounded;
+      case 'low':
+        return Icons.flag_rounded;
+      case 'all':
+        return Icons.filter_list_rounded;
+      default:
+        return Icons.flag_outlined;
+    }
+  }
 }
 

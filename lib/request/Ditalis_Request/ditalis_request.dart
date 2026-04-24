@@ -192,6 +192,14 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       }
     } catch (e) {
       debugPrint('❌ Error fetching document details: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppErrorHandler.translateException(context, e)),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
     } finally {
       setState(() {
         _isLoadingPreviousDocs = false;
@@ -237,6 +245,14 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       }
     } catch (e) {
       debugPrint('❌ Error fetching forwards: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppErrorHandler.translateException(context, e)),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
     } finally {
       setState(() => _isLoadingForwards = false);
     }
@@ -318,6 +334,14 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       }
     } catch (e) {
       debugPrint('❌ Error fetching budgets: $e');
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppErrorHandler.translateException(context, e)),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
     } finally {
       setState(() => _isLoadingBudgets = false);
     }
@@ -620,18 +644,12 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   void _showFulfillmentDialog() {
     String? selectedBudget;
     final TextEditingController amountController = TextEditingController();
+    final numberFormatter = NumberFormat('#,###.##');
     
     // إذا لم يتم تحميل الميزانيات بعد، نحاول تحميلها
     if (_budgets.isEmpty && !_isLoadingBudgets) {
       _fetchBudgets();
     }
-
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDarkMode ? Colors.white : AppColors.textPrimary;
-    final subTextColor = isDarkMode ? Colors.white70 : AppColors.textSecondary;
-    final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-    final inputFillColor = isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[50];
-    final borderColor = isDarkMode ? Colors.white24 : Colors.grey[300];
 
     showDialog(
       context: context,
@@ -646,11 +664,11 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: cardColor,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: isDarkMode ? Colors.black45 : Colors.black26, 
+                      color: AppColors.shadowColor, 
                       blurRadius: 10, 
                       offset: const Offset(0, 10)
                     )
@@ -665,19 +683,19 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.accentGreen.withOpacity(0.1),
+                            color: AppColors.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(Icons.check_circle_rounded, color: AppColors.accentGreen, size: 28),
+                          child: Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 28),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            AppLocalizations.of(context)!.translate('confirm_completion') ?? 'تأكيد اكتمال الطلب',
+                            AppLocalizations.of(context)!.translate('confirm_completion'),
                             style: TextStyle(
                               fontSize: 20, 
                               fontWeight: FontWeight.bold, 
-                              color: textColor
+                              color: AppColors.textPrimary
                             ),
                           ),
                         ),
@@ -685,20 +703,20 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      AppLocalizations.of(context)!.translate('budget_used') ?? 'الميزانية المستخدمة',
+                      AppLocalizations.of(context)!.translate('budget_used'),
                       style: TextStyle(
                         fontSize: 14, 
                         fontWeight: FontWeight.w600, 
-                        color: subTextColor
+                        color: AppColors.textSecondary
                       ),
                     ),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: inputFillColor,
+                        color: AppColors.background.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: borderColor!),
+                        border: Border.all(color: AppColors.borderColor),
                       ),
                       child: _isLoadingBudgets
                           ? Padding(
@@ -710,13 +728,13 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                                     height: 20, 
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2, 
-                                      color: isDarkMode ? AppColors.accentGreen : AppColors.primary
+                                      color: AppColors.primary
                                     )
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
-                                    AppLocalizations.of(context)!.translate('loading_budgets') ?? 'جاري تحميل الميزانيات...',
-                                    style: TextStyle(color: textColor),
+                                    AppLocalizations.of(context)!.translate('loading_budgets'),
+                                    style: TextStyle(color: AppColors.textPrimary),
                                   ),
                                 ],
                               ),
@@ -725,25 +743,29 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                               child: DropdownButton<String>(
                                 value: selectedBudget,
                                 hint: Text(
-                                  AppLocalizations.of(context)!.translate('select_budget') ?? 'اختر الميزانية',
-                                  style: TextStyle(color: subTextColor),
+                                  AppLocalizations.of(context)!.translate('select_budget'),
+                                  style: TextStyle(color: AppColors.textMuted),
                                 ),
                                 isExpanded: true,
-                                dropdownColor: cardColor,
-                                icon: Icon(Icons.account_balance_wallet_outlined, color: AppColors.accentGreen),
+                                dropdownColor: AppColors.surface,
+                                icon: Icon(Icons.account_balance_wallet_outlined, color: AppColors.primary),
                                 items: _budgets.map((budget) {
+                                  final double available = budget['available'] ?? 0.0;
                                   return DropdownMenuItem<String>(
                                     value: budget['name'],
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(
-                                          budget['name'], 
-                                          style: TextStyle(fontSize: 14, color: textColor)
+                                        Expanded(
+                                          child: Text(
+                                            budget['name'], 
+                                            style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                         Text(
-                                          '${budget['available']} ${AppLocalizations.of(context)!.translate('remaining') ?? 'متبقي'}', 
-                                          style: TextStyle(fontSize: 12, color: subTextColor)
+                                          '${numberFormatter.format(available)} ${AppLocalizations.of(context)!.translate('remaining')}', 
+                                          style: TextStyle(fontSize: 12, color: AppColors.textMuted)
                                         ),
                                       ],
                                     ),
@@ -757,11 +779,11 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      AppLocalizations.of(context)!.translate('amount_to_allocate') ?? 'المبلغ المراد تخصيصه',
+                      AppLocalizations.of(context)!.translate('amount_to_allocate'),
                       style: TextStyle(
                         fontSize: 14, 
                         fontWeight: FontWeight.w600, 
-                        color: subTextColor
+                        color: AppColors.textSecondary
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -769,16 +791,16 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                       controller: amountController,
                       keyboardType: TextInputType.number,
                       autofocus: true,
-                      style: TextStyle(color: textColor),
+                      style: TextStyle(color: AppColors.textPrimary),
                       decoration: InputDecoration(
-                        hintText: AppLocalizations.of(context)!.translate('enter_amount_hint') ?? 'أدخل المبلغ هنا',
-                        hintStyle: TextStyle(color: subTextColor.withOpacity(0.5)),
-                        prefixIcon: Icon(Icons.monetization_on_outlined, color: AppColors.accentGreen),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.accentGreen)),
+                        hintText: AppLocalizations.of(context)!.translate('enter_amount_hint'),
+                        hintStyle: TextStyle(color: AppColors.textMuted),
+                        prefixIcon: Icon(Icons.monetization_on_outlined, color: AppColors.primary),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.primary)),
                         filled: true,
-                        fillColor: inputFillColor,
+                        fillColor: AppColors.background.withOpacity(0.5),
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -788,14 +810,14 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                           child: ElevatedButton(
                             onPressed: () => Navigator.pop(context),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isDarkMode ? Colors.white12 : Colors.grey[200],
-                              foregroundColor: textColor,
+                              backgroundColor: AppColors.background,
+                              foregroundColor: AppColors.textPrimary,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
                             ),
                             child: Text(
-                              AppLocalizations.of(context)!.translate('cancel') ?? 'إلغاء', 
+                              AppLocalizations.of(context)!.translate('cancel'), 
                               style: const TextStyle(fontWeight: FontWeight.bold)
                             ),
                           ),
@@ -804,37 +826,29 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () {
-                              if (selectedBudget == null) {
+                              final amount = double.tryParse(amountController.text.trim());
+                              if (selectedBudget != null && amount != null && amount > 0) {
+                                Navigator.pop(context);
+                                _markAsFulfilled(selectedBudget!, amount);
+                              } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text(AppLocalizations.of(context)!.translate('please_select_budget') ?? 'يرجى اختيار الميزانية'), 
-                                    backgroundColor: Colors.orange
+                                    content: Text(AppLocalizations.of(context)!.translate('please_fill_all_fields')),
+                                    backgroundColor: AppColors.accentRed,
                                   ),
                                 );
-                                return;
                               }
-                              final amount = double.tryParse(amountController.text) ?? 0.0;
-                              if (amount <= 0) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(AppLocalizations.of(context)!.translate('please_enter_valid_amount') ?? 'يرجى إدخال مبلغ صحيح'), 
-                                    backgroundColor: Colors.orange
-                                  ),
-                                );
-                                return;
-                              }
-                              Navigator.pop(context);
-                              _markAsFulfilled(selectedBudget!, amount);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accentGreen,
+                              backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
-                              elevation: 0,
+                              elevation: 4,
+                              shadowColor: AppColors.primary.withOpacity(0.4),
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                             child: Text(
-                              AppLocalizations.of(context)!.translate('confirm_and_complete') ?? 'تأكيد واكمال', 
+                              AppLocalizations.of(context)!.translate('confirm'), 
                               style: const TextStyle(fontWeight: FontWeight.bold)
                             ),
                           ),
@@ -874,14 +888,10 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         height: isMobile ? 50 : 56,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: [Color(0xFF2E7D32), AppColors.accentGreen],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
+          gradient: AppColors.fulfilledGradient,
           boxShadow: [
             BoxShadow(
-              color: AppColors.accentGreen.withOpacity(0.3),
+              color: AppColors.statusFulfilled.withOpacity(0.3),
               blurRadius: 8,
               offset: Offset(0, 4),
             ),
@@ -1041,7 +1051,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         : AppLocalizations.of(context)!.translate('waiting');
     
     // 🔥 تغيير اللون إلى الأزرق للحالة Waiting
-    final statusColor = fulfilled ? AppColors.accentGreen : AppColors.accentBlue;
+    final statusColor = fulfilled ? AppColors.statusFulfilled : AppColors.accentBlue;
 
     // ✅ محاولة استخراج الاسم من كل المفاتيح الممكنة لضمان عدم ظهور Unknown
     final creator = data["creatorName"] ?? 

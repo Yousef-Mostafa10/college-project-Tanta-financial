@@ -75,7 +75,7 @@ Widget buildArchiveMobileCard({
                       shape: BoxShape.circle,
                       border: Border.all(color: statusColor.withOpacity(0.3)),
                     ),
-                    child: Icon(statusIcon, color: statusColor, size: 16),
+                    child: Icon(statusIcon, color: statusColor, size: 18), // 16 -> 18
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -113,12 +113,12 @@ Widget buildArchiveMobileCard({
               // التاريخ
               Row(
                 children: [
-                  Icon(Icons.calendar_today_rounded, size: 12, color: ArchiveColors.textSecondary),
-                  const SizedBox(width: 4),
+                  Icon(Icons.calendar_today_rounded, size: 14, color: ArchiveColors.textSecondary), // 12 -> 14
+                  const SizedBox(width: 6), // 4 -> 6
                   Expanded(
                     child: Text(
                       date,
-                      style: TextStyle(fontSize: 11, color: ArchiveColors.textSecondary),
+                      style: TextStyle(fontSize: 13, color: ArchiveColors.textSecondary), // 11 -> 13
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -161,12 +161,12 @@ Widget buildArchiveMobileCard({
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.edit_outlined, size: 12, color: ArchiveColors.accentYellow),
+                          Icon(Icons.edit_outlined, size: 14, color: ArchiveColors.accentYellow), // 12 -> 14
                           const SizedBox(width: 4),
                           Text(
                             AppLocalizations.of(context)!.translate('edit'),
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 11, // 10 -> 11
                               color: ArchiveColors.accentYellow,
                               fontWeight: FontWeight.w600,
                             ),
@@ -197,12 +197,12 @@ Widget buildArchiveMobileCard({
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.remove_red_eye_outlined, size: 12, color: ArchiveColors.primary),
+                          Icon(Icons.remove_red_eye_outlined, size: 14, color: ArchiveColors.primary), // 12 -> 14
                           const SizedBox(width: 4),
                           Text(
                             AppLocalizations.of(context)!.translate('view_details'),
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 11, // 10 -> 11
                               color: ArchiveColors.primary,
                               fontWeight: FontWeight.w600,
                             ),
@@ -223,7 +223,7 @@ Widget buildArchiveMobileCard({
 
 Widget _buildMobileChip(String text, IconData icon, Color color) {
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 6,2 -> 8,4
     decoration: BoxDecoration(
       color: color.withOpacity(0.1),
       borderRadius: BorderRadius.circular(6),
@@ -232,12 +232,12 @@ Widget _buildMobileChip(String text, IconData icon, Color color) {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 10, color: color),
-        const SizedBox(width: 2),
+        Icon(icon, size: 13, color: color), // 10 -> 13
+        const SizedBox(width: 4), // 2 -> 4
         Text(
-          text.length > 6 ? text.substring(0, 6) + '...' : text,
+          text.length > 8 ? text.substring(0, 8) + '...' : text, // 6 -> 8
           style: TextStyle(
-            fontSize: 9,
+            fontSize: 11, // 9 -> 11
             color: color,
             fontWeight: FontWeight.w500,
           ),

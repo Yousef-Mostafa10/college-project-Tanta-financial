@@ -39,7 +39,9 @@ class _ArchivePageState extends State<ArchivePage> {
   String? _errorMessage;
   String? _userToken;
   Timer? _searchDebounce;
+  bool _isRefreshing = false; // ✅ للتحكم في التحميل البسيط دون إخفاء الواجهة
   bool _showBackToTop = false;
+  final FocusNode _searchFocusNode = FocusNode(); // ✅ للتحكم في حقل البحث
 
   // إحصائيات من الـ API Summary
   int _totalCount = 0;
@@ -72,6 +74,7 @@ class _ArchivePageState extends State<ArchivePage> {
     _scrollController.dispose();
     _searchController.dispose();
     _searchDebounce?.cancel();
+    _searchFocusNode.dispose(); // ✅ تنظيف
     super.dispose();
   }
 
@@ -133,7 +136,7 @@ class _ArchivePageState extends State<ArchivePage> {
   }
 
   // 🔹 جلب العمليات
-  Future<void> _fetchArchiveRequests() async {
+  Future<void> _fetchArchiveRequests({bool fullLoad = true}) async {
     if (_userToken == null) {
       setState(() {
         _errorMessage = AppLocalizations.of(context)!.translate('please_login_first');
@@ -143,11 +146,9 @@ class _ArchivePageState extends State<ArchivePage> {
     }
 
     setState(() {
-      _isLoading = true;
+      if (fullLoad) _isLoading = true;
+      _isRefreshing = true;
       _errorMessage = null;
-      _requests = [];
-      _currentPage = 1;
-      _hasMore = true;
     });
 
     try {
@@ -168,7 +169,6 @@ class _ArchivePageState extends State<ArchivePage> {
           _requests = result['data'] ?? [];
           _currentPage = pagination?['currentPage'] ?? 1;
           _hasMore = pagination?['next'] != null;
-          _totalCount = pagination?['total'] ?? _requests.length;
 
           // إحصائيات من الـ Summary
           if (summary != null) {
@@ -177,23 +177,27 @@ class _ArchivePageState extends State<ArchivePage> {
             _rejectedCount = summary['REJECTED'] ?? 0;
             _needsEditingCount = summary['NEEDS_EDITING'] ?? 0;
             _totalCount = _waitingCount + _approvedCount + _rejectedCount + _needsEditingCount;
+          } else {
+            _totalCount = pagination?['total'] ?? _requests.length;
           }
 
           _applyFilters();
-          _isLoading = false;
         });
       } else {
         setState(() {
-          _isLoading = false;
           final String errString = result['error']?.toString() ?? 'failed_load_requests';
           _errorMessage = AppErrorHandler.translateException(context, errString);
         });
       }
     } catch (e) {
-      print("❌ Error fetching archive requests: $e");
+      print("❌ Error fetching archive: $e");
+      setState(() {
+        _errorMessage = AppErrorHandler.translateException(context, e);
+      });
+    } finally {
       setState(() {
         _isLoading = false;
-        _errorMessage = AppLocalizations.of(context)!.translate('failed_load_requests');
+        _isRefreshing = false;
       });
     }
   }
@@ -228,9 +232,9 @@ class _ArchivePageState extends State<ArchivePage> {
       }
     } catch (e) {
       print("❌ Error loading more: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingMore = false);
     }
-
-    if (mounted) setState(() => _isLoadingMore = false);
   }
 
   void _scrollToTop() {
@@ -252,7 +256,7 @@ class _ArchivePageState extends State<ArchivePage> {
   void _onSearchChanged(String value) {
     if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 500), () {
-      _fetchArchiveRequests();
+      _fetchArchiveRequests(fullLoad: false);
     });
   }
 
@@ -302,25 +306,79 @@ class _ArchivePageState extends State<ArchivePage> {
                       ),
                     ),
                   ),
-                ...options.map((option) {
+                  ...options.map((option) {
                     String displayText = option;
-                    if (option == 'All') displayText = AppLocalizations.of(context)!.translate('all_filter');
-                    if (option == 'All Types') displayText = AppLocalizations.of(context)!.translate('all_types_filter');
-                    if (option == 'Waiting') displayText = AppLocalizations.of(context)!.translate('waiting');
-                    if (option == 'Approved') displayText = AppLocalizations.of(context)!.translate('approved');
-                    if (option == 'Rejected') displayText = AppLocalizations.of(context)!.translate('rejected');
-                    if (option == 'Needs Change') displayText = AppLocalizations.of(context)!.translate('needs_change');
-                    if (option == 'Fulfilled') displayText = AppLocalizations.of(context)!.translate('fulfilled');
-                    if (option == 'High') displayText = AppLocalizations.of(context)!.translate('priority_high');
-                    if (option == 'Medium') displayText = AppLocalizations.of(context)!.translate('priority_medium');
-                    if (option == 'Low') displayText = AppLocalizations.of(context)!.translate('priority_low');
+                    Color itemColor = ArchiveColors.textPrimary;
+                    IconData itemIcon = Icons.circle_outlined;
+
+                    // ترجمة النص وتحديد الألوان والأيقونات
+                    if (option == 'All') {
+                      String labelKey = title == AppLocalizations.of(context)!.translate('select_priority') ? 'priority_filter' : 'status_filter';
+                      displayText = "${AppLocalizations.of(context)!.translate(labelKey)}: ${AppLocalizations.of(context)!.translate('all_filter')}";
+                      itemColor = ArchiveColors.primary;
+                      itemIcon = Icons.filter_list_rounded;
+                    }
+                    else if (option == 'All Types') {
+                      displayText = AppLocalizations.of(context)!.translate('all_types_filter');
+                      itemColor = ArchiveColors.primary;
+                      itemIcon = Icons.category_rounded;
+                    }
+                    else if (option == 'Waiting') {
+                      displayText = AppLocalizations.of(context)!.translate('waiting');
+                      itemColor = ArchiveColors.statusWaiting;
+                      itemIcon = Icons.hourglass_empty_rounded;
+                    }
+                    else if (option == 'Approved') {
+                      displayText = AppLocalizations.of(context)!.translate('approved');
+                      itemColor = ArchiveColors.statusApproved;
+                      itemIcon = Icons.check_circle_rounded;
+                    }
+                    else if (option == 'Rejected') {
+                      displayText = AppLocalizations.of(context)!.translate('rejected');
+                      itemColor = ArchiveColors.statusRejected;
+                      itemIcon = Icons.cancel_rounded;
+                    }
+                    else if (option == 'Needs Change') {
+                      displayText = AppLocalizations.of(context)!.translate('needs_change');
+                      itemColor = ArchiveColors.statusNeedsChange;
+                      itemIcon = Icons.edit_note_rounded;
+                    }
+                    else if (option == 'Fulfilled') {
+                      displayText = AppLocalizations.of(context)!.translate('fulfilled');
+                      itemColor = ArchiveColors.statusFulfilled;
+                      itemIcon = Icons.task_alt_rounded;
+                    }
+                    else if (option == 'High') {
+                      displayText = AppLocalizations.of(context)!.translate('priority_high');
+                      itemColor = ArchiveColors.statusRejected;
+                      itemIcon = Icons.priority_high_rounded;
+                    }
+                    else if (option.toLowerCase() == 'medium') {
+                      displayText = AppLocalizations.of(context)!.translate('priority_medium');
+                      itemColor = ArchiveColors.statusPending;
+                      itemIcon = Icons.low_priority_rounded;
+                    }
+                    else if (option == 'Low') {
+                      displayText = AppLocalizations.of(context)!.translate('priority_low');
+                      itemColor = ArchiveColors.statusApproved;
+                      itemIcon = Icons.flag_rounded;
+                    }
+
+                    bool isSelected = option == currentValue;
 
                     return ListTile(
                       leading: Icon(
-                        Icons.check_rounded,
-                        color: option == currentValue ? ArchiveColors.primary : Colors.transparent,
+                        itemIcon,
+                        color: isSelected ? ArchiveColors.primary : itemColor,
                       ),
-                      title: Text(displayText, style: TextStyle(color: ArchiveColors.textPrimary)),
+                      title: Text(
+                        displayText, 
+                        style: TextStyle(
+                          color: isSelected ? ArchiveColors.primary : itemColor,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        )
+                      ),
+                      trailing: isSelected ? Icon(Icons.check_circle, color: ArchiveColors.primary) : null,
                       onTap: () {
                         Navigator.pop(context);
                         onSelected(option);
@@ -388,7 +446,7 @@ class _ArchivePageState extends State<ArchivePage> {
           : Stack(
               children: [
                 isMobile ? _buildMobileBody() : _buildDesktopBody(),
-                if (_isLoadingMore)
+                if (_isRefreshing)
                   Positioned(
                     top: 0,
                     left: 0,
@@ -424,6 +482,7 @@ class _ArchivePageState extends State<ArchivePage> {
         buildMobileFilterSection(
           context: context,
           searchController: _searchController,
+          searchFocusNode: _searchFocusNode, // ✅ ربط
           selectedPriority: _selectedPriority,
           selectedType: _selectedType,
           selectedStatus: _selectedStatus,
@@ -520,6 +579,7 @@ class _ArchivePageState extends State<ArchivePage> {
               typeNames: typeNames,
               statuses: statuses,
               searchController: _searchController,
+              searchFocusNode: _searchFocusNode, // ✅ ربط
               onPriorityChanged: (value) {
                 setState(() => _selectedPriority = value!);
                 _fetchArchiveRequests();
@@ -587,10 +647,7 @@ class _ArchivePageState extends State<ArchivePage> {
     final id = req["id"].toString();
     final title = req["title"] ?? AppLocalizations.of(context)!.translate('no_title');
     final type = req["typeName"] ?? req["type"]?["name"] ?? AppLocalizations.of(context)!.translate('n_a');
-    String priority = req["priority"] ?? AppLocalizations.of(context)!.translate('not_available');
-    if (priority.toUpperCase() == 'HIGH') priority = AppLocalizations.of(context)!.translate('priority_high');
-    else if (priority.toUpperCase() == 'MEDIUM') priority = AppLocalizations.of(context)!.translate('priority_medium');
-    else if (priority.toUpperCase() == 'LOW') priority = AppLocalizations.of(context)!.translate('priority_low');
+    final priority = req["priority"]?.toString() ?? "low";
 
     final createdAt = req["createdAt"] ?? req["created_at"];
     final formattedDate = MyRequestsHelpers.formatDate(context, createdAt);

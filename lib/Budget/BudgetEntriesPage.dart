@@ -208,11 +208,13 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
         });
       }
     } catch (e) {
-      setState(() {
-        isLoading = reset ? false : isLoading;
-        _isLoadingMore = false;
-        if (reset) errorMessage = AppLocalizations.of(context)!.translate('failed_load_entries');
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = reset ? false : isLoading;
+          _isLoadingMore = false;
+          if (reset) errorMessage = AppErrorHandler.translateException(context, e);
+        });
+      }
       debugPrint('Error fetching entries: $e');
     }
   }
@@ -423,7 +425,7 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
             ),
           ],
         ),
-        backgroundColor: EntryColors.sidebarBg,
+        backgroundColor: EntryColors.primary,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
