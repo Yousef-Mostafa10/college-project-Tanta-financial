@@ -140,75 +140,61 @@ Widget buildArchiveMobileCard({
                     documentsCount > 0 ? ArchiveColors.accentBlue : ArchiveColors.textMuted,
                   ),
                   const Spacer(),
-                  // زر التعديل
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => EditRequestPage(requestId: id),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: ArchiveColors.accentYellow.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: ArchiveColors.accentYellow.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.edit_outlined, size: 14, color: ArchiveColors.accentYellow), // 12 -> 14
-                          const SizedBox(width: 4),
-                          Text(
-                            AppLocalizations.of(context)!.translate('edit'),
-                            style: TextStyle(
-                              fontSize: 11, // 10 -> 11
-                              color: ArchiveColors.accentYellow,
-                              fontWeight: FontWeight.w600,
-                            ),
+                  // القائمة المنبثقة (الثلاث نقاط)
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditRequestPage(requestId: id),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  // زر عرض التفاصيل فقط
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CourseApprovalRequestPage(requestId: id),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: ArchiveColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: ArchiveColors.primary.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.remove_red_eye_outlined, size: 14, color: ArchiveColors.primary), // 12 -> 14
-                          const SizedBox(width: 4),
-                          Text(
-                            AppLocalizations.of(context)!.translate('view_details'),
-                            style: TextStyle(
-                              fontSize: 11, // 10 -> 11
-                              color: ArchiveColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        );
+                      } else if (value == 'view') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CourseApprovalRequestPage(requestId: id),
                           ),
-                        ],
+                        );
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'view',
+                        child: Row(
+                          children: [
+                            Icon(Icons.remove_red_eye_outlined, size: 20, color: ArchiveColors.primary),
+                            const SizedBox(width: 10),
+                            Text(
+                              AppLocalizations.of(context)!.translate('view_details'),
+                              style: TextStyle(fontSize: 14, color: ArchiveColors.textPrimary),
+                            ),
+                          ],
+                        ),
                       ),
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 20, color: ArchiveColors.accentYellow),
+                            const SizedBox(width: 10),
+                            Text(
+                              AppLocalizations.of(context)!.translate('edit'),
+                              style: TextStyle(fontSize: 14, color: ArchiveColors.textPrimary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: ArchiveColors.primary.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: ArchiveColors.primary.withOpacity(0.1)),
+                      ),
+                      child: Icon(Icons.more_vert_rounded, color: ArchiveColors.primary, size: 22),
                     ),
                   ),
                 ],

@@ -317,9 +317,7 @@ class InboxDesktopCard extends StatelessWidget {
                         Icon(Icons.attach_file_rounded, size: 14, color: documentsCount > 0 ? Colors.blue : InboxColors.textSecondary),
                         SizedBox(width: 4),
                         Text(
-                          documentsCount > 0 
-                              ? "$documentsCount" 
-                              : AppLocalizations.of(context)!.translate('no_attachments'),
+                          "$documentsCount",
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

@@ -121,8 +121,8 @@ class _LoginPageState extends State<LoginPage> {
             ),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: min(screenWidth, 1000),
-                maxHeight: min(screenHeight, 800),
+                maxWidth: min(screenWidth, 1200),
+                maxHeight: min(screenHeight, 850),
               ),
               child: Card(
                 color: cardColor,
@@ -150,13 +150,13 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           // الفورم على اليسار
           Expanded(
-            flex: 2,
+            flex: 3,
             child: buildForm(),
           ),
-          const SizedBox(width: 40),
+          const SizedBox(width: 50),
           // الصورة على اليمين
           Expanded(
-            flex: 3,
+            flex: 4,
             child: _buildImageSection(screenWidth, isPortrait),
           ),
         ],
@@ -205,7 +205,9 @@ class _LoginPageState extends State<LoginPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Image.asset(
-            'assets/images/undraw_project-completed_fwjq.png',
+            AppColors.isDark 
+                ? 'assets/images/Gemini_Generated_Image_14gt8u14gt8u14gt.png' 
+                : 'assets/images/Gemini_Generated_Image_ff5fu5ff5fu5ff5f (1).png',
             width: _getImageSize(screenWidth, isPortrait),
             height: _getImageSize(screenWidth, isPortrait) * 0.8,
             fit: BoxFit.contain,
@@ -227,8 +229,10 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   double _getImageSize(double screenWidth, bool isPortrait) {
-    if (screenWidth > 900) {
-      return isPortrait ? 350 : 300;
+    if (screenWidth > 1200) {
+      return isPortrait ? 600 : 550;
+    } else if (screenWidth > 900) {
+      return isPortrait ? 500 : 450;
     } else if (screenWidth > 600) {
       return isPortrait ? 280 : 250;
     } else {

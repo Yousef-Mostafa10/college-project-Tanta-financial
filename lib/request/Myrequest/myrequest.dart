@@ -676,12 +676,50 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                     if (option == 'Medium') displayText = AppLocalizations.of(context)!.translate('priority_medium');
                     if (option == 'Low') displayText = AppLocalizations.of(context)!.translate('priority_low');
 
+                    // Get icon and color for the option
+                    final isPriority = title == AppLocalizations.of(context)!.translate('select_priority');
+                    final isStatus = title == AppLocalizations.of(context)!.translate('select_status');
+                    
+                    IconData icon = Icons.filter_list_rounded;
+                    Color color = MyRequestsColors.primary;
+                    
+                    if (isStatus) {
+                      switch (option.toLowerCase()) {
+                        case 'approved': icon = Icons.check_circle_rounded; color = MyRequestsColors.statusApproved; break;
+                        case 'rejected': icon = Icons.cancel_rounded; color = MyRequestsColors.statusRejected; break;
+                        case 'waiting': icon = Icons.hourglass_empty_rounded; color = MyRequestsColors.statusWaiting; break;
+                        case 'needs change': icon = Icons.edit_note_rounded; color = MyRequestsColors.statusNeedsChange; break;
+                        case 'fulfilled': icon = Icons.task_alt_rounded; color = MyRequestsColors.statusFulfilled; break;
+                      }
+                    } else if (isPriority) {
+                      switch (option.toLowerCase()) {
+                        case 'high': icon = Icons.priority_high_rounded; color = MyRequestsColors.statusRejected; break;
+                        case 'medium': icon = Icons.low_priority_rounded; color = MyRequestsColors.statusPending; break;
+                        case 'low': icon = Icons.flag_rounded; color = MyRequestsColors.statusApproved; break;
+                      }
+                    }
+
+                    final isSelected = option == currentValue;
+
                     return ListTile(
-                      leading: Icon(
-                        Icons.check_rounded,
-                        color: option == currentValue ? MyRequestsColors.primary : Colors.transparent,
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icon, color: color, size: 20),
                       ),
-                      title: Text(displayText, style: TextStyle(color: MyRequestsColors.textPrimary)),
+                      title: Text(
+                        displayText, 
+                        style: TextStyle(
+                          color: isSelected ? color : MyRequestsColors.textPrimary,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      trailing: isSelected 
+                        ? Icon(Icons.check_circle_rounded, color: color, size: 22) 
+                        : null,
                       onTap: () {
                         Navigator.pop(context);
                         onSelected(option);

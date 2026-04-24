@@ -318,9 +318,7 @@ class InboxMobileCard extends StatelessWidget {
                         Icon(Icons.attach_file_rounded, size: 13, color: documentsCount > 0 ? Colors.blue : InboxColors.textSecondary), // 12 -> 13
                         SizedBox(width: 4), // 2 -> 4
                         Text(
-                          documentsCount > 0 
-                              ? "$documentsCount" 
-                              : AppLocalizations.of(context)!.translate('no_attachments'),
+                          "$documentsCount",
                           style: TextStyle(
                             fontSize: 11, // 10 -> 11
                             fontWeight: FontWeight.w500,

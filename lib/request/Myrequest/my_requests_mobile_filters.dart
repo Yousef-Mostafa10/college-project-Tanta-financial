@@ -119,6 +119,8 @@ Widget _buildMobileFilterChip({
     final isStatus = label == AppLocalizations.of(context)!.translate('status_filter');
     final isPriority = label == AppLocalizations.of(context)!.translate('priority_filter');
 
+    if (value == 'All' || value == 'All Types') return MyRequestsColors.primary;
+
     if (isStatus) {
       switch (value.toLowerCase()) {
         case 'waiting': return MyRequestsColors.statusWaiting;
@@ -137,6 +139,22 @@ Widget _buildMobileFilterChip({
       }
     }
     return MyRequestsColors.textPrimary;
+  }
+
+  // تحديد لون الخلفية
+  Color getBgColor() {
+    if (value == 'All' || value == 'All Types') {
+      return MyRequestsColors.primary.withOpacity(0.05);
+    }
+    return getTextColor().withOpacity(0.12);
+  }
+
+  // تحديد لون الحدود
+  Color getBorderColor() {
+    if (value == 'All' || value == 'All Types') {
+      return MyRequestsColors.primary.withOpacity(0.2);
+    }
+    return getTextColor().withOpacity(0.4);
   }
 
   // تحديد أيقونة حسب الحالة أو الأولوية
@@ -193,9 +211,9 @@ Widget _buildMobileFilterChip({
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       decoration: BoxDecoration(
-        color: MyRequestsColors.primary.withOpacity(0.05),
+        color: getBgColor(),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: MyRequestsColors.primary.withOpacity(0.2)),
+        border: Border.all(color: getBorderColor()),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

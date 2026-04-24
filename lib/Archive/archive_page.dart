@@ -308,77 +308,66 @@ class _ArchivePageState extends State<ArchivePage> {
                   ),
                   ...options.map((option) {
                     String displayText = option;
-                    Color itemColor = ArchiveColors.textPrimary;
-                    IconData itemIcon = Icons.circle_outlined;
-
-                    // ترجمة النص وتحديد الألوان والأيقونات
                     if (option == 'All') {
                       String labelKey = title == AppLocalizations.of(context)!.translate('select_priority') ? 'priority_filter' : 'status_filter';
                       displayText = "${AppLocalizations.of(context)!.translate(labelKey)}: ${AppLocalizations.of(context)!.translate('all_filter')}";
-                      itemColor = ArchiveColors.primary;
-                      itemIcon = Icons.filter_list_rounded;
                     }
-                    else if (option == 'All Types') {
-                      displayText = AppLocalizations.of(context)!.translate('all_types_filter');
-                      itemColor = ArchiveColors.primary;
-                      itemIcon = Icons.category_rounded;
-                    }
-                    else if (option == 'Waiting') {
-                      displayText = AppLocalizations.of(context)!.translate('waiting');
-                      itemColor = ArchiveColors.statusWaiting;
-                      itemIcon = Icons.hourglass_empty_rounded;
-                    }
-                    else if (option == 'Approved') {
-                      displayText = AppLocalizations.of(context)!.translate('approved');
-                      itemColor = ArchiveColors.statusApproved;
-                      itemIcon = Icons.check_circle_rounded;
-                    }
-                    else if (option == 'Rejected') {
-                      displayText = AppLocalizations.of(context)!.translate('rejected');
-                      itemColor = ArchiveColors.statusRejected;
-                      itemIcon = Icons.cancel_rounded;
-                    }
-                    else if (option == 'Needs Change') {
-                      displayText = AppLocalizations.of(context)!.translate('needs_change');
-                      itemColor = ArchiveColors.statusNeedsChange;
-                      itemIcon = Icons.edit_note_rounded;
-                    }
-                    else if (option == 'Fulfilled') {
-                      displayText = AppLocalizations.of(context)!.translate('fulfilled');
-                      itemColor = ArchiveColors.statusFulfilled;
-                      itemIcon = Icons.task_alt_rounded;
-                    }
-                    else if (option == 'High') {
-                      displayText = AppLocalizations.of(context)!.translate('priority_high');
-                      itemColor = ArchiveColors.statusRejected;
-                      itemIcon = Icons.priority_high_rounded;
-                    }
-                    else if (option.toLowerCase() == 'medium') {
-                      displayText = AppLocalizations.of(context)!.translate('priority_medium');
-                      itemColor = ArchiveColors.statusPending;
-                      itemIcon = Icons.low_priority_rounded;
-                    }
-                    else if (option == 'Low') {
-                      displayText = AppLocalizations.of(context)!.translate('priority_low');
-                      itemColor = ArchiveColors.statusApproved;
-                      itemIcon = Icons.flag_rounded;
+                    else if (option == 'All Types') displayText = AppLocalizations.of(context)!.translate('all_types_filter');
+                    else if (option == 'Waiting') displayText = AppLocalizations.of(context)!.translate('status_waiting');
+                    else if (option == 'Approved') displayText = AppLocalizations.of(context)!.translate('status_approved');
+                    else if (option == 'Rejected') displayText = AppLocalizations.of(context)!.translate('status_rejected');
+                    else if (option == 'Needs Change') displayText = AppLocalizations.of(context)!.translate('status_needs_editing');
+                    else if (option == 'Fulfilled') displayText = AppLocalizations.of(context)!.translate('status_fulfilled');
+                    else if (option == 'High') displayText = AppLocalizations.of(context)!.translate('priority_high');
+                    else if (option == 'Medium') displayText = AppLocalizations.of(context)!.translate('priority_medium');
+                    else if (option == 'Low') displayText = AppLocalizations.of(context)!.translate('priority_low');
+
+                    // تحديد الألوان والأيقونات
+                    final isPriority = title == AppLocalizations.of(context)!.translate('select_priority');
+                    final isStatus = title == AppLocalizations.of(context)!.translate('select_status');
+                    
+                    IconData icon = Icons.filter_list_rounded;
+                    Color color = ArchiveColors.primary;
+                    
+                    if (isStatus) {
+                      switch (option.toLowerCase()) {
+                        case 'approved': icon = Icons.check_circle_rounded; color = ArchiveColors.statusApproved; break;
+                        case 'rejected': icon = Icons.cancel_rounded; color = ArchiveColors.statusRejected; break;
+                        case 'waiting': icon = Icons.hourglass_empty_rounded; color = ArchiveColors.statusWaiting; break;
+                        case 'needs change': icon = Icons.edit_note_rounded; color = ArchiveColors.statusNeedsChange; break;
+                        case 'fulfilled': icon = Icons.task_alt_rounded; color = ArchiveColors.statusFulfilled; break;
+                      }
+                    } else if (isPriority) {
+                      switch (option.toLowerCase()) {
+                        case 'high': icon = Icons.priority_high_rounded; color = ArchiveColors.statusRejected; break;
+                        case 'medium': icon = Icons.low_priority_rounded; color = ArchiveColors.statusPending; break;
+                        case 'low': icon = Icons.flag_rounded; color = ArchiveColors.statusApproved; break;
+                      }
+                    } else if (option == 'All Types') {
+                      icon = Icons.category_rounded;
                     }
 
-                    bool isSelected = option == currentValue;
+                    final isSelected = option == currentValue;
 
                     return ListTile(
-                      leading: Icon(
-                        itemIcon,
-                        color: isSelected ? ArchiveColors.primary : itemColor,
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icon, color: color, size: 20),
                       ),
                       title: Text(
                         displayText, 
                         style: TextStyle(
-                          color: isSelected ? ArchiveColors.primary : itemColor,
+                          color: isSelected ? color : ArchiveColors.textPrimary,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        )
+                        ),
                       ),
-                      trailing: isSelected ? Icon(Icons.check_circle, color: ArchiveColors.primary) : null,
+                      trailing: isSelected 
+                        ? Icon(Icons.check_circle_rounded, color: color, size: 22) 
+                        : null,
                       onTap: () {
                         Navigator.pop(context);
                         onSelected(option);

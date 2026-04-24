@@ -140,50 +140,61 @@ Widget buildArchiveDesktopCard({
                     documentsCount > 0 ? ArchiveColors.accentBlue : ArchiveColors.textMuted,
                   ),
                   const Spacer(),
-
-                  // زر التعديل
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => EditRequestPage(requestId: id),
-                        ),
-                      );
+                  // القائمة المنبثقة (الثلاث نقاط)
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditRequestPage(requestId: id),
+                          ),
+                        );
+                      } else if (value == 'view') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CourseApprovalRequestPage(requestId: id),
+                          ),
+                        );
+                      }
                     },
-                    icon: Icon(Icons.edit_outlined, size: 16),
-                    label: Text(
-                      AppLocalizations.of(context)!.translate('edit'),
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: ArchiveColors.accentYellow,
-                      side: BorderSide(color: ArchiveColors.accentYellow.withOpacity(0.5)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // زر عرض التفاصيل فقط
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CourseApprovalRequestPage(requestId: id),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'view',
+                        child: Row(
+                          children: [
+                            Icon(Icons.remove_red_eye_outlined, size: 20, color: ArchiveColors.primary),
+                            const SizedBox(width: 12),
+                            Text(
+                              AppLocalizations.of(context)!.translate('view_details'),
+                              style: TextStyle(fontSize: 14, color: ArchiveColors.textPrimary),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                    icon: Icon(Icons.remove_red_eye_outlined, size: 16),
-                    label: Text(
-                      AppLocalizations.of(context)!.translate('view_details'),
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: ArchiveColors.primary,
-                      side: BorderSide(color: ArchiveColors.primary.withOpacity(0.5)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 20, color: ArchiveColors.accentYellow),
+                            const SizedBox(width: 12),
+                            Text(
+                              AppLocalizations.of(context)!.translate('edit'),
+                              style: TextStyle(fontSize: 14, color: ArchiveColors.textPrimary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: ArchiveColors.primary.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: ArchiveColors.primary.withOpacity(0.1)),
+                      ),
+                      child: Icon(Icons.more_vert_rounded, color: ArchiveColors.primary, size: 22),
                     ),
                   ),
                 ],
