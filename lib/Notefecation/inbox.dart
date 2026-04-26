@@ -1470,9 +1470,11 @@ class _InboxPageState extends State<InboxPage> {
         });
       }
 
-      final success = await _apiService.cancelForward(transactionId, forwardId, _userToken);
+      final response = await _apiService.cancelForward(transactionId, forwardId, _userToken);
 
       if (!mounted) return;
+
+      final success = response.statusCode >= 200 && response.statusCode < 300;
 
       if (success) {
         // إزالة علامة التحديث
@@ -1502,14 +1504,21 @@ class _InboxPageState extends State<InboxPage> {
           'hasForwarded': request['hasForwarded'],
         });
 
+        // استخراج رسالة الخطأ المترجمة (مثل FORWARD_ALREADY_SEEN)
+        final errMsg = AppErrorHandler.extractAndTranslate(
+          context,
+          response.body,
+          fallback: AppLocalizations.of(context)!.translate('failed_to_cancel_forward'),
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('failed_to_cancel_forward')),
+            content: Text(errMsg),
             backgroundColor: InboxColors.accentRed,
           ),
         );
 
-        print('❌ Cancel forward failed for request $requestId');
+        print('❌ Cancel forward failed for request $requestId: ${response.statusCode}');
       }
     } catch (e) {
       print('❌ Exception in _cancelForward: $e');

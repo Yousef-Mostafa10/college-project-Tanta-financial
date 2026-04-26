@@ -591,15 +591,25 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     setState(() => _isProcessing = true);
 
     try {
-      final body = {
-        "title": _requestData?["title"] ?? "",
-        "description": _requestData?["description"] ?? "",
-        "typeName": _requestData?["typeName"] ?? "",
-        "priority": _requestData?["priority"] ?? "LOW",
-        "fulfilled": true,
-        "budgetName": budgetName,
-        "budgetAllocation": budgetAllocation,
-      };
+      // ✅ المحاسب العادي يُسمح له فقط بتعديل budgetName و budgetAllocation
+      // أما الأدمن فيمكنه إرسال كل الحقول
+      final bool isAccountant = _userRole?.toUpperCase() == 'ACCOUNTANT';
+
+      final Map<String, dynamic> body = isAccountant
+          ? {
+              "fulfilled": true,
+              "budgetName": budgetName,
+              "budgetAllocation": budgetAllocation,
+            }
+          : {
+              "title": _requestData?["title"] ?? "",
+              "description": _requestData?["description"] ?? "",
+              "typeName": _requestData?["typeName"] ?? "",
+              "priority": _requestData?["priority"] ?? "LOW",
+              "fulfilled": true,
+              "budgetName": budgetName,
+              "budgetAllocation": budgetAllocation,
+            };
 
       final response = await http.patch(
         Uri.parse("$_baseUrl/transactions/${widget.requestId}"),
@@ -614,8 +624,9 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)!.translate('request_updated_success_details') ?? "Successfully updated"),
+              content: Text(AppLocalizations.of(context)!.translate('request_fulfilled_success') ?? "Request fulfilled successfully!"),
               backgroundColor: AppColors.accentGreen,
+              duration: Duration(seconds: 3),
             ),
           );
           // إعادة جلب البيانات لتحديث واجهة المستخدم

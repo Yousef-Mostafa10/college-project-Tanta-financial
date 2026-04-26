@@ -865,12 +865,12 @@ class InboxApi {
   }
 
   // 🔹 إلغاء الـ forward
-  Future<bool> cancelForward(
+  Future<http.Response> cancelForward(
       String transactionId,
       dynamic forwardId,
       String? token,
       ) async {
-    if (token == null || forwardId == null) return false;
+    if (token == null || forwardId == null) return http.Response('{"error": "unauthorized"}', 401);
 
     try {
       final response = await http.delete(
@@ -882,11 +882,13 @@ class InboxApi {
         },
       );
 
-      // ✅ قبول أي كود 2xx كنجاح
-      return response.statusCode >= 200 && response.statusCode < 300;
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        print("❌ cancelForward failed: ${response.statusCode} - ${response.body}");
+      }
+      return response;
     } catch (e) {
       print("❌ Error in cancelForward: $e");
-      return false;
+      return http.Response('{"error": "$e"}', 500);
     }
   }
 

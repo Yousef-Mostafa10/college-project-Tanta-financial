@@ -394,18 +394,22 @@ class _ForwardInfoWidgetState extends State<ForwardInfoWidget> {
     );
 
     if (confirmed == true) {
-      final success = await widget.api.cancelForward(widget.transactionId, widget.forwardId!);
-      if (success) {
-        if (mounted) {
-          widget.onCancelled();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.translate('forward_cancelled_success') ?? 'Forward cancelled successfully'), backgroundColor: Colors.green),
-          );
+      try {
+        final success = await widget.api.cancelForward(widget.transactionId, widget.forwardId!);
+        if (success) {
+          if (mounted) {
+            widget.onCancelled();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(AppLocalizations.of(context)!.translate('forward_cancelled_success') ?? 'Forward cancelled successfully'), backgroundColor: Colors.green),
+            );
+          }
         }
-      } else {
+      } catch (e) {
         if (mounted) {
+          final errKey = e.toString().replaceAll('Exception: ', '');
+          final errMsg = AppLocalizations.of(context)!.translate(errKey) ?? errKey;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.translate('failed_cancel_forward') ?? 'Failed to cancel forward'), backgroundColor: Colors.red),
+            SnackBar(content: Text(errMsg), backgroundColor: Colors.red),
           );
         }
       }

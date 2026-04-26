@@ -34,6 +34,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
   String? _userToken;
   String? _userName;
   int? _userId; // 🔥 معرف المستخدم
+  String? _userRole; // 🔥 دور المستخدم (ADMIN, ACCOUNTANT, USER...)
   String _selectedRequestType = 'Request Type';
   String _selectedPriority = 'Medium';
 
@@ -48,6 +49,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
   bool _typesHasMore = true;
   int _typesCurrentPage = 1;
   bool _isCreator = false; // 🔥 الافتراضي هو false للبدء بفصح الصلاحيات
+  Map<String, dynamic>? _requestData; // 🔥 حفظ بيانات الطلب الأصلية للمقارنة
 
   final String _baseUrl = AppConfig.baseUrl;
   final String _documentApiUrl = AppConfig.baseUrl;
@@ -68,6 +70,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
   // ✅ متغيرات الـ Forward Comment
   int? _forwardId;
+  String _originalSenderComment = ''; // تتبع التعليق الأصلي لمعرفة هل تم تغييره
   bool _isLoadingForward = false;
   bool _isUpdatingComment = false;
 
@@ -116,8 +119,9 @@ class _EditRequestPageState extends State<EditRequestPage> {
       _userToken = prefs.getString('token');
       _userName = prefs.getString('userName') ?? prefs.getString('username');
       _userId = prefs.getInt('user_id');
+      _userRole = prefs.getString('user_role');
       
-      debugPrint('👤 User Info Loaded: Name=$_userName, ID=$_userId');
+      debugPrint('👤 User Info Loaded: Name=$_userName, ID=$_userId, Role=$_userRole');
     } catch (e) {
       debugPrint('Error loading user info: $e');
     }
@@ -526,6 +530,8 @@ class _EditRequestPageState extends State<EditRequestPage> {
           return;
         }
 
+        _requestData = Map<String, dynamic>.from(data); // حفظ البيانات الأصلية للمقارنة لاحقاً
+
         setState(() {
           _titleController.text = data["title"] ?? '';
           _descriptionController.text = data["description"] ?? '';
@@ -558,6 +564,13 @@ class _EditRequestPageState extends State<EditRequestPage> {
   void _checkPermissions(dynamic data) {
     if (data == null) return;
 
+    // 0. ✅ الأدمن دائماً لديه صلاحية التعديل الكاملة بغض النظر عن صاحب الطلب
+    if (_userRole?.toUpperCase() == 'ADMIN') {
+      _isCreator = true;
+      debugPrint('✅ Permission Granted: User is ADMIN');
+      return;
+    }
+
     // 1. محاولة الفحص بواسطة الـ IDs (الأكثر دقة)
     final dynamic creatorIdRaw = data["creatorId"] ?? data["creator"]?["id"];
     if (creatorIdRaw != null && _userId != null) {
@@ -581,15 +594,16 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
     // 3. إذا لم يتطابق شيء، نعتبره ليس صاحب الطلب
     _isCreator = false;
-    debugPrint('🚫 Permission Denied: User is not the creator (User: $_userName/$_userId, Creator: $creatorName/$creatorIdRaw)');
+    debugPrint('🚫 Permission Denied: User is not the creator (User: $_userName/$_userId, Role: $_userRole, Creator: $creatorName/$creatorIdRaw)');
   }
 
-  // ✅ جلب بيانات الـ Forward (أول forward) للحصول على senderComment
+  // ✅ جلب أحدث توجيه للمستخدم الحالي بكفاءة (طلبان فقط)
   Future<void> _fetchForwardData() async {
     setState(() => _isLoadingForward = true);
 
     try {
-      final response = await http.get(
+      // ── الطلب الأول: نجلب الصفحة الأولى فقط لمعرفة totalPages ──
+      final firstResponse = await http.get(
         Uri.parse('$_baseUrl/transaction/${widget.requestId}/forward?page=1&perPage=10'),
         headers: {
           'accept': 'application/json',
@@ -597,44 +611,77 @@ class _EditRequestPageState extends State<EditRequestPage> {
         },
       );
 
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        List<dynamic> forwards = [];
+      if (firstResponse.statusCode != 200) return;
 
-        if (responseData is Map) {
-          forwards = responseData['data'] ?? [];
-        } else if (responseData is List) {
-          forwards = responseData;
+      final firstData = json.decode(firstResponse.body);
+      List<dynamic> forwards = [];
+      int totalPages = 1;
+
+      if (firstData is Map) {
+        forwards = firstData['data'] ?? [];
+        totalPages = firstData['pagination']?['totalPages'] ?? 1;
+      } else if (firstData is List) {
+        forwards = firstData;
+      }
+
+      // ── الطلب الثاني: إذا يوجد أكثر من صفحة، نجلب آخر صفحة مباشرةً ──
+      if (totalPages > 1) {
+        final lastResponse = await http.get(
+          Uri.parse('$_baseUrl/transaction/${widget.requestId}/forward?page=$totalPages&perPage=10'),
+          headers: {
+            'accept': 'application/json',
+            'Authorization': 'Bearer $_userToken',
+          },
+        );
+
+        if (lastResponse.statusCode == 200) {
+          final lastData = json.decode(lastResponse.body);
+          List<dynamic> lastForwards = [];
+          if (lastData is Map) {
+            lastForwards = lastData['data'] ?? [];
+          } else if (lastData is List) {
+            lastForwards = lastData;
+          }
+          // نضع آخر صفحة في المقدمة لأنها الأحدث
+          forwards = [...lastForwards, ...forwards];
+        }
+      }
+
+      if (forwards.isNotEmpty) {
+        // ✅ الترتيب بالـ ID تنازلياً (ID أكبر = أحدث) — createdAt غير متاح من الـ API
+        forwards.sort((a, b) {
+          final idA = a['id'] is int ? a['id'] as int : int.tryParse(a['id'].toString()) ?? 0;
+          final idB = b['id'] is int ? b['id'] as int : int.tryParse(b['id'].toString()) ?? 0;
+          return idB.compareTo(idA); // تنازلي: الأحدث (أكبر ID) أولاً
+        });
+
+        // ✅ أول توجيه للمستخدم بعد الترتيب = الأحدث
+        dynamic myForward;
+        for (final f in forwards) {
+          final sender = f['sender'];
+          if (sender == null) continue;
+
+          final sId = sender['id'];
+          final sName = sender['name']?.toString().toLowerCase();
+
+          final bool matchId = (sId != null && _userId != null && sId == _userId);
+          final bool matchName = (sName != null && _userName != null && sName == _userName!.toLowerCase());
+
+          if (matchId || matchName) {
+            myForward = f;
+            break;
+          }
         }
 
-        if (forwards.isNotEmpty) {
-          // 🔥 البحث عن الـ Forward الذي قمت أنا بإرساله
-          final myForward = forwards.firstWhere(
-            (f) {
-              final sender = f['sender'];
-              if (sender == null) return false;
-              
-              // مطابقة بالـ ID أو بالاسم كحل احتياطي
-              final sId = sender['id'];
-              final sName = sender['name']?.toString().toLowerCase();
-              
-              bool matchId = (sId != null && _userId != null && sId == _userId);
-              bool matchName = (sName != null && _userName != null && sName == _userName!.toLowerCase());
-              
-              return matchId || matchName;
-            },
-            orElse: () => null,
-          );
-
-          if (myForward != null) {
-            setState(() {
-              _forwardId = myForward['id'];
-              _senderCommentController.text = myForward['senderComment'] ?? '';
-            });
-            debugPrint('✅ Found my forward: id=$_forwardId, comment=${_senderCommentController.text}');
-          } else {
-            debugPrint('ℹ️ No forward sent by current user found in this page');
-          }
+        if (myForward != null) {
+          setState(() {
+            _forwardId = myForward['id'];
+            _senderCommentController.text = myForward['senderComment'] ?? '';
+            _originalSenderComment = _senderCommentController.text; // حفظ القيمة الأصلية
+          });
+          debugPrint('✅ Found latest forward: id=$_forwardId, createdAt=${myForward['createdAt']}, comment=${_senderCommentController.text}');
+        } else {
+          debugPrint('ℹ️ No forward sent by current user found');
         }
       }
     } catch (e) {
@@ -666,7 +713,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
         debugPrint('✅ Sender comment updated successfully');
       } else {
         debugPrint('❌ Failed to update comment: ${response.statusCode}');
-        _showErrorSnackBar(AppLocalizations.of(context)!.translate('sender_comment_update_failed').replaceFirst('{error}', response.statusCode.toString()));
+        _handleApiError(response, 'sender_comment_update_failed');
       }
     } catch (e) {
       debugPrint('❌ Error updating comment: $e');
@@ -1337,6 +1384,27 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
   // ✅ تعديل: تحديث الطلب مع معالجة الملفات
   Future<void> _updateRequest() async {
+    // 1️⃣ التحقق من وجود تغييرات فعلية أولاً
+    bool hasChanges = false;
+
+    if (_isCreator) {
+      if (_titleController.text != (_requestData?["title"] ?? "")) hasChanges = true;
+      if (_descriptionController.text != (_requestData?["description"] ?? "")) hasChanges = true;
+      if (_selectedPriority.toUpperCase() != (_requestData?["priority"] ?? "MEDIUM").toUpperCase()) hasChanges = true;
+      if (_selectedRequestType != (_requestData?["typeName"] ?? "Request Type")) hasChanges = true;
+    }
+
+    if (_senderCommentController.text != _originalSenderComment) hasChanges = true;
+    if (_selectedFiles.isNotEmpty) hasChanges = true;
+    if (_selectedPreviousDocuments.isNotEmpty) hasChanges = true;
+
+    // إذا لم يكن هناك أي تغيير، نوقف التنفيذ ولا نرسل طلبات للـ API
+    if (!hasChanges) {
+      _showSuccessSnackBar(AppLocalizations.of(context)!.translate('no_changes_detected') ?? 'لا توجد تغييرات للحفظ');
+      return;
+    }
+
+    // 2️⃣ التحقق من صحة الحقول (Validation)
     if (!_formKey.currentState!.validate()) {
       // البحث عن أول حقل به خطأ والسكرول إليه
       if (_titleController.text.trim().isEmpty) {
@@ -1370,41 +1438,48 @@ class _EditRequestPageState extends State<EditRequestPage> {
         await _linkPreviousDocuments();
       }
 
-      // 3. تجهيز IDs الملفات الموجودة
-      List<int> documentIds = _documents.map((doc) {
-        final id = doc["id"];
-        return id is int ? id : int.parse(id.toString());
-      }).toList();
+      // 3. تحديث بيانات الطلب الأساسية (فقط إذا كان لديه الصلاحية)
+      if (_isCreator) {
+        List<int> documentIds = _documents.map((doc) {
+          final id = doc["id"];
+          return id is int ? id : int.parse(id.toString());
+        }).toList();
 
-      // 4. تحديث بيانات الطلب مع تضمين documentsIds
-      final requestData = {
-        'title': _titleController.text,
-        'description': _descriptionController.text,
-        'typeName': _selectedRequestType,
-        'priority': _selectedPriority.toUpperCase(),
-        'documentsIds': documentIds,
-      };
+        final requestData = {
+          'title': _titleController.text,
+          'description': _descriptionController.text,
+          'typeName': _selectedRequestType,
+          'priority': _selectedPriority.toUpperCase(),
+          'documentsIds': documentIds,
+        };
 
-      debugPrint('🚀 Updating request: $requestData');
+        debugPrint('🚀 Updating request: $requestData');
 
-      final response = await http.patch(
-        Uri.parse('$_baseUrl/transactions/${widget.requestId}'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_userToken',
-        },
-        body: json.encode(requestData),
-      );
+        final response = await http.patch(
+          Uri.parse('$_baseUrl/transactions/${widget.requestId}'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_userToken',
+          },
+          body: json.encode(requestData),
+        );
 
-      debugPrint('📊 Update Status: ${response.statusCode}');
-      debugPrint('📄 Update Response: ${response.body}');
+        debugPrint('📊 Update Status: ${response.statusCode}');
+        debugPrint('📄 Update Response: ${response.body}');
 
-      if (response.statusCode == 200) {
-        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_updated_success_details'));
-        await _fetchRequestDetails();
+        if (response.statusCode == 200) {
+          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_updated_success_details'));
+        } else {
+          _handleApiError(response, 'failed_update_request_status');
+          return; // نوقف التنفيذ إذا فشل
+        }
       } else {
-        _showErrorSnackBar(AppLocalizations.of(context)!.translate('failed_update_request_status').replaceFirst('{status}', response.statusCode.toString()));
+        // رسالة نجاح للمستخدم الذي حدث الملفات/التعليق فقط (مثل المحاسب)
+        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('editing_completed') ?? 'تم التحديث بنجاح');
       }
+
+      // في جميع الحالات (سواء حدث الطلب الأساسي أو اكتفى بالملفات والتعليق)، نقوم بجلب التحديثات
+      await _fetchRequestDetails();
     } catch (e) {
       _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
     } finally {
@@ -1416,7 +1491,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
   }
 
   Future<void> _finishEditing() async {
-    _showSuccessSnackBar(AppLocalizations.of(context)!.translate('editing_completed'));
+    // زر "إنهاء" يجب أن يخرج فقط ولا يوحي بأنه تم الحفظ
     if (mounted) {
       Navigator.pop(context);
     }
@@ -1429,6 +1504,27 @@ class _EditRequestPageState extends State<EditRequestPage> {
     } catch (e) {
       return isoDate;
     }
+  }
+
+  // ✅ صف إجراء مسموح به في رسالة المعلومات
+  Widget _buildAllowedActionRow(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: AppColors.accentBlue, size: 16),
+        SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildDocumentsSection(bool isMobile, bool isTablet) {
@@ -1813,21 +1909,45 @@ class _EditRequestPageState extends State<EditRequestPage> {
             if (!_isCreator) ...[
               SizedBox(height: 12),
               Container(
-                padding: EdgeInsets.all(12),
+                padding: EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.accentBlue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.accentBlue.withOpacity(0.3)),
+                  color: AppColors.accentBlue.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.accentBlue.withOpacity(0.35)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, color: AppColors.accentBlue, size: 20),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        AppLocalizations.of(context)!.translate('view_only_mode_hint'),
-                        style: TextStyle(color: AppColors.accentBlue, fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded, color: AppColors.accentBlue, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            AppLocalizations.of(context)!.translate('view_only_mode_hint'),
+                            style: TextStyle(
+                              color: AppColors.accentBlue,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Divider(color: AppColors.accentBlue.withOpacity(0.2), height: 1),
+                    SizedBox(height: 10),
+                    // ما يمكن للمستخدم فعله
+                    _buildAllowedActionRow(
+                      Icons.upload_file_rounded,
+                      AppLocalizations.of(context)!.translate('allowed_action_upload_file') ??
+                          'يمكنك رفع ملف جديد وإرفاقه بهذا الطلب',
+                    ),
+                    SizedBox(height: 8),
+                    _buildAllowedActionRow(
+                      Icons.comment_rounded,
+                      AppLocalizations.of(context)!.translate('allowed_action_edit_comment') ??
+                          'يمكنك إضافة أو تعديل تعليقك الخاص على هذا الطلب',
                     ),
                   ],
                 ),
@@ -1895,57 +2015,61 @@ class _EditRequestPageState extends State<EditRequestPage> {
               ],
             ),
             SizedBox(height: isMobile ? 6 : 8),
-            FormField<String>(
-              initialValue: _selectedRequestType,
-              validator: (v) => (_selectedRequestType == 'Request Type') ? AppLocalizations.of(context)!.translate('request_type_hint') : null,
-              builder: (state) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    InkWell(
-                      key: _typeKey,
-                      onTap: _isCreator ? _showTypeSelectionDialog : null,
-                      child: InputDecorator(
-                        decoration: InputDecoration(
-                filled: true,
-                fillColor: AppColors.surface,
-                prefixIcon: Icon(Icons.edit_note, color: AppColors.primary, size: 20),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.borderColor)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.borderColor)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.focusBorderColor, width: 2)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _selectedRequestType == 'Request Type'
-                                    ? AppLocalizations.of(context)!.translate('request_type_hint')
-                                    : _selectedRequestType,
-                                style: TextStyle(
-                                  color: _selectedRequestType == 'Request Type' ? AppColors.textMuted : AppColors.textPrimary,
-                                  fontWeight: _selectedRequestType == 'Request Type' ? FontWeight.normal : FontWeight.w600,
+            // ✅ خانة نوع الطلب - باهتة عند عدم التعديل
+            Opacity(
+              opacity: _isCreator ? 1.0 : 0.5,
+              child: FormField<String>(
+                initialValue: _selectedRequestType,
+                validator: (v) => (_selectedRequestType == 'Request Type') ? AppLocalizations.of(context)!.translate('request_type_hint') : null,
+                builder: (state) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      InkWell(
+                        key: _typeKey,
+                        onTap: _isCreator ? _showTypeSelectionDialog : null,
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                  filled: true,
+                  fillColor: _isCreator ? AppColors.surface : AppColors.surface.withOpacity(0.6),
+                  prefixIcon: Icon(Icons.edit_note, color: AppColors.primary, size: 20),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.borderColor)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.borderColor)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: state.hasError ? AppColors.accentRed : AppColors.focusBorderColor, width: 2)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _selectedRequestType == 'Request Type'
+                                      ? AppLocalizations.of(context)!.translate('request_type_hint')
+                                      : _selectedRequestType,
+                                  style: TextStyle(
+                                    color: _selectedRequestType == 'Request Type' ? AppColors.textMuted : AppColors.textPrimary,
+                                    fontWeight: _selectedRequestType == 'Request Type' ? FontWeight.normal : FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
-                          ],
+                              Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    if (state.hasError)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8, left: 12),
-                        child: Text(
-                          state.errorText!,
-                          style: TextStyle(color: AppColors.accentRed, fontSize: 12),
+                      if (state.hasError)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, left: 12),
+                          child: Text(
+                            state.errorText!,
+                            style: TextStyle(color: AppColors.accentRed, fontSize: 12),
+                          ),
                         ),
-                      ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
             SizedBox(height: isMobile ? 16 : 20),
 
@@ -1958,39 +2082,43 @@ class _EditRequestPageState extends State<EditRequestPage> {
               ),
             ),
             SizedBox(height: isMobile ? 6 : 8),
-            DropdownButtonFormField<String>(
-              value: _selectedPriority,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: AppColors.surface,
-                prefixIcon: Icon(Icons.edit_note, color: AppColors.primary, size: 20),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2)),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 12 : 16,
-                  vertical: isMobile ? 14 : 16,
-                ),
-              ),
-              items: _priorityOptions.map((String value) {
-                String label = value;
-                if (value == 'Low') label = AppLocalizations.of(context)!.translate('priority_low');
-                if (value == 'Medium') label = AppLocalizations.of(context)!.translate('priority_medium');
-                if (value == 'High') label = AppLocalizations.of(context)!.translate('priority_high');
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: isMobile ? 14 : 16,
-                      color: AppColors.textPrimary,
-                    ),
+            // ✅ خانة الأولوية - باهتة عند عدم التعديل
+            Opacity(
+              opacity: _isCreator ? 1.0 : 0.5,
+              child: DropdownButtonFormField<String>(
+                value: _selectedPriority,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: _isCreator ? AppColors.surface : AppColors.surface.withOpacity(0.6),
+                  prefixIcon: Icon(Icons.edit_note, color: AppColors.primary, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.focusBorderColor, width: 2)),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 12 : 16,
+                    vertical: isMobile ? 14 : 16,
                   ),
-                );
-              }).toList(),
-              onChanged: _isCreator ? (newValue) {
-                setState(() { _selectedPriority = newValue!; });
-              } : null,
+                ),
+                items: _priorityOptions.map((String value) {
+                  String label = value;
+                  if (value == 'Low') label = AppLocalizations.of(context)!.translate('priority_low');
+                  if (value == 'Medium') label = AppLocalizations.of(context)!.translate('priority_medium');
+                  if (value == 'High') label = AppLocalizations.of(context)!.translate('priority_high');
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: isMobile ? 14 : 16,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  );
+                }).toList(),
+                onChanged: _isCreator ? (newValue) {
+                  setState(() { _selectedPriority = newValue!; });
+                } : null,
+              ),
             ),
             SizedBox(height: isMobile ? 12 : 16),
 
