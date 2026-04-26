@@ -636,6 +636,12 @@ class AppLocalizations {
       'inputter_label': 'Entered By',
       'Budget category in use': 'Budget category in use, cannot be deleted',
       'BUDGET_CATEGORY_IN_USE': 'Budget category in use, cannot be deleted',
+      'contact_developers': 'Contact Developers',
+      'job_flutter': 'Flutter Developer',
+      'job_backend': 'Backend Developer',
+      'job_frontend': 'Frontend Developer',
+      'job_tester': 'Software Tester',
+      'whatsapp_chat': 'Chat on WhatsApp',
     },
     'ar': {
       // General & Navigation
@@ -1280,6 +1286,12 @@ class AppLocalizations {
       'inputter_label': 'بواسطة',
       'Budget category in use': 'فئة الميزانية قيد الاستخدام، لا يمكن حذفها.',
       'BUDGET_CATEGORY_IN_USE': 'فئة الميزانية قيد الاستخدام، لا يمكن حذفها.',
+      'contact_developers': 'تواصل مع المطورين',
+      'job_flutter': 'مطور فلاتر',
+      'job_backend': 'مطور باك إند',
+      'job_frontend': 'مطور فرونت إند',
+      'job_tester': 'مختبر جودة برمجيات',
+      'whatsapp_chat': 'تواصل عبر واتساب',
     },
   };
 

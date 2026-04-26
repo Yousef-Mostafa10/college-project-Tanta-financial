@@ -15,6 +15,7 @@ import 'package:college_project/core/app_theme_color.dart';
 
 import 'Department/DepartmentsPage.dart';
 import 'Budget/BudgetPage.dart';
+import 'settings/contact_developers.dart';
 
 class CustomDrawer extends StatefulWidget {
   final VoidCallback onLogout;
@@ -634,6 +635,19 @@ class _CustomDrawerState extends State<CustomDrawer> {
                       onTap: () => themeProvider.setThemeColor(AppThemeColor.purple),
                     ),
                   ],
+                );
+              },
+            ),
+
+            // تواصل مع المطورين
+            _buildMenuItem(
+              icon: Icons.contact_support_rounded,
+              title: AppLocalizations.of(context)!.translate('contact_developers'),
+              color: AppColors.accentBlue,
+              isMobile: isMobile,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const ContactDevelopersPage()),
                 );
               },
             ),

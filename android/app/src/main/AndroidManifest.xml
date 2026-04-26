@@ -61,11 +61,22 @@
             android:value="2" />
     </application>
 
-    <!-- Required to query activities that can process text -->
+    <!-- Required to query activities that can process text and WhatsApp -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- إذن فتح الواتساب -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="whatsapp" />
+        </intent>
+        <!-- إذن فتح روابط الواتساب -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" android:host="wa.me" />
         </intent>
     </queries>
 
