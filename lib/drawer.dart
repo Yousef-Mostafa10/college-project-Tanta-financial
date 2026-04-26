@@ -643,7 +643,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
             _buildMenuItem(
               icon: Icons.contact_support_rounded,
               title: AppLocalizations.of(context)!.translate('contact_developers'),
-              color: AppColors.accentBlue,
+              color: AppColors.primary,
               isMobile: isMobile,
               onTap: () {
                 Navigator.of(context).push(
