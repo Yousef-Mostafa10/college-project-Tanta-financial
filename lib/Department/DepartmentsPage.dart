@@ -1141,7 +1141,9 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppColors.headerGradientStart, AppColors.headerGradientEnd],
+              colors: AppColors.isDark
+                  ? [AppColors.headerGradientStart, AppColors.headerGradientEnd]
+                  : [AppColors.primary, AppColors.primaryHover],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

@@ -239,7 +239,7 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
           ),
         ),
         backgroundColor: AppColors.primary,
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),

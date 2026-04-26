@@ -283,7 +283,7 @@ class _AddUserPageState extends State<AddUserPage> {
         backgroundColor: AppColors.primary,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -302,14 +302,19 @@ class _AddUserPageState extends State<AddUserPage> {
                   height: isMobile ? 100 : 120,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                      colors: AppColors.isDark
+                          ? [AppColors.gradientStart, AppColors.gradientEnd]
+                          : [AppColors.primary.withOpacity(0.7), AppColors.primary],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     shape: BoxShape.circle,
+                    border: AppColors.isDark 
+                        ? null 
+                        : Border.all(color: AppColors.primary.withOpacity(0.2), width: 4),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.2),
+                        color: AppColors.primary.withOpacity(AppColors.isDark ? 0.2 : 0.1),
                         blurRadius: 15,
                         offset: Offset(0, 4),
                       ),
@@ -318,7 +323,7 @@ class _AddUserPageState extends State<AddUserPage> {
                   child: Icon(
                     Icons.person_add_alt_1,
                     size: isMobile ? 40 : 50,
-                    color: AppColors.primary,
+                    color: Colors.white,
                   ),
                 ),
 

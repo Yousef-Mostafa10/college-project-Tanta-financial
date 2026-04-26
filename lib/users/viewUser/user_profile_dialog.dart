@@ -72,9 +72,14 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
               height: widget.isMobile ? 60 : 70,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                  colors: AppColors.isDark
+                      ? [AppColors.gradientStart, AppColors.gradientEnd]
+                      : [AppColors.primary.withOpacity(0.7), AppColors.primary],
                 ),
                 shape: BoxShape.circle,
+                border: AppColors.isDark
+                    ? null
+                    : Border.all(color: AppColors.primary.withOpacity(0.1), width: 2),
               ),
               child: Icon(
                 Icons.person,

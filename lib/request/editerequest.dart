@@ -2101,17 +2101,40 @@ class _EditRequestPageState extends State<EditRequestPage> {
                 ),
                 items: _priorityOptions.map((String value) {
                   String label = value;
-                  if (value == 'Low') label = AppLocalizations.of(context)!.translate('priority_low');
-                  if (value == 'Medium') label = AppLocalizations.of(context)!.translate('priority_medium');
-                  if (value == 'High') label = AppLocalizations.of(context)!.translate('priority_high');
+                  Color priorityColor = AppColors.accentGreen;
+                  if (value == 'Low') {
+                    label = AppLocalizations.of(context)!.translate('priority_low');
+                    priorityColor = AppColors.accentGreen;
+                  } else if (value == 'Medium') {
+                    label = AppLocalizations.of(context)!.translate('priority_medium');
+                    priorityColor = AppColors.accentYellow;
+                  } else if (value == 'High') {
+                    label = AppLocalizations.of(context)!.translate('priority_high');
+                    priorityColor = AppColors.accentRed;
+                  }
+                  
                   return DropdownMenuItem<String>(
                     value: value,
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: isMobile ? 14 : 16,
-                        color: AppColors.textPrimary,
-                      ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: priorityColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: isMobile ? 14 : 16,
+                            color: priorityColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }).toList(),
@@ -2329,14 +2352,16 @@ class _EditRequestPageState extends State<EditRequestPage> {
               letterSpacing: 0.5,
             ),
           ),
-          centerTitle: true,
+          centerTitle: false,
           elevation: 0,
           flexibleSpace: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.headerGradientStart, AppColors.headerGradientEnd],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                colors: AppColors.isDark
+                    ? [AppColors.headerGradientStart, AppColors.headerGradientEnd]
+                    : [AppColors.primary, AppColors.primaryHover],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
           ),
@@ -2357,14 +2382,16 @@ class _EditRequestPageState extends State<EditRequestPage> {
             letterSpacing: 0.5,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         elevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppColors.headerGradientStart, AppColors.headerGradientEnd],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+              colors: AppColors.isDark
+                  ? [AppColors.headerGradientStart, AppColors.headerGradientEnd]
+                  : [AppColors.primary, AppColors.primaryHover],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
         ),
@@ -2386,14 +2413,16 @@ class _EditRequestPageState extends State<EditRequestPage> {
               letterSpacing: 0.5,
             ),
           ),
-          centerTitle: true,
+          centerTitle: false,
           elevation: 0,
           flexibleSpace: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.headerGradientStart, AppColors.headerGradientEnd],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                colors: AppColors.isDark
+                    ? [AppColors.headerGradientStart, AppColors.headerGradientEnd]
+                    : [AppColors.primary, AppColors.primaryHover],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
           ),

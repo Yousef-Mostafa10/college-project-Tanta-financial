@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart' hide TextDirection;
+import 'package:open_filex/open_filex.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 
 import '../../app_config.dart';
@@ -133,7 +134,9 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           // ✅ جلب الـ Forwards والمستندات بعد نجاح جلب الطلب
           _fetchForwards();
           if (transactionData["documents"] != null) {
-            _fetchDocumentsDetails(transactionData["documents"]);
+            final List<dynamic> documents = transactionData["documents"];
+            _fetchDocumentsDetails(documents);
+            _checkDownloadedFiles(documents);
           }
         } else {
           setState(() {
@@ -204,6 +207,40 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       setState(() {
         _isLoadingPreviousDocs = false;
       });
+    }
+  }
+
+  // ✅ الحل الهجين: التحقق من وجود الملفات المحملة مسبقاً
+  Future<void> _checkDownloadedFiles(List<dynamic> documents) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final Map<String, String> existingFiles = {};
+
+      for (var doc in documents) {
+        final docId = doc["id"]?.toString();
+        if (docId == null) continue;
+
+        // البحث عن المسار في SharedPreferences
+        final savedPath = prefs.getString('downloaded_doc_$docId');
+        if (savedPath != null) {
+          final file = File(savedPath);
+          // التحقق الفعلي من وجود الملف على القرص
+          if (await file.exists()) {
+            existingFiles[docId] = savedPath;
+          } else {
+            // إذا حُذف الملف يدوياً، نقوم بمسح السجل
+            await prefs.remove('downloaded_doc_$docId');
+          }
+        }
+      }
+
+      if (mounted && existingFiles.isNotEmpty) {
+        setState(() {
+          _downloadedFilePaths.addAll(existingFiles);
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error checking downloaded files: $e');
     }
   }
 
@@ -450,10 +487,14 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         await file.writeAsBytes(response.bodyBytes);
 
         if (await file.exists()) {
+          // ✅ حفظ المسار في SharedPreferences للرجوع إليه لاحقاً
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('downloaded_doc_$documentId', filePath);
+
           setState(() {
             _downloadingFiles[fileName] = false;
             _downloadProgress.remove(fileName);
-            _downloadedFilePaths[fileName] = filePath;
+            _downloadedFilePaths[documentId.toString()] = filePath;
           });
 
           if (mounted) {
@@ -492,8 +533,9 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     }
   }
 
-  void _showFileDetails(String fileName) {
-    final filePath = _downloadedFilePaths[fileName];
+  void _showFileDetails(String fileName, dynamic documentId) {
+    final docKey = documentId.toString();
+    final filePath = _downloadedFilePaths[docKey];
     if (filePath == null) return;
 
     showDialog(
@@ -520,7 +562,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             Text(fileName,
                 style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             SizedBox(height: 8),
-            Text('${AppLocalizations.of(context)!.translate('open_folder_button')}:',
+            Text('${AppLocalizations.of(context)!.translate('file_path') ?? 'File path'}:',
                 style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             Text(filePath,
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
@@ -542,7 +584,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
             ),
-            child: Text(AppLocalizations.of(context)!.translate('open_folder_button'), style: TextStyle(color: Colors.white)),
+            child: Text(AppLocalizations.of(context)!.translate('open_file') ?? 'Open File', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -570,17 +612,27 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
   void _openFileLocation(String filePath) async {
     try {
-      final file = File(filePath);
-      final directory = file.parent;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${AppLocalizations.of(context)!.translate('open_folder_button')}: ${directory.path}'),
-          backgroundColor: AppColors.accentBlue,
-        ),
-      );
+      final result = await OpenFilex.open(filePath);
+      if (result.type != ResultType.done) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${AppLocalizations.of(context)!.translate('error') ?? "Error"}: ${result.message}'),
+              backgroundColor: AppColors.accentRed,
+            ),
+          );
+        }
+      }
     } catch (e) {
-      print('Error opening file location: $e');
+      print('Error opening file: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.translate('error_opening_file') ?? "Error opening file"),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
     }
   }
 
@@ -1308,9 +1360,12 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     final fileName = document["title"]?.toString() ?? "document.pdf";
     final uploaderName = document["uploaderName"]?.toString() ?? "Admin";
     final fileId = document["id"];
+    final uploadedAt = document["uploadedAt"] ?? document["createdAt"];
+    final formattedDate = uploadedAt != null ? _formatDate(uploadedAt) : "";
+
     final isDownloading = _downloadingFiles[fileName] == true;
     final downloadStatus = _downloadProgress[fileName];
-    final isDownloaded = _downloadedFilePaths.containsKey(fileName);
+    final isDownloaded = _downloadedFilePaths.containsKey(fileId.toString());
 
     return Container(
       margin: EdgeInsets.only(bottom: isMobile ? 8 : 12),
@@ -1322,17 +1377,17 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       child: isMobile
           ? _buildMobileAttachmentItem(
           fileName, uploaderName, fileId, isDownloading,
-          downloadStatus, isDownloaded, fileId, isMobile)
+          downloadStatus, isDownloaded, fileId, isMobile, formattedDate)
           : _buildDesktopAttachmentItem(
           fileName, uploaderName, fileId, isDownloading,
-          downloadStatus, isDownloaded, fileId, isMobile),
+          downloadStatus, isDownloaded, fileId, isMobile, formattedDate),
     );
   }
 
   Widget _buildMobileAttachmentItem(
       String fileName, String uploaderName, dynamic fileId,
       bool isDownloading, String? downloadStatus, bool isDownloaded,
-      dynamic documentId, bool isMobile) {
+      dynamic documentId, bool isMobile, String formattedDate) {
     return ListTile(
       leading: _getFileIcon(fileName),
       title: Text(
@@ -1342,9 +1397,9 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Container(
-        constraints: BoxConstraints(maxHeight: 40),
+        constraints: BoxConstraints(maxHeight: 60),
         child: _buildFileSubtitle(
-            uploaderName, fileId.toString(), isDownloading, downloadStatus, isDownloaded, fileName, isMobile),
+            uploaderName, fileId.toString(), isDownloading, downloadStatus, isDownloaded, fileName, isMobile, formattedDate),
       ),
       trailing: _buildDownloadButton(isDownloading, isDownloaded, documentId, fileName, isMobile),
       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1355,7 +1410,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   Widget _buildDesktopAttachmentItem(
       String fileName, String uploaderName, dynamic fileId,
       bool isDownloading, String? downloadStatus, bool isDownloaded,
-      dynamic documentId, bool isMobile) {
+      dynamic documentId, bool isMobile, String formattedDate) {
     return Padding(
       padding: EdgeInsets.all(16),
       child: Row(
@@ -1403,6 +1458,21 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                         style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                       ),
                     ],
+                    if (formattedDate.isNotEmpty) ...[
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.textMuted,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.textSecondary),
+                      Text(
+                        formattedDate,
+                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                    ],
                   ],
                 ),
                 if (isDownloading && downloadStatus != null) ...[
@@ -1411,7 +1481,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                 ],
                 if (isDownloaded) ...[
                   SizedBox(height: 6),
-                  _buildDownloadedStatus(fileName, false),
+                  _buildDownloadedStatus(fileName, false, fileId),
                 ],
               ],
             ),
@@ -1425,7 +1495,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
   Widget _buildFileSubtitle(
       String uploaderName, String fileId, bool isDownloading,
-      String? downloadStatus, bool isDownloaded, String fileName, bool isMobile) {
+      String? downloadStatus, bool isDownloaded, String fileName, bool isMobile, String formattedDate) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -1450,13 +1520,26 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                 Text('${AppLocalizations.of(context)!.translate('file_id_label')}: $fileId',
                     style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
               ],
+              if (formattedDate.isNotEmpty) ...[
+                Container(
+                  width: 3,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: AppColors.textMuted,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Icon(Icons.calendar_today_rounded, size: 10, color: AppColors.textSecondary),
+                Text(formattedDate,
+                    style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+              ],
             ],
           ),
         ),
         if (isDownloading && downloadStatus != null)
           _buildDownloadProgress(downloadStatus, isMobile),
         if (isDownloaded)
-          _buildDownloadedStatus(fileName, isMobile),
+          _buildDownloadedStatus(fileName, isMobile, fileId),
       ],
     );
   }
@@ -1480,11 +1563,11 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     );
   }
 
-  Widget _buildDownloadedStatus(String fileName, bool isMobile) {
+  Widget _buildDownloadedStatus(String fileName, bool isMobile, dynamic documentId) {
     return Tooltip(
       message: AppLocalizations.of(context)!.translate('view_details'),
       child: GestureDetector(
-        onTap: () => _showFileDetails(fileName),
+        onTap: () => _showFileDetails(fileName, documentId),
         child: Container(
           margin: EdgeInsets.only(top: 4),
           child: Row(
@@ -1522,7 +1605,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
     if (isDownloaded) {
       return GestureDetector(
-        onTap: () => _showFileDetails(fileName),
+        onTap: () => _showFileDetails(fileName, documentId),
         child: Tooltip(
           message: AppLocalizations.of(context)!.translate('view_details'),
           child: Container(

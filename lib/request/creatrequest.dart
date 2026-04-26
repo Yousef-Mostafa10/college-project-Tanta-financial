@@ -30,9 +30,9 @@ class CreateRequestColors {
   static Color get accentBlue      => AppColors.accentBlue;
   static Color get accentYellow    => AppColors.accentYellow;
 
-  // Always dark for headers: white text must be readable in both themes
-  static Color get primaryGradientStart => AppColors.headerGradientStart;
-  static Color get primaryGradientEnd   => AppColors.headerGradientEnd;
+  // 🎨 Improved gradients for light mode
+  static Color get primaryGradientStart => AppColors.isDark ? AppColors.headerGradientStart : AppColors.primary;
+  static Color get primaryGradientEnd   => AppColors.isDark ? AppColors.headerGradientEnd : AppColors.primaryHover;
 
   static Color get borderColor     => AppColors.borderColor;
   static Color get focusBorderColor=> AppColors.primary;
@@ -1699,7 +1699,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: CreateRequestColors.primary.withOpacity(0.3),
+            color: CreateRequestColors.primary.withOpacity(AppColors.isDark ? 0.3 : 0.15),
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -1773,7 +1773,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: CreateRequestColors.primary.withOpacity(0.3),
+                    color: CreateRequestColors.primary.withOpacity(AppColors.isDark ? 0.3 : 0.15),
                     blurRadius: 8,
                     offset: Offset(0, 4),
                   ),
@@ -1839,14 +1839,14 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             letterSpacing: 0.5,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         elevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [CreateRequestColors.primaryGradientStart, CreateRequestColors.primaryGradientEnd],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
         ),
@@ -2029,10 +2029,42 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                       items: ['Low', 'Medium', 'High']
                           .map((v) {
                         String label = v;
-                        if (v == 'Low') label = AppLocalizations.of(context)!.translate('priority_low');
-                        if (v == 'Medium') label = AppLocalizations.of(context)!.translate('priority_medium');
-                        if (v == 'High') label = AppLocalizations.of(context)!.translate('priority_high');
-                        return DropdownMenuItem(value: v, child: Text(label));
+                        Color priorityColor = CreateRequestColors.accentGreen;
+                        if (v == 'Low') {
+                          label = AppLocalizations.of(context)!.translate('priority_low');
+                          priorityColor = CreateRequestColors.accentGreen;
+                        } else if (v == 'Medium') {
+                          label = AppLocalizations.of(context)!.translate('priority_medium');
+                          priorityColor = CreateRequestColors.accentYellow;
+                        } else if (v == 'High') {
+                          label = AppLocalizations.of(context)!.translate('priority_high');
+                          priorityColor = CreateRequestColors.accentRed;
+                        }
+                        
+                        return DropdownMenuItem(
+                          value: v, 
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: priorityColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                label,
+                                style: TextStyle(
+                                  color: priorityColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
                       })
                           .toList(),
                       onChanged: (v) => setState(() => _selectedPriority = v!),
