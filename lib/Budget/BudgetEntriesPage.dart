@@ -8,6 +8,8 @@ import '../app_config.dart';
 import '../l10n/app_localizations.dart';
 import '../core/app_colors.dart';
 import '../utils/app_error_handler.dart';
+import 'package:provider/provider.dart';
+import 'package:college_project/providers/theme_provider.dart';
 
 
 // ─────────────────────────────────────────────
@@ -406,76 +408,80 @@ class _BudgetEntriesPageState extends State<BudgetEntriesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: EntryColors.bodyBg,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              AppLocalizations.of(context)!.translate('payment_records'),
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Scaffold(
+          backgroundColor: EntryColors.bodyBg,
+          appBar: AppBar(
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppLocalizations.of(context)!.translate('payment_records'),
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
+                ),
+                Text(
+                  '"${widget.categoryName}"',
+                  style: TextStyle(fontSize: 12, color: Colors.white70),
+                ),
+              ],
             ),
-            Text(
-              '"${widget.categoryName}"',
-              style: TextStyle(fontSize: 12, color: Colors.white70),
+            backgroundColor: EntryColors.primary,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
             ),
-          ],
-        ),
-        backgroundColor: EntryColors.primary,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          // Filter toggle button
-          IconButton(
-            icon: Badge(
-              isLabelVisible: _hasActiveFilters,
-              backgroundColor: EntryColors.accentYellow,
-              child: Icon(Icons.filter_list, color: Colors.white),
-            ),
-            onPressed: () => setState(() => _showFilters = !_showFilters),
-            tooltip: AppLocalizations.of(context)!.translate('filters_tooltip'),
+            actions: [
+              // Filter toggle button
+              IconButton(
+                icon: Badge(
+                  isLabelVisible: _hasActiveFilters,
+                  backgroundColor: EntryColors.accentYellow,
+                  child: Icon(Icons.filter_list, color: Colors.white),
+                ),
+                onPressed: () => setState(() => _showFilters = !_showFilters),
+                tooltip: AppLocalizations.of(context)!.translate('filters_tooltip'),
+              ),
+              // Refresh button
+              IconButton(
+                icon: Icon(Icons.refresh, color: Colors.white),
+                onPressed: () => _fetchEntries(reset: true),
+                tooltip: AppLocalizations.of(context)!.translate('refresh_tooltip'),
+              ),
+            ],
           ),
-          // Refresh button
-          IconButton(
-            icon: Icon(Icons.refresh, color: Colors.white),
-            onPressed: () => _fetchEntries(reset: true),
-            tooltip: AppLocalizations.of(context)!.translate('refresh_tooltip'),
+          body: Column(
+            children: [
+              // ─── FILTER PANEL ───
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: _showFilters ? _buildFilterPanel() : const SizedBox.shrink(),
+              ),
+    
+              // ─── STATS BAR ───
+              _buildStatsBar(),
+    
+              // ─── ENTRIES LIST ───
+              Expanded(child: _buildContent()),
+            ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // ─── FILTER PANEL ───
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child: _showFilters ? _buildFilterPanel() : const SizedBox.shrink(),
-          ),
-
-          // ─── STATS BAR ───
-          _buildStatsBar(),
-
-          // ─── ENTRIES LIST ───
-          Expanded(child: _buildContent()),
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _showBackToTop
-          ? FloatingActionButton(
-              heroTag: 'entries_scroll_top',
-              mini: true,
-              onPressed: _scrollToTop,
-              backgroundColor: EntryColors.primary.withOpacity(0.85),
-              child: Icon(Icons.arrow_upward, color: Colors.white),
-            )
-          : null,
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: _showBackToTop
+              ? FloatingActionButton(
+                  heroTag: 'entries_scroll_top',
+                  mini: true,
+                  onPressed: _scrollToTop,
+                  backgroundColor: EntryColors.primary.withOpacity(0.85),
+                  child: Icon(Icons.arrow_upward, color: Colors.white),
+                )
+              : null,
+        );
+      },
     );
   }
 

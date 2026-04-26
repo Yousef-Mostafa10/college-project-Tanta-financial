@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
@@ -684,21 +685,33 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         // ✅ استخدام الاسم الفريد الذي تم إنشاؤه عند الاختيار
         final finalFileName = file.name;
 
-        if (file.path == null) continue;
-
         var request = http.MultipartRequest(
           'POST',
           Uri.parse('$_documentApiUrl/documents'),
         );
 
         request.headers['Authorization'] = 'Bearer $token';
-        request.headers['accept'] = 'application/json'; // ✅ إضافة header مفقود
+        request.headers['accept'] = 'application/json';
         
-        request.files.add(await http.MultipartFile.fromPath(
-          'file',
-          file.path!,
-          filename: finalFileName,
-        ));
+        if (kIsWeb) {
+          if (file.bytes != null) {
+            request.files.add(http.MultipartFile.fromBytes(
+              'file',
+              file.bytes!,
+              filename: finalFileName,
+            ));
+          } else {
+            debugPrint('❌ Web upload failed: bytes are null for $finalFileName');
+            continue;
+          }
+        } else {
+          if (file.path == null) continue;
+          request.files.add(await http.MultipartFile.fromPath(
+            'file',
+            file.path!,
+            filename: finalFileName,
+          ));
+        }
 
         debugPrint('📄 Uploading: $finalFileName');
 

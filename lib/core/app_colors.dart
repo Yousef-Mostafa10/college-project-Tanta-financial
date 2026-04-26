@@ -148,6 +148,7 @@ class AppColors {
     _themeColor = themeColor;
   }
   static bool get isDark => _isDark;
+  static AppThemeColor get themeColor => _themeColor;
 
   // ══════════════════════════════════════════════════════════════════════════
   //  ① CONDUCTORS  — Raw material. Built fresh from the 90-step blue spectrum.
@@ -197,11 +198,11 @@ class AppColors {
   static const Color _paper7 = Color(0xFF0F172A);
 
   // ·· Light Premium (Purple Blueprint) ··
-  static const Color _pPaper0 = Color(0xFFFAF5FF); // background
-  static const Color _pPaper1 = Color(0xFFFFFFFF); // surface
-  static const Color _pPaper2 = Color(0xFFF3E8FF); // elevated
-  static const Color _pPaper3 = Color(0xFFE9D5FF); // hover
-  static const Color _pPaper4 = Color(0xFFD8B4FE); // border
+  static const Color _pPaper0 = Color(0xFFFAF9FF); // بياض مكسور بلمحة موف خفيفة جداً وغير ملحوظة (Ghost Purple)
+  static const Color _pPaper1 = Color(0xFFFFFFFF); // White surface
+  static const Color _pPaper2 = Color(0xFFF1F5F9); // Slate 100
+  static const Color _pPaper3 = Color(0xFFE2E8F0); // Slate 200
+  static const Color _pPaper4 = Color(0xFFCBD5E1); // Slate 300 border
   static const Color _pPaper5 = Color(0xFF7E22CE); // secondary text
   static const Color _pPaper6 = Color(0xFF581C87); // primary text dim
   static const Color _pPaper7 = Color(0xFF3B0764); // primary text deep

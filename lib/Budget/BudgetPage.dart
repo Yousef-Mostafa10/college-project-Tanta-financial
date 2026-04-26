@@ -7,6 +7,8 @@ import '../app_config.dart';
 import '../l10n/app_localizations.dart';
 import '../core/app_colors.dart';
 import '../utils/app_error_handler.dart';
+import 'package:provider/provider.dart';
+import 'package:college_project/providers/theme_provider.dart';
 import 'BudgetEntriesPage.dart';
 
 class BudgetPage extends StatefulWidget {
@@ -908,256 +910,260 @@ class _BudgetPageState extends State<BudgetPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: BudgetColors.bodyBg,
-      appBar: AppBar(
-        title: Text(
-          AppLocalizations.of(context)!.translate('budget_management'),
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: BudgetColors.primary,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh, color: Colors.white),
-            onPressed: () => fetchAllCategories(fullLoad: false),
-            tooltip: AppLocalizations.of(context)!.translate('refresh'),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-          // 🔍 Search Bar
-          Container(
-            padding: const EdgeInsets.all(24),
-            child: Container(
-              decoration: BoxDecoration(
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Scaffold(
+          backgroundColor: BudgetColors.bodyBg,
+          appBar: AppBar(
+            title: Text(
+              AppLocalizations.of(context)!.translate('budget_management'),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: BudgetColors.statShadow,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  hintText: AppLocalizations.of(context)!.translate('search_budget_hint'),
-                  hintStyle: TextStyle(color: BudgetColors.textMuted),
-                  prefixIcon:
-                      Icon(Icons.search, color: BudgetColors.primary),
-                  suffixIcon: searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.clear,
-                              color: BudgetColors.textMuted),
-                          onPressed: () {
-                            searchController.clear();
-                            setState(() {
-                              filteredCategories = allCategories;
-                            });
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                ),
               ),
             ),
+            backgroundColor: BudgetColors.primary,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.refresh, color: Colors.white),
+                onPressed: () => fetchAllCategories(fullLoad: false),
+                tooltip: AppLocalizations.of(context)!.translate('refresh'),
+              ),
+            ],
           ),
-
-          // 📊 Stats Summary
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          body: Stack(
+            children: [
+              Column(
+                children: [
+              // 🔍 Search Bar
+              Container(
+                padding: const EdgeInsets.all(24),
+                child: Container(
                   decoration: BoxDecoration(
-                    color: BudgetColors.statBgLight,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: BudgetColors.statBorder),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.account_balance_wallet,
-                          size: 16, color: BudgetColors.primary),
-                      SizedBox(width: 8),
-                      Text(
-                        AppLocalizations.of(context)!.translate('total_categories_stat').replaceAll('{count}', '$_totalCategories'),
-                        style: TextStyle(
-                          color: BudgetColors.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: BudgetColors.statShadow,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
+                  child: TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context)!.translate('search_budget_hint'),
+                      hintStyle: TextStyle(color: BudgetColors.textMuted),
+                      prefixIcon:
+                          Icon(Icons.search, color: BudgetColors.primary),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.clear,
+                                  color: BudgetColors.textMuted),
+                              onPressed: () {
+                                searchController.clear();
+                                setState(() {
+                                  filteredCategories = allCategories;
+                                });
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
                 ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: 16),
-
-          // 📱 Categories Grid
-          Expanded(
-            child: isLoading
-                ? Center(
-                    child: CircularProgressIndicator(
-                        color: BudgetColors.primary))
-                : errorMessage != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.error_outline,
-                                size: 64, color: BudgetColors.accentRed),
-                            SizedBox(height: 16),
-                            Text(errorMessage!,
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    color: BudgetColors.textMuted)),
-                            SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: fetchAllCategories,
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: BudgetColors.primary),
-                              child: Text(AppLocalizations.of(context)!.translate('retry_button'), style: TextStyle(color: Colors.white)),
+              ),
+    
+              // 📊 Stats Summary
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  children: [
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: BudgetColors.statBgLight,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: BudgetColors.statBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.account_balance_wallet,
+                              size: 16, color: BudgetColors.primary),
+                          SizedBox(width: 8),
+                          Text(
+                            AppLocalizations.of(context)!.translate('total_categories_stat').replaceAll('{count}', '$_totalCategories'),
+                            style: TextStyle(
+                              color: BudgetColors.primary,
+                              fontWeight: FontWeight.w500,
                             ),
-                          ],
-                        ),
-                      )
-                    : filteredCategories.isEmpty
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+    
+              SizedBox(height: 16),
+    
+              // 📱 Categories Grid
+              Expanded(
+                child: isLoading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                            color: BudgetColors.primary))
+                    : errorMessage != null
                         ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.account_balance_wallet_outlined,
-                                  size: 64,
-                                  color:
-                                      BudgetColors.textMuted.withOpacity(0.5),
-                                ),
+                                Icon(Icons.error_outline,
+                                    size: 64, color: BudgetColors.accentRed),
                                 SizedBox(height: 16),
-                                Text(
-                                  searchController.text.isEmpty
-                                      ? AppLocalizations.of(context)!.translate('no_requests_found')
-                                      : AppLocalizations.of(context)!.translate('no_search_results'),
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      color: BudgetColors.textMuted),
+                                Text(errorMessage!,
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: BudgetColors.textMuted)),
+                                SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: fetchAllCategories,
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: BudgetColors.primary),
+                                  child: Text(AppLocalizations.of(context)!.translate('retry_button'), style: TextStyle(color: Colors.white)),
                                 ),
                               ],
                             ),
                           )
-                        : LayoutBuilder(
-                            builder: (context, constraints) {
-                              final double width = constraints.maxWidth;
-                              final bool isSmallMobile = width < 360;
-                              final int crossAxisCount = width > 900
-                                  ? 4
-                                  : (width > 600 ? 3 : 2);
-                              final double childAspectRatio = width > 600
-                                  ? 1.0
-                                  : (isSmallMobile ? 0.72 : 0.75);
-
-                              return GridView.builder(
-                                controller: _scrollController,
-                                padding: EdgeInsets.all(
-                                    isSmallMobile ? 12 : 24),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  childAspectRatio: childAspectRatio,
-                                  crossAxisSpacing:
-                                      isSmallMobile ? 12 : 16,
-                                  mainAxisSpacing:
-                                      isSmallMobile ? 12 : 16,
+                        : filteredCategories.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.account_balance_wallet_outlined,
+                                      size: 64,
+                                      color:
+                                          BudgetColors.textMuted.withOpacity(0.5),
+                                    ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      searchController.text.isEmpty
+                                          ? AppLocalizations.of(context)!.translate('no_requests_found')
+                                          : AppLocalizations.of(context)!.translate('no_search_results'),
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          color: BudgetColors.textMuted),
+                                    ),
+                                  ],
                                 ),
-                                itemCount: filteredCategories.length +
-                                    (_hasMorePages &&
-                                            searchController.text.isEmpty
-                                        ? 1
-                                        : 0),
-                                itemBuilder: (context, index) {
-                                  if (index == filteredCategories.length) {
-                                    return Center(
-                                      child: Padding(
-                                        padding: EdgeInsets.all(16),
-                                        child: CircularProgressIndicator(
-                                          color: BudgetColors.primary,
-                                          strokeWidth: 2,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  final cat = filteredCategories[index];
-                                  return BudgetCategoryCard(
-                                    category: cat,
-                                    onEdit: () => _showRenameCategoryDialog(cat),
-                                    onAddEntry: () => _showAddEntryDialog(cat),
-                                    onDelete: () => _confirmDelete(cat),
+                              )
+                            : LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final double width = constraints.maxWidth;
+                                  final bool isSmallMobile = width < 360;
+                                  final int crossAxisCount = width > 900
+                                      ? 4
+                                      : (width > 600 ? 3 : 2);
+                                  final double childAspectRatio = width > 600
+                                      ? 1.0
+                                      : (isSmallMobile ? 0.72 : 0.75);
+    
+                                  return GridView.builder(
+                                    controller: _scrollController,
+                                    padding: EdgeInsets.all(
+                                        isSmallMobile ? 12 : 24),
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: crossAxisCount,
+                                      childAspectRatio: childAspectRatio,
+                                      crossAxisSpacing:
+                                          isSmallMobile ? 12 : 16,
+                                      mainAxisSpacing:
+                                          isSmallMobile ? 12 : 16,
+                                    ),
+                                    itemCount: filteredCategories.length +
+                                        (_hasMorePages &&
+                                                searchController.text.isEmpty
+                                            ? 1
+                                            : 0),
+                                    itemBuilder: (context, index) {
+                                      if (index == filteredCategories.length) {
+                                        return Center(
+                                          child: Padding(
+                                            padding: EdgeInsets.all(16),
+                                            child: CircularProgressIndicator(
+                                              color: BudgetColors.primary,
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      final cat = filteredCategories[index];
+                                      return BudgetCategoryCard(
+                                        category: cat,
+                                        onEdit: () => _showRenameCategoryDialog(cat),
+                                        onAddEntry: () => _showAddEntryDialog(cat),
+                                        onDelete: () => _confirmDelete(cat),
+                                      );
+                                    },
                                   );
                                 },
-                              );
-                            },
-                          ),
+                              ),
+                      ),
+                    ],
                   ),
+                  if (isRefreshing)
+                    const Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: LinearProgressIndicator(),
+                    ),
                 ],
               ),
-              if (isRefreshing)
-                const Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: LinearProgressIndicator(),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: SizedBox(
+            width: MediaQuery.of(context).size.width,
+            child: Stack(
+              children: [
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: FloatingActionButton(
+                      heroTag: 'budget_add_btn',
+                      onPressed: _showAddCategoryDialog,
+                      backgroundColor: BudgetColors.primary,
+                      child: Icon(Icons.add, color: Colors.white, size: 28),
+                    ),
+                  ),
                 ),
-            ],
-          ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: SizedBox(
-        width: MediaQuery.of(context).size.width,
-        child: Stack(
-          children: [
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: FloatingActionButton(
-                  heroTag: 'budget_add_btn',
-                  onPressed: _showAddCategoryDialog,
-                  backgroundColor: BudgetColors.primary,
-                  child: Icon(Icons.add, color: Colors.white, size: 28),
-                ),
-              ),
+                if (_showBackToTop)
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: FloatingActionButton(
+                      heroTag: 'budget_scroll_top',
+                      mini: true,
+                      onPressed: _scrollToTop,
+                      backgroundColor: BudgetColors.primary.withOpacity(0.8),
+                      child: Icon(Icons.arrow_upward, color: Colors.white),
+                    ),
+                  ),
+              ],
             ),
-            if (_showBackToTop)
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: FloatingActionButton(
-                  heroTag: 'budget_scroll_top',
-                  mini: true,
-                  onPressed: _scrollToTop,
-                  backgroundColor: BudgetColors.primary.withOpacity(0.8),
-                  child: Icon(Icons.arrow_upward, color: Colors.white),
-                ),
-              ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

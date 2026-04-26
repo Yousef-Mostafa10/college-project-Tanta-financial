@@ -3,6 +3,8 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:college_project/providers/theme_provider.dart';
 
 import '../Auth/login.dart';
 import '../Notefecation/inbox.dart';
@@ -416,67 +418,71 @@ class _AdministrativeDashboardPageState
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final isMobile = width < 600;
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final width = MediaQuery.of(context).size.width;
+        final isMobile = width < 600;
 
-    return Scaffold(
-      backgroundColor: AppColors.bodyBg,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        title: Text(
-          AppLocalizations.of(context)!.translate('administrative_dashboard'),
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: min(width * 0.04, 20),
-            color: Colors.white,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh_rounded, color: Colors.white),
-            onPressed: fetchRequests,
-            tooltip: AppLocalizations.of(context)!.translate('refresh'),
-          ),
-          IconButton(
-            icon: Icon(Icons.notifications_outlined,
-                color: Colors.white),
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const InboxPage())),
-            tooltip: AppLocalizations.of(context)!.translate('notifications'),
-          ),
-        ],
-      ),
-      drawer: CustomDrawer(onLogout: logout),
-      body: isLoading
-          ? _buildLoadingState()
-          : Stack(
-              children: [
-                isMobile
-                    ? _buildMobileOptimizedBody()
-                    : _buildDesktopBodyWithScroll(),
-                if (isRefreshing)
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: LinearProgressIndicator(
-                      backgroundColor: Colors.transparent,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                    ),
-                  ),
-              ],
+        return Scaffold(
+          backgroundColor: AppColors.bodyBg,
+          appBar: AppBar(
+            backgroundColor: AppColors.primary,
+            elevation: 0,
+            title: Text(
+              AppLocalizations.of(context)!.translate('administrative_dashboard'),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: min(width * 0.04, 20),
+                color: Colors.white,
+              ),
             ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _showBackToTop
-          ? FloatingActionButton(
-              heroTag: 'dashboard_scroll_top',
-              mini: true,
-              onPressed: _scrollToTop,
-              backgroundColor: AppColors.primary.withOpacity(0.8),
-              child: const Icon(Icons.arrow_upward, color: Colors.white),
-            )
-          : null,
+            actions: [
+              IconButton(
+                icon: Icon(Icons.refresh_rounded, color: Colors.white),
+                onPressed: fetchRequests,
+                tooltip: AppLocalizations.of(context)!.translate('refresh'),
+              ),
+              IconButton(
+                icon: Icon(Icons.notifications_outlined,
+                    color: Colors.white),
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const InboxPage())),
+                tooltip: AppLocalizations.of(context)!.translate('notifications'),
+              ),
+            ],
+          ),
+          drawer: CustomDrawer(onLogout: logout),
+          body: isLoading
+              ? _buildLoadingState()
+              : Stack(
+                  children: [
+                    isMobile
+                        ? _buildMobileOptimizedBody()
+                        : _buildDesktopBodyWithScroll(),
+                    if (isRefreshing)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: LinearProgressIndicator(
+                          backgroundColor: Colors.transparent,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                      ),
+                  ],
+                ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: _showBackToTop
+              ? FloatingActionButton(
+                  heroTag: 'dashboard_scroll_top',
+                  mini: true,
+                  onPressed: _scrollToTop,
+                  backgroundColor: AppColors.primary.withOpacity(0.8),
+                  child: const Icon(Icons.arrow_upward, color: Colors.white),
+                )
+              : null,
+        );
+      },
     );
   }
 

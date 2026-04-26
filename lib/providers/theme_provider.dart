@@ -40,6 +40,8 @@ class ThemeProvider extends ChangeNotifier {
     final colorIndex = prefs.getInt('themeColorIndex') ?? 0;
     _themeColor = AppThemeColor.values[colorIndex];
     
+    debugPrint("🎨 Theme Loaded: isDark=$isDark, ColorIndex=$colorIndex");
+    
     AppColors.setTheme(isDark: isDark, themeColor: _themeColor);
     notifyListeners();
   }
@@ -48,5 +50,6 @@ class ThemeProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isDark', isDarkMode);
     await prefs.setInt('themeColorIndex', _themeColor.index);
+    debugPrint("💾 Theme Saved: isDark=$isDarkMode, ColorIndex=${_themeColor.index}");
   }
 }

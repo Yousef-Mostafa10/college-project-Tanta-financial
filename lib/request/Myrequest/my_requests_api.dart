@@ -19,7 +19,7 @@ class MyRequestsApi {
   // 🔹 جلب أنواع المعاملات مع Pagination (صفحة واحدة)
   Future<Map<String, dynamic>> fetchTypesPage({int page = 1, int perPage = 10}) async {
     try {
-      if (userToken == null) return {'types': [], 'hasMore': false};
+      if (userToken == null) return {'types': <String>[], 'hasMore': false};
 
       final response = await http.get(
         Uri.parse("$baseUrl/transactions/types?page=$page&perPage=$perPage"),
@@ -58,10 +58,10 @@ class MyRequestsApi {
           'hasMore': hasMore,
         };
       }
-      return {'types': [], 'hasMore': false};
+      return {'types': <String>[], 'hasMore': false};
     } catch (e) {
       print("⚠️ Error fetching types page: $e");
-      return {'types': [], 'hasMore': false};
+      return {'types': <String>[], 'hasMore': false};
     }
   }
 
@@ -69,7 +69,7 @@ class MyRequestsApi {
   Future<List<String>> fetchTypes() async {
     final result = await fetchTypesPage(page: 1, perPage: 1000);
     List<String> allTypes = ['All Types'];
-    allTypes.addAll(result['types'] as List<String>);
+    allTypes.addAll(List<String>.from(result['types'] ?? []));
     return allTypes.toSet().toList();
   }
 

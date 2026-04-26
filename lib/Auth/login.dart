@@ -8,6 +8,9 @@ import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
 import '../core/app_colors.dart';
 import '../utils/app_error_handler.dart';
+import 'package:provider/provider.dart';
+import 'package:college_project/providers/theme_provider.dart';
+import 'package:college_project/core/app_theme_color.dart';
 import 'auth_service.dart';
 import '../request/Myrequest/myrequest.dart';
 
@@ -106,39 +109,43 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final screenHeight = MediaQuery.of(context).size.height;
+        final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: max(16, screenWidth * 0.05),
-              vertical: max(10, screenHeight * 0.02),
-            ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: min(screenWidth, 1200),
-                maxHeight: min(screenHeight, 850),
-              ),
-              child: Card(
-                color: cardColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+        return Scaffold(
+          backgroundColor: backgroundColor,
+          body: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: max(16, screenWidth * 0.05),
+                  vertical: max(10, screenHeight * 0.02),
                 ),
-                elevation: screenWidth > 600 ? 5 : 2,
-                child: Padding(
-                  padding: EdgeInsets.all(max(16, screenWidth * 0.03)),
-                  child: _buildResponsiveLayout(screenWidth, isPortrait),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: min(screenWidth, 1200),
+                    maxHeight: min(screenHeight, 850),
+                  ),
+                  child: Card(
+                    color: cardColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: screenWidth > 600 ? 5 : 2,
+                    child: Padding(
+                      padding: EdgeInsets.all(max(16, screenWidth * 0.03)),
+                      child: _buildResponsiveLayout(screenWidth, isPortrait),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -205,9 +212,7 @@ class _LoginPageState extends State<LoginPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Image.asset(
-            AppColors.isDark 
-                ? 'assets/images/Gemini_Generated_Image_14gt8u14gt8u14gt.png' 
-                : 'assets/images/Gemini_Generated_Image_ff5fu5ff5fu5ff5f (1).png',
+            _getLoginImage(),
             width: _getImageSize(screenWidth, isPortrait),
             height: _getImageSize(screenWidth, isPortrait) * 0.8,
             fit: BoxFit.contain,
@@ -402,5 +407,19 @@ class _LoginPageState extends State<LoginPage> {
         ],
       ),
     );
+  }
+  String _getLoginImage() {
+    final bool isDark = AppColors.isDark;
+    final AppThemeColor theme = AppColors.themeColor;
+
+    if (theme == AppThemeColor.purple) {
+      return isDark
+          ? 'assets/images/Gemini_Generated_Image_6e036d6e036d6e03.png'
+          : 'assets/images/Gemini_Generated_Image_sllkiisllkiisllk.png';
+    } else {
+      return isDark
+          ? 'assets/images/Gemini_Generated_Image_14gt8u14gt8u14gt.png'
+          : 'assets/images/Gemini_Generated_Image_ff5fu5ff5fu5ff5f (1).png';
+    }
   }
 }

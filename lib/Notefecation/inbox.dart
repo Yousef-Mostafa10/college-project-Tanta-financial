@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import 'package:college_project/utils/app_error_handler.dart';
 import 'package:college_project/core/app_colors.dart';
+import 'package:provider/provider.dart';
+import 'package:college_project/providers/theme_provider.dart';
 import '../request/Ditalis_Request/ditalis_request.dart';
 import '../request/editerequest.dart';
 import 'inbox_api.dart';
@@ -2127,57 +2129,61 @@ class _InboxPageState extends State<InboxPage> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final isMobile = width < 600;
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final width = MediaQuery.of(context).size.width;
+        final isMobile = width < 600;
 
-    return Scaffold(
-      backgroundColor: InboxColors.bodyBg,
-      appBar: AppBar(
-        title: Text(
-          AppLocalizations.of(context)!.translate('inbox_title'),
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: min(width * 0.04, 20),
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: InboxColors.primary,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh_rounded, color: Colors.white),
-            onPressed: _fetchInboxRequests,
-            tooltip: AppLocalizations.of(context)!.translate('refresh'),
-          ),
-          if (_isLoading || _isRefreshing)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
+        return Scaffold(
+          backgroundColor: InboxColors.bodyBg,
+          appBar: AppBar(
+            title: Text(
+              AppLocalizations.of(context)!.translate('inbox_title'),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: min(width * 0.04, 20),
+                color: Colors.white,
               ),
             ),
-        ],
-      ),
-      body: _isLoading
-          ? _buildLoadingState()
-          : isMobile
-          ? _buildMobileOptimizedBody()
-          : _buildDesktopBody(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _showBackToTop
-          ? FloatingActionButton(
-              heroTag: 'inbox_scroll_top',
-              mini: true,
-              onPressed: _scrollToTop,
-              backgroundColor: InboxColors.primary.withOpacity(0.8),
-              child: Icon(Icons.arrow_upward, color: Colors.white),
-            )
-          : null,
+            backgroundColor: InboxColors.primary,
+            elevation: 0,
+            actions: [
+              IconButton(
+                icon: Icon(Icons.refresh_rounded, color: Colors.white),
+                onPressed: _fetchInboxRequests,
+                tooltip: AppLocalizations.of(context)!.translate('refresh'),
+              ),
+              if (_isLoading || _isRefreshing)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          body: _isLoading
+              ? _buildLoadingState()
+              : isMobile
+              ? _buildMobileOptimizedBody()
+              : _buildDesktopBody(),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: _showBackToTop
+              ? FloatingActionButton(
+                  heroTag: 'inbox_scroll_top',
+                  mini: true,
+                  onPressed: _scrollToTop,
+                  backgroundColor: InboxColors.primary.withOpacity(0.8),
+                  child: Icon(Icons.arrow_upward, color: Colors.white),
+                )
+              : null,
+        );
+      },
     );
   }
 }

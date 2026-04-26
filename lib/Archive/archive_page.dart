@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import 'dart:async';
+import 'package:provider/provider.dart';
+import 'package:college_project/providers/theme_provider.dart';
 
 import '../app_config.dart';
 import 'archive_colors.dart';
@@ -406,57 +408,61 @@ class _ArchivePageState extends State<ArchivePage> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final isMobile = width < 600;
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final width = MediaQuery.of(context).size.width;
+        final isMobile = width < 600;
 
-    return Scaffold(
-      backgroundColor: ArchiveColors.bodyBg,
-      appBar: AppBar(
-        title: Text(
-          AppLocalizations.of(context)!.translate('archive') ?? 'Archive',
-          style: TextStyle(
-            fontSize: isMobile ? 18 : 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: ArchiveColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh_rounded, size: isMobile ? 20 : 24),
-            onPressed: _fetchArchiveRequests,
-            tooltip: AppLocalizations.of(context)!.translate('refresh'),
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? _buildLoadingState(isMobile)
-          : Stack(
-              children: [
-                isMobile ? _buildMobileBody() : _buildDesktopBody(),
-                if (_isRefreshing)
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: LinearProgressIndicator(
-                      backgroundColor: Colors.transparent,
-                      valueColor: AlwaysStoppedAnimation<Color>(ArchiveColors.primary),
-                    ),
-                  ),
-              ],
+        return Scaffold(
+          backgroundColor: ArchiveColors.bodyBg,
+          appBar: AppBar(
+            title: Text(
+              AppLocalizations.of(context)!.translate('archive') ?? 'Archive',
+              style: TextStyle(
+                fontSize: isMobile ? 18 : 20,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _showBackToTop
-          ? FloatingActionButton(
-              heroTag: 'archive_scroll_top',
-              mini: true,
-              onPressed: _scrollToTop,
-              backgroundColor: ArchiveColors.primary.withOpacity(0.8),
-              child: Icon(Icons.arrow_upward, color: Colors.white),
-            )
-          : null,
+            backgroundColor: ArchiveColors.primary,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            actions: [
+              IconButton(
+                icon: Icon(Icons.refresh_rounded, size: isMobile ? 20 : 24),
+                onPressed: _fetchArchiveRequests,
+                tooltip: AppLocalizations.of(context)!.translate('refresh'),
+              ),
+            ],
+          ),
+          body: _isLoading
+              ? _buildLoadingState(isMobile)
+              : Stack(
+                  children: [
+                    isMobile ? _buildMobileBody() : _buildDesktopBody(),
+                    if (_isRefreshing)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: LinearProgressIndicator(
+                          backgroundColor: Colors.transparent,
+                          valueColor: AlwaysStoppedAnimation<Color>(ArchiveColors.primary),
+                        ),
+                      ),
+                  ],
+                ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: _showBackToTop
+              ? FloatingActionButton(
+                  heroTag: 'archive_scroll_top',
+                  mini: true,
+                  onPressed: _scrollToTop,
+                  backgroundColor: ArchiveColors.primary.withOpacity(0.8),
+                  child: Icon(Icons.arrow_upward, color: Colors.white),
+                )
+              : null,
+        );
+      },
     );
   }
 

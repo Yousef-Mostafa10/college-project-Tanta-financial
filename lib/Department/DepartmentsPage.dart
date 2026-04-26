@@ -7,6 +7,8 @@ import '../app_config.dart';
 import '../l10n/app_localizations.dart';
 import '../core/app_colors.dart';
 import '../utils/app_error_handler.dart';
+import 'package:provider/provider.dart';
+import 'package:college_project/providers/theme_provider.dart';
 
 class DepartmentsPage extends StatefulWidget {
   const DepartmentsPage({Key? key}) : super(key: key);
@@ -1125,296 +1127,300 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bodyBg,
-      appBar: AppBar(
-        title: Text(
-          AppLocalizations.of(context)!.translate('departments_management'),
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: AppColors.isDark
-                  ? [AppColors.headerGradientStart, AppColors.headerGradientEnd]
-                  : [AppColors.primary, AppColors.primaryHover],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh, color: Colors.white),
-            onPressed: () => fetchAllDepartments(fullLoad: false),
-            tooltip: AppLocalizations.of(context)!.translate('refresh'),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-          // 🔍 Search Bar
-          Container(
-            padding: const EdgeInsets.all(24),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.statShadow,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Scaffold(
+          backgroundColor: AppColors.bodyBg,
+          appBar: AppBar(
+            title: Text(
+              AppLocalizations.of(context)!.translate('departments_management'),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-              child: TextField(
-                controller: searchController,
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: AppLocalizations.of(context)!.translate('search_dept_hint'),
-                  hintStyle: TextStyle(color: AppColors.textMuted),
-                  prefixIcon: Icon(Icons.search, color: AppColors.primary),
-                  suffixIcon: searchController.text.isNotEmpty
-                      ? IconButton(
-                    icon: Icon(Icons.clear, color: AppColors.textMuted),
-                    onPressed: () {
-                      searchController.clear();
-                      setState(() {
-                        filteredDepartments = allDepartments;
-                      });
-                    },
-                  )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            flexibleSpace: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: AppColors.isDark
+                      ? [AppColors.headerGradientStart, AppColors.headerGradientEnd]
+                      : [AppColors.primary, AppColors.primaryHover],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
             ),
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.refresh, color: Colors.white),
+                onPressed: () => fetchAllDepartments(fullLoad: false),
+                tooltip: AppLocalizations.of(context)!.translate('refresh'),
+              ),
+            ],
           ),
-
-          // 📊 Stats Summary
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          body: Stack(
+            children: [
+              Column(
+                children: [
+              // 🔍 Search Bar
+              Container(
+                padding: const EdgeInsets.all(24),
+                child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.statBgLight,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.statBorder),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.statShadow,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Row(
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context)!.translate('search_dept_hint'),
+                      hintStyle: TextStyle(color: AppColors.textMuted),
+                      prefixIcon: Icon(Icons.search, color: AppColors.primary),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                        icon: Icon(Icons.clear, color: AppColors.textMuted),
+                        onPressed: () {
+                          searchController.clear();
+                          setState(() {
+                            filteredDepartments = allDepartments;
+                          });
+                        },
+                      )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+              ),
+    
+              // 📊 Stats Summary
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.statBgLight,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.statBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.corporate_fare, size: 16, color: AppColors.primary),
+                          SizedBox(width: 8),
+                          Text(
+                            AppLocalizations.of(context)!.translate('total_departments').replaceAll('{count}', '$_totalDepartments'),
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+    
+              SizedBox(height: 16),
+    
+              // 📱 Departments Grid
+              Expanded(
+                child: isLoading
+                    ? Center(child: CircularProgressIndicator(color: AppColors.primary))
+                    : errorMessage != null
+                    ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.corporate_fare, size: 16, color: AppColors.primary),
-                      SizedBox(width: 8),
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: AppColors.accentRed,
+                      ),
+                      SizedBox(height: 16),
                       Text(
-                        AppLocalizations.of(context)!.translate('total_departments').replaceAll('{count}', '$_totalDepartments'),
+                        errorMessage!,
                         style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 16,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: fetchAllDepartments,
+                        icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 4,
+                          shadowColor: AppColors.primary.withOpacity(0.4),
+                        ),
+                        label: Text(
+                          AppLocalizations.of(context)!.translate('retry'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ),
                     ],
                   ),
+                )
+                    : filteredDepartments.isEmpty
+                    ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.business_center,
+                        size: 64,
+                        color: AppColors.textMuted.withOpacity(0.5),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        searchController.text.isEmpty
+                            ? AppLocalizations.of(context)!.translate('no_depts_found')
+                            : AppLocalizations.of(context)!.translate('no_search_results'),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: fetchAllDepartments,
+                        icon: const Icon(Icons.sync, color: Colors.white, size: 20),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        label: Text(
+                          AppLocalizations.of(context)!.locale.languageCode == 'ar' ? 'إعادة تحميل' : 'Reload',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          double width = constraints.maxWidth;
+                          bool isSmallMobile = width < 360;
+                          int crossAxisCount = width > 900 ? 4 : (width > 600 ? 3 : 2);
+                          
+                          // Calculate aspect ratio based on width to ensure content fits
+                          double childAspectRatio = width > 600 ? 1.1 : (isSmallMobile ? 0.72 : 0.85);
+    
+                          return GridView.builder(
+                            controller: _scrollController,
+                            padding: EdgeInsets.all(isSmallMobile ? 12 : 24),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              childAspectRatio: childAspectRatio,
+                              crossAxisSpacing: isSmallMobile ? 12 : 16,
+                              mainAxisSpacing: isSmallMobile ? 12 : 16,
+                            ),
+                            itemCount: filteredDepartments.length + (_hasMorePages && searchController.text.isEmpty ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              // عنصر اللودينج في الآخر
+                              if (index == filteredDepartments.length) {
+                                return Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.primary,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                );
+                              }
+                              final dept = filteredDepartments[index];
+                              return DepartmentCard(
+                                department: dept,
+                                onEdit: () => _showEditDepartmentDialog(dept),
+                                onDelete: () => _confirmDelete(dept),
+                              );
+                            },
+                          );
+                        },
+                      ),
                 ),
               ],
             ),
-          ),
-
-          SizedBox(height: 16),
-
-          // 📱 Departments Grid
-          Expanded(
-            child: isLoading
-                ? Center(child: CircularProgressIndicator(color: AppColors.primary))
-                : errorMessage != null
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: AppColors.accentRed,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    errorMessage!,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: fetchAllDepartments,
-                    icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 4,
-                      shadowColor: AppColors.primary.withOpacity(0.4),
-                    ),
-                    label: Text(
-                      AppLocalizations.of(context)!.translate('retry'),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-                : filteredDepartments.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.business_center,
-                    size: 64,
-                    color: AppColors.textMuted.withOpacity(0.5),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    searchController.text.isEmpty
-                        ? AppLocalizations.of(context)!.translate('no_depts_found')
-                        : AppLocalizations.of(context)!.translate('no_search_results'),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: fetchAllDepartments,
-                    icon: const Icon(Icons.sync, color: Colors.white, size: 20),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    label: Text(
-                      AppLocalizations.of(context)!.locale.languageCode == 'ar' ? 'إعادة تحميل' : 'Reload',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                  ),
-                ],
-              ),
-            )
-                : LayoutBuilder(
-                    builder: (context, constraints) {
-                      double width = constraints.maxWidth;
-                      bool isSmallMobile = width < 360;
-                      int crossAxisCount = width > 900 ? 4 : (width > 600 ? 3 : 2);
-                      
-                      // Calculate aspect ratio based on width to ensure content fits
-                      double childAspectRatio = width > 600 ? 1.1 : (isSmallMobile ? 0.72 : 0.85);
-
-                      return GridView.builder(
-                        controller: _scrollController,
-                        padding: EdgeInsets.all(isSmallMobile ? 12 : 24),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          childAspectRatio: childAspectRatio,
-                          crossAxisSpacing: isSmallMobile ? 12 : 16,
-                          mainAxisSpacing: isSmallMobile ? 12 : 16,
-                        ),
-                        itemCount: filteredDepartments.length + (_hasMorePages && searchController.text.isEmpty ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          // عنصر اللودينج في الآخر
-                          if (index == filteredDepartments.length) {
-                            return Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(16),
-                                child: CircularProgressIndicator(
-                                  color: AppColors.primary,
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            );
-                          }
-                          final dept = filteredDepartments[index];
-                          return DepartmentCard(
-                            department: dept,
-                            onEdit: () => _showEditDepartmentDialog(dept),
-                            onDelete: () => _confirmDelete(dept),
-                          );
-                        },
-                      );
-                    },
-                  ),
-            ),
-          ],
-        ),
-        if (isRefreshing)
-          const Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: LinearProgressIndicator(),
-          ),
-      ],
-    ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: SizedBox(
-        width: MediaQuery.of(context).size.width,
-        child: Stack(
-          children: [
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: FloatingActionButton(
-                  heroTag: 'dept_add_btn',
-                  onPressed: _showAddDepartmentDialog,
-                  backgroundColor: AppColors.primary,
-                  child: Icon(
-                    Icons.add,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-              ),
-            ),
-            if (_showBackToTop)
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: FloatingActionButton(
-                  heroTag: 'dept_scroll_top',
-                  mini: true,
-                  onPressed: _scrollToTop,
-                  backgroundColor: AppColors.primary.withOpacity(0.8),
-                  child: Icon(Icons.arrow_upward, color: Colors.white),
-                ),
+            if (isRefreshing)
+              const Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: LinearProgressIndicator(),
               ),
           ],
         ),
-      ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: SizedBox(
+            width: MediaQuery.of(context).size.width,
+            child: Stack(
+              children: [
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: FloatingActionButton(
+                      heroTag: 'dept_add_btn',
+                      onPressed: _showAddDepartmentDialog,
+                      backgroundColor: AppColors.primary,
+                      child: Icon(
+                        Icons.add,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_showBackToTop)
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: FloatingActionButton(
+                      heroTag: 'dept_scroll_top',
+                      mini: true,
+                      onPressed: _scrollToTop,
+                      backgroundColor: AppColors.primary.withOpacity(0.8),
+                      child: Icon(Icons.arrow_upward, color: Colors.white),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

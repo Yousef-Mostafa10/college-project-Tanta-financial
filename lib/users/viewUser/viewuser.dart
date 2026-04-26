@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:college_project/providers/theme_provider.dart';
 import '../../utils/app_error_handler.dart';
 import 'user_model.dart';
 import 'users_api.dart';
@@ -223,117 +225,121 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final isMobile = width < 600;
-    final isTablet = width >= 600 && width < 1024;
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final width = MediaQuery.of(context).size.width;
+        final isMobile = width < 600;
+        final isTablet = width >= 600 && width < 1024;
 
-    return Scaffold(
-      backgroundColor: AppColors.bodyBg,
-      appBar: AppBar(
-        title: Text(
-          AppLocalizations.of(context)!.translate('users_management'),
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: isMobile ? 18 : 20,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-        centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-            onPressed: _loadUsers,
-            tooltip: AppLocalizations.of(context)!.translate('refresh_tooltip'),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          UsersSearchFilter(
-            searchQuery: _searchQuery,
-            selectedRole: _selectedRole,
-            selectedDepartment: _selectedDepartment,
-            selectedActive: _selectedActive,
-            departments: _departments,
-            apiService: _apiService,
-            onSearchChanged: _onSearchQueryChanged,
-            onRoleChanged: _onRoleChanged,
-            onDepartmentChanged: _onDepartmentChanged,
-            onActiveChanged: _onActiveChanged,
-            isMobile: isMobile,
-          ),
-          Expanded(
-            child: _isLoading
-                ? Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+        return Scaffold(
+          backgroundColor: AppColors.bodyBg,
+          appBar: AppBar(
+            title: Text(
+              AppLocalizations.of(context)!.translate('users_management'),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: isMobile ? 18 : 20,
               ),
-            )
-                : _users.isEmpty
-                ? UsersEmptyState(
-              selectedFilter: _selectedRole,
-              hasUsers: _users.isNotEmpty,
-              isMobile: isMobile,
-            )
-                : Column(
-              children: [
-                UsersListHeader(
-                  filteredUsersCount: _searchQuery.isEmpty && _selectedRole == 'all' && _selectedDepartment == 'all' && _selectedActive == null
-                      ? _totalUsers
-                      : _users.length,
-                  selectedFilter: _selectedRole,
-                  hasMore: _hasMorePages,
-                  searchQuery: _searchQuery,
-                  isMobile: isMobile,
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: EdgeInsets.all(isMobile ? 12 : 16),
-                    itemCount: _users.length + (_hasMorePages ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      // عنصر اللودينج في الآخر
-                      if (index == _users.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          ),
-                        );
-                      }
-                      final user = _users[index];
-                      return UserCard(
-                        user: user,
-                        apiService: _apiService,
-                        isMobile: isMobile,
-                        isTablet: isTablet,
-                        onUpdate: _loadUsers,
-                      );
-                    },
-                  ),
-                ),
-              ],
             ),
+            backgroundColor: AppColors.primary,
+            centerTitle: false,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                onPressed: _loadUsers,
+                tooltip: AppLocalizations.of(context)!.translate('refresh_tooltip'),
+              ),
+            ],
           ),
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _showBackToTop
-          ? FloatingActionButton(
-              heroTag: 'users_scroll_top',
-              mini: true,
-              onPressed: _scrollToTop,
-              backgroundColor: AppColors.primary.withOpacity(0.8),
-              child: const Icon(Icons.arrow_upward, color: Colors.white),
-            )
-          : null,
+          body: Column(
+            children: [
+              UsersSearchFilter(
+                searchQuery: _searchQuery,
+                selectedRole: _selectedRole,
+                selectedDepartment: _selectedDepartment,
+                selectedActive: _selectedActive,
+                departments: _departments,
+                apiService: _apiService,
+                onSearchChanged: _onSearchQueryChanged,
+                onRoleChanged: _onRoleChanged,
+                onDepartmentChanged: _onDepartmentChanged,
+                onActiveChanged: _onActiveChanged,
+                isMobile: isMobile,
+              ),
+              Expanded(
+                child: _isLoading
+                    ? Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  ),
+                )
+                    : _users.isEmpty
+                    ? UsersEmptyState(
+                  selectedFilter: _selectedRole,
+                  hasUsers: _users.isNotEmpty,
+                  isMobile: isMobile,
+                )
+                    : Column(
+                  children: [
+                    UsersListHeader(
+                      filteredUsersCount: _searchQuery.isEmpty && _selectedRole == 'all' && _selectedDepartment == 'all' && _selectedActive == null
+                          ? _totalUsers
+                          : _users.length,
+                      selectedFilter: _selectedRole,
+                      hasMore: _hasMorePages,
+                      searchQuery: _searchQuery,
+                      isMobile: isMobile,
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: EdgeInsets.all(isMobile ? 12 : 16),
+                        itemCount: _users.length + (_hasMorePages ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          // عنصر اللودينج في الآخر
+                          if (index == _users.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          final user = _users[index];
+                          return UserCard(
+                            user: user,
+                            apiService: _apiService,
+                            isMobile: isMobile,
+                            isTablet: isTablet,
+                            onUpdate: _loadUsers,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: _showBackToTop
+              ? FloatingActionButton(
+                  heroTag: 'users_scroll_top',
+                  mini: true,
+                  onPressed: _scrollToTop,
+                  backgroundColor: AppColors.primary.withOpacity(0.8),
+                  child: const Icon(Icons.arrow_upward, color: Colors.white),
+                )
+              : null,
+        );
+      },
     );
   }
 }

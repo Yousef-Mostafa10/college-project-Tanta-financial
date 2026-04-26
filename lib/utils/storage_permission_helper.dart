@@ -1,12 +1,14 @@
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'dart:io';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class StoragePermissionHelper {
   static final DeviceInfoPlugin _deviceInfoPlugin = DeviceInfoPlugin();
 
   /// الحصول على إصدار Android الحالي
   static Future<int> getAndroidVersion() async {
+    if (kIsWeb) return 0; // الويب ليس اندرويد
     try {
       if (!Platform.isAndroid) return 0;
       final androidInfo = await _deviceInfoPlugin.androidInfo;
@@ -19,6 +21,7 @@ class StoragePermissionHelper {
 
   /// التحقق من وجود أذونات التخزين
   static Future<bool> checkStoragePermission() async {
+    if (kIsWeb) return true; // الويب لا يحتاج اذن تخزين تقليدي
     if (!Platform.isAndroid) return true;
 
     final androidVersion = await getAndroidVersion();
@@ -42,6 +45,7 @@ class StoragePermissionHelper {
 
   /// طلب أذونات التخزين
   static Future<bool> requestStoragePermission() async {
+    if (kIsWeb) return true;
     if (!Platform.isAndroid) return true;
 
     final androidVersion = await getAndroidVersion();
@@ -72,6 +76,7 @@ class StoragePermissionHelper {
 
   /// دالة شاملة للتحقق وطلب الأذونات
   static Future<bool> checkAndRequestPermission() async {
+    if (kIsWeb) return true;
     if (!Platform.isAndroid) return true;
     
     final hasPermission = await checkStoragePermission();
@@ -82,6 +87,7 @@ class StoragePermissionHelper {
   }
 
   static Future<void> openSettings() async {
+    if (kIsWeb) return;
     await openAppSettings();
   }
 }

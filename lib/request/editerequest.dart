@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
-import 'dart:io';
+import 'dart:io' as io;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
 import 'transaction_type_model.dart';
@@ -1216,11 +1217,25 @@ class _EditRequestPageState extends State<EditRequestPage> {
         request.headers['Authorization'] = 'Bearer $_userToken';
         request.headers['accept'] = 'application/json';
 
-        request.files.add(await http.MultipartFile.fromPath(
-          'file',
-          file.path!,
-          filename: finalFileName,
-        ));
+        if (kIsWeb) {
+          if (file.bytes != null) {
+            request.files.add(http.MultipartFile.fromBytes(
+              'file',
+              file.bytes!,
+              filename: finalFileName,
+            ));
+          } else {
+            debugPrint('❌ Web upload failed: bytes are null for $finalFileName');
+            continue;
+          }
+        } else {
+          if (file.path == null) continue;
+          request.files.add(await http.MultipartFile.fromPath(
+            'file',
+            file.path!,
+            filename: finalFileName,
+          ));
+        }
 
         var response = await request.send();
 

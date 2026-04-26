@@ -1,7 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' as io;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -212,6 +214,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
   // ✅ الحل الهجين: التحقق من وجود الملفات المحملة مسبقاً
   Future<void> _checkDownloadedFiles(List<dynamic> documents) async {
+    if (kIsWeb) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       final Map<String, String> existingFiles = {};
@@ -223,7 +226,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
         // البحث عن المسار في SharedPreferences
         final savedPath = prefs.getString('downloaded_doc_$docId');
         if (savedPath != null) {
-          final file = File(savedPath);
+          final file = io.File(savedPath);
           // التحقق الفعلي من وجود الملف على القرص
           if (await file.exists()) {
             existingFiles[docId] = savedPath;
@@ -419,19 +422,36 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
 
   // ✅ تحديث دالة التحميل لاستخدام downloadURI
   Future<void> _downloadFile(int documentId, String fileName) async {
-    final hasPermission = await StoragePermissionHelper.checkAndRequestPermission();
-    if (!hasPermission) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('storage_permission_denied')),
-            backgroundColor: AppColors.accentRed,
-            action: SnackBarAction(
-              label: AppLocalizations.of(context)!.translate('settings'),
-              onPressed: () => StoragePermissionHelper.openSettings(),
+    if (!kIsWeb) {
+      final hasPermission = await StoragePermissionHelper.checkAndRequestPermission();
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.translate('storage_permission_denied')),
+              backgroundColor: AppColors.accentRed,
+              action: SnackBarAction(
+                label: AppLocalizations.of(context)!.translate('settings'),
+                onPressed: () => StoragePermissionHelper.openSettings(),
+              ),
             ),
-          ),
-        );
+          );
+        }
+        return;
+      }
+    }
+
+    if (kIsWeb) {
+      // ✅ طريقة التحميل في الويب: فتح الرابط مباشرة
+      final url = Uri.parse("$_baseUrl/documents/$documentId/download");
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch download URL')),
+          );
+        }
       }
       return;
     }
@@ -441,11 +461,11 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
       _downloadProgress[fileName] = AppLocalizations.of(context)!.translate('starting_download_msg');
     });
 
-    Directory? downloadDir;
+    io.Directory? downloadDir;
     try {
       downloadDir = await getDownloadsDirectory();
       if (downloadDir == null) {
-        downloadDir = Directory((await getTemporaryDirectory()).path);
+        downloadDir = io.Directory((await getTemporaryDirectory()).path);
       }
 
       if (!await downloadDir.exists()) {
@@ -483,7 +503,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           _downloadProgress[fileName] = AppLocalizations.of(context)!.translate('saving_file_msg');
         });
 
-        final file = File(filePath);
+        final file = io.File(filePath);
         await file.writeAsBytes(response.bodyBytes);
 
         if (await file.exists()) {
@@ -592,8 +612,9 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   }
 
   String _getFileSize(String filePath) {
+    if (kIsWeb) return AppLocalizations.of(context)!.translate('not_available');
     try {
-      final file = File(filePath);
+      final file = io.File(filePath);
       if (file.existsSync()) {
         final sizeInBytes = file.lengthSync();
         if (sizeInBytes < 1024) {
