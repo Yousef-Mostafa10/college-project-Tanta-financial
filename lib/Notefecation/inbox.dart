@@ -7,8 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:college_project/l10n/app_localizations.dart';
 import 'package:college_project/utils/app_error_handler.dart';
+import 'package:college_project/core/app_colors.dart';
 import '../request/Ditalis_Request/ditalis_request.dart';
-import '../request/creatrequest.dart';
 import '../request/editerequest.dart';
 import 'inbox_api.dart';
 import 'inbox_colors.dart';
@@ -1077,7 +1077,7 @@ class _InboxPageState extends State<InboxPage> {
                         children: [
                           Icon(
                             Icons.person_search_rounded,
-                            color: CreateRequestColors.primary,
+                            color: AppColors.primary,
                             size: 24,
                           ),
                           SizedBox(width: 12),
@@ -1086,7 +1086,7 @@ class _InboxPageState extends State<InboxPage> {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: CreateRequestColors.primary,
+                              color: AppColors.primary,
                             ),
                           ),
                         ],
@@ -1099,7 +1099,7 @@ class _InboxPageState extends State<InboxPage> {
                         focusNode: _searchFocusNode, // ✅ ربط الـ FocusNode
                         decoration: InputDecoration(
                           hintText: AppLocalizations.of(context)!.translate('search_users'),
-                          prefixIcon: Icon(Icons.search_rounded, color: CreateRequestColors.primary),
+                          prefixIcon: Icon(Icons.search_rounded, color: AppColors.primary),
                           suffixIcon: isLoadingUsers && users.isNotEmpty
                               ? Padding(
                                   padding: const EdgeInsets.all(10),
@@ -1108,7 +1108,7 @@ class _InboxPageState extends State<InboxPage> {
                                     height: 16,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 1.5,
-                                      color: CreateRequestColors.primary,
+                                      color: AppColors.primary,
                                     ),
                                   ),
                                 )
@@ -1143,11 +1143,11 @@ class _InboxPageState extends State<InboxPage> {
                            child: Center(
                              child: Column(
                                children: [
-                                 CircularProgressIndicator(color: CreateRequestColors.primary),
+                                 CircularProgressIndicator(color: AppColors.primary),
                                  SizedBox(height: 12),
                                  Text(
                                    AppLocalizations.of(context)!.translate('searching'),
-                                   style: TextStyle(color: CreateRequestColors.textSecondary),
+                                   style: TextStyle(color: AppColors.textSecondary),
                                  ),
                                ],
                              ),
@@ -1159,7 +1159,7 @@ class _InboxPageState extends State<InboxPage> {
                            child: Center(
                              child: Text(
                                AppLocalizations.of(context)!.translate('no_users_found'),
-                               style: TextStyle(color: CreateRequestColors.textSecondary),
+                               style: TextStyle(color: AppColors.textSecondary),
                              ),
                            ),
                          ),
@@ -1196,14 +1196,14 @@ class _InboxPageState extends State<InboxPage> {
                                                   width: 24,
                                                   height: 24,
                                                   child: CircularProgressIndicator(
-                                                    color: CreateRequestColors.primary,
+                                                    color: AppColors.primary,
                                                     strokeWidth: 2,
                                                   ),
                                                 )
                                               : Text(
                                                   AppLocalizations.of(context)!.translate('scroll_for_more'),
                                                   style: TextStyle(
-                                                    color: CreateRequestColors.textSecondary,
+                                                    color: AppColors.textSecondary,
                                                     fontSize: 12,
                                                   ),
                                                 ),
@@ -1219,22 +1219,22 @@ class _InboxPageState extends State<InboxPage> {
                                       leading: Icon(
                                         Icons.person_rounded,
                                         color: isSelected
-                                            ? CreateRequestColors.primary
-                                            : CreateRequestColors.textSecondary,
+                                            ? AppColors.primary
+                                            : AppColors.textSecondary,
                                       ),
                                       title: Text(
                                         userName,
                                         style: TextStyle(
                                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                           color: isSelected
-                                              ? CreateRequestColors.primary
-                                              : CreateRequestColors.textPrimary,
+                                              ? AppColors.primary
+                                              : AppColors.textPrimary,
                                         ),
                                       ),
                                       trailing: isSelected
                                           ? Icon(
                                               Icons.check_rounded,
-                                              color: CreateRequestColors.primary,
+                                              color: AppColors.primary,
                                             )
                                           : null,
                                       onTap: () {
@@ -1253,7 +1253,7 @@ class _InboxPageState extends State<InboxPage> {
                         maxLines: 2,
                         decoration: InputDecoration(
                           hintText: AppLocalizations.of(context)!.translate('enter_comments'),
-                          prefixIcon: Icon(Icons.comment_rounded, color: CreateRequestColors.primary),
+                          prefixIcon: Icon(Icons.comment_rounded, color: AppColors.primary),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -1276,8 +1276,8 @@ class _InboxPageState extends State<InboxPage> {
                                 Navigator.pop(context);
                               },
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: CreateRequestColors.primary,
-                                side: BorderSide(color: CreateRequestColors.primary),
+                                foregroundColor: AppColors.primary,
+                                side: BorderSide(color: AppColors.primary),
                               ),
                               child: Text(AppLocalizations.of(context)!.translate('cancel')),
                             ),
@@ -1299,7 +1299,7 @@ class _InboxPageState extends State<InboxPage> {
                                       );
                                     },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: CreateRequestColors.primary,
+                                backgroundColor: AppColors.primary,
                               ),
                               child: Text(
                                 AppLocalizations.of(context)!.translate('forward'),

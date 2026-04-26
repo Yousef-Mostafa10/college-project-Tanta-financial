@@ -36,72 +36,22 @@ class MyApp extends StatelessWidget {
     return prefs.getString("user_role") ?? "user";
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Consumer2<LanguageProvider, ThemeProvider>(
-      builder: (context, languageProvider, themeProvider, child) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'College Project',
-          themeMode: themeProvider.themeMode,
-          navigatorKey: SessionManager.navigatorKey, // ✅ ربط الـ key لإدارة الجلسة
-          theme: ThemeData(
-            useMaterial3: true,
-            brightness: Brightness.light,
-            primaryColor: AppColors.primary,
-            scaffoldBackgroundColor: AppColors.background,
-            cardTheme: CardThemeData(
-              color: AppColors.surface,
-              elevation: 1,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
-            ),
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: AppColors.primary,
-              brightness: Brightness.light,
-              primary: AppColors.primary,
-              surface: AppColors.surface,
-              background: AppColors.background,
-              onPrimary: AppColors.onPrimary,
-              error: AppColors.accentRed,
-            ),
-            textTheme: AppFonts.textTheme(isDark: false),
-            inputDecorationTheme: InputDecorationTheme(
-              filled: true,
-              fillColor: AppColors.surfaceElevated,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.borderColor),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.borderColor),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.primary, width: 2),
-              ),
-              labelStyle: TextStyle(color: AppColors.textSecondary),
-              hintStyle: TextStyle(color: AppColors.textMuted),
-            ),
-            popupMenuTheme: PopupMenuThemeData(
-              color: AppColors.surfaceElevated,
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
-              textStyle: TextStyle(color: AppColors.textPrimary),
-            ),
-            iconTheme: IconThemeData(color: AppColors.primary),
-          ),
-          darkTheme: ThemeData(
-            useMaterial3: true,
-            brightness: Brightness.dark,
-            primaryColor: AppColors.primary,
-            scaffoldBackgroundColor: AppColors.background,
-            cardTheme: CardThemeData(
-              color: AppColors.surface,
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
-            ),
-            colorScheme: ColorScheme.dark(
+  ThemeData _buildThemeData(bool isDark) {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      primaryColor: AppColors.primary,
+      scaffoldBackgroundColor: AppColors.background,
+      cardTheme: CardThemeData(
+        color: AppColors.surface,
+        elevation: isDark ? 2 : 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: AppColors.borderColor, width: 1),
+        ),
+      ),
+      colorScheme: isDark
+          ? ColorScheme.dark(
               primary: AppColors.primary,
               secondary: AppColors.secondary,
               surface: AppColors.surface,
@@ -110,34 +60,66 @@ class MyApp extends StatelessWidget {
               onSurface: AppColors.textPrimary,
               onBackground: AppColors.textPrimary,
               error: AppColors.accentRed,
+            )
+          : ColorScheme.fromSeed(
+              seedColor: AppColors.primary,
+              brightness: Brightness.light,
+              primary: AppColors.primary,
+              surface: AppColors.surface,
+              background: AppColors.background,
+              onPrimary: AppColors.onPrimary,
+              error: AppColors.accentRed,
             ),
-            textTheme: AppFonts.textTheme(isDark: true),
-            inputDecorationTheme: InputDecorationTheme(
-              filled: true,
-              fillColor: AppColors.surfaceElevated,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.borderColor),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.borderColor),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.primary, width: 2),
-              ),
-              labelStyle: TextStyle(color: AppColors.textSecondary),
-              hintStyle: TextStyle(color: AppColors.textMuted),
-            ),
-            popupMenuTheme: PopupMenuThemeData(
-              color: AppColors.surfaceElevated,
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
-              textStyle: TextStyle(color: AppColors.textPrimary),
-            ),
-            iconTheme: IconThemeData(color: AppColors.primary),
-          ),
+      textTheme: AppFonts.textTheme(isDark: isDark),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.surfaceElevated,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppColors.borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppColors.borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppColors.primary, width: 2),
+        ),
+        labelStyle: TextStyle(color: AppColors.textSecondary),
+        hintStyle: TextStyle(color: AppColors.textMuted),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: AppColors.surfaceElevated,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: AppColors.borderColor, width: 1),
+        ),
+        textStyle: TextStyle(color: AppColors.textPrimary),
+      ),
+      iconTheme: IconThemeData(color: AppColors.primary),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer2<LanguageProvider, ThemeProvider>(
+      builder: (context, languageProvider, themeProvider, child) {
+        // Triggering a static update of AppColors based on current provider state
+        // This ensures getters return correct values during this build cycle.
+        AppColors.setTheme(
+          isDark: themeProvider.isDarkMode,
+          themeColor: themeProvider.themeColor,
+        );
+
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'College Project',
+          themeMode: themeProvider.themeMode,
+          navigatorKey: SessionManager.navigatorKey,
+          theme: _buildThemeData(false),
+          darkTheme: _buildThemeData(true),
           locale: languageProvider.currentLocale,
           supportedLocales: const [
             Locale('en', ''),

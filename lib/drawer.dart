@@ -11,6 +11,7 @@ import 'package:college_project/providers/language_provider.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import 'package:college_project/providers/theme_provider.dart';
 import 'package:college_project/core/app_colors.dart';
+import 'package:college_project/core/app_theme_color.dart';
 
 import 'Department/DepartmentsPage.dart';
 import 'Budget/BudgetPage.dart';
@@ -609,9 +610,71 @@ class _CustomDrawerState extends State<CustomDrawer> {
                 );
               },
             ),
+
+            // اختيار لون السيم (Theme Color)
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return _buildSubExpansionTile(
+                  title: AppLocalizations.of(context)!.translate('theme_color') ?? 'Theme Color',
+                  icon: Icons.palette_rounded,
+                  isMobile: isMobile,
+                  children: [
+                    _buildColorItem(
+                      title: 'Default Blue',
+                      color: const Color(0xFF007AFF),
+                      isSelected: themeProvider.themeColor == AppThemeColor.defaultBlue,
+                      isMobile: isMobile,
+                      onTap: () => themeProvider.setThemeColor(AppThemeColor.defaultBlue),
+                    ),
+                    _buildColorItem(
+                      title: 'Deep Purple',
+                      color: const Color(0xFF6E00B2),
+                      isSelected: themeProvider.themeColor == AppThemeColor.purple,
+                      isMobile: isMobile,
+                      onTap: () => themeProvider.setThemeColor(AppThemeColor.purple),
+                    ),
+                  ],
+                );
+              },
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  // دالة مساعدة لبناء عناصر اختيار اللون
+  Widget _buildColorItem({
+    required String title,
+    required Color color,
+    required bool isSelected,
+    required bool isMobile,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.only(left: isMobile ? 40 : 48, right: isMobile ? 16 : 24),
+      onTap: onTap,
+      leading: Container(
+        width: isMobile ? 16 : 20,
+        height: isMobile ? 16 : 20,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected ? AppColors.textPrimary : Colors.transparent,
+            width: 2,
+          ),
+        ),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: isMobile ? 12 : 14,
+          color: isSelected ? AppColors.primary : AppColors.textSecondary,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      trailing: isSelected ? Icon(Icons.check_rounded, color: AppColors.primary, size: isMobile ? 16 : 18) : null,
     );
   }
 

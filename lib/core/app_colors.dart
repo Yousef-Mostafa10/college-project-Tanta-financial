@@ -1,4 +1,6 @@
+import 'package:college_project/core/app_theme_color.dart';
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -138,7 +140,13 @@ class AppColors {
   AppColors._();
 
   static bool _isDark = true;
-  static void setTheme(bool isDark) => _isDark = isDark;
+  static AppThemeColor _themeColor = AppThemeColor.defaultBlue;
+
+  /// SET THEME — Call this to update the global color system state.
+  static void setTheme({required bool isDark, required AppThemeColor themeColor}) {
+    _isDark = isDark;
+    _themeColor = themeColor;
+  }
   static bool get isDark => _isDark;
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -152,41 +160,69 @@ class AppColors {
   //  Not white. The paper a naval architect uses. Slightly blue, slightly cool.
   // ══════════════════════════════════════════════════════════════════════════
 
-  // ·· Dark Board (private, never touch in widgets) ··
-  static const Color _board0 = Color(0xFF060912); // void — deepest ground plane
-  static const Color _board1 = Color(0xFF091221); // substrate — main dark bg
-  static const Color _board2 = Color(0xFF0D1C35); // trace layer — cards
-  static const Color _board3 = Color(0xFF142847); // via — elevated surfaces
-  static const Color _board4 = Color(0xFF1C3660); // bus — hover state
-  static const Color _board5 = Color(0xFF254878); // junction — border / divider
-  static const Color _board6 = Color(0xFF325E94); // connector — muted border
-  static const Color _board7 = Color(0xFF4D7DB0); // lead — disabled / muted text
-  static const Color _board8 = Color(0xFF82AECE); // surface trace — secondary text
-  static const Color _board9 = Color(0xFFBDD4E8); // top copper — primary text dim
-  static const Color _boardA = Color(0xFFE4F1FB); // solder mask — primary text bright
+  // ·· Dark Board (Default Blue) ··
+  static const Color _board0 = Color(0xFF060912);
+  static const Color _board1 = Color(0xFF091221);
+  static const Color _board2 = Color(0xFF0D1C35);
+  static const Color _board3 = Color(0xFF142847);
+  static const Color _board4 = Color(0xFF1C3660);
+  static const Color _board5 = Color(0xFF254878);
+  static const Color _board6 = Color(0xFF325E94);
+  static const Color _board7 = Color(0xFF4D7DB0);
+  static const Color _board8 = Color(0xFF82AECE);
+  static const Color _board9 = Color(0xFFBDD4E8);
+  static const Color _boardA = Color(0xFFE4F1FB);
 
-  // ·· Light Premium (Refined Blueprint) ··
-  static const Color _paper0 = Color(0xFFF8FAFC); // Slate 50 — clean, crisp background
-  static const Color _paper1 = Color(0xFFFFFFFF); // White — cards
-  static const Color _paper2 = Color(0xFFF1F5F9); // Slate 100 — light tint / elevated
-  static const Color _paper3 = Color(0xFFE2E8F0); // Slate 200 — grid line / hover
-  static const Color _paper4 = Color(0xFFCBD5E1); // Slate 300 — construction line / border
-  static const Color _paper5 = Color(0xFF64748B); // Slate 500 — clear prominent muted text
-  static const Color _paper6 = Color(0xFF334155); // Slate 700 — deep secondary text
-  static const Color _paper7 = Color(0xFF0F172A); // Slate 900 — crisp primary text
+  // ·· Dark Board (Purple - Midnight Slate) ··
+  static const Color _purpleBoard0 = Color(0xFF0B090F); // sidebar
+  static const Color _purpleBoard1 = Color(0xFF0F0E15); // main dark bg
+  static const Color _purpleBoard2 = Color(0xFF171620); // cards
+  static const Color _purpleBoard3 = Color(0xFF22202E); // elevated
+  static const Color _purpleBoard4 = Color(0xFF2D2B3D); // hover
+  static const Color _purpleBoard5 = Color(0xFF39374B); // border
+  static const Color _purpleBoard6 = Color(0xFF4A485E);
+  static const Color _purpleBoard7 = Color(0xFF65627C);
+  static const Color _purpleBoard8 = Color(0xFF8F8BA7);
+  static const Color _purpleBoard9 = Color(0xFFB9B5D1); // secondary text
+  static const Color _purpleBoardA = Color(0xFFF2F0FF); // primary text (clean & soft)
+
+  // ·· Light Premium (Blue Blueprint) ··
+  static const Color _paper0 = Color(0xFFF8FAFC);
+  static const Color _paper1 = Color(0xFFFFFFFF);
+  static const Color _paper2 = Color(0xFFF1F5F9);
+  static const Color _paper3 = Color(0xFFE2E8F0);
+  static const Color _paper4 = Color(0xFFCBD5E1);
+  static const Color _paper5 = Color(0xFF64748B);
+  static const Color _paper6 = Color(0xFF334155);
+  static const Color _paper7 = Color(0xFF0F172A);
+
+  // ·· Light Premium (Purple Blueprint) ··
+  static const Color _pPaper0 = Color(0xFFFAF5FF); // background
+  static const Color _pPaper1 = Color(0xFFFFFFFF); // surface
+  static const Color _pPaper2 = Color(0xFFF3E8FF); // elevated
+  static const Color _pPaper3 = Color(0xFFE9D5FF); // hover
+  static const Color _pPaper4 = Color(0xFFD8B4FE); // border
+  static const Color _pPaper5 = Color(0xFF7E22CE); // secondary text
+  static const Color _pPaper6 = Color(0xFF581C87); // primary text dim
+  static const Color _pPaper7 = Color(0xFF3B0764); // primary text deep
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  ② THE SIGNAL  — The live current. One chromatic event per focus zone.
-  //
-  //  "The signal does not need to shout.
-  //   In a monochromatic circuit, even a whisper is thunder."
+  //  ② THE SIGNAL  — The live current.
   // ══════════════════════════════════════════════════════════════════════════
 
-  static const Color _live      = Color(0xFF007AFF); // the current — brand blue (slightly warm Azure)
-  static const Color _liveGlow  = Color(0xFF3DA8FF); // energized — dark mode primary
-  static const Color _liveHot   = Color(0xFF71C1FF); // overdriven — dark hover
-  static const Color _liveDeep  = Color(0xFF005FD4); // grounded — light hover
-  static const Color _liveSunk  = Color(0xFF0048AA); // shorted — light pressed
+  // Blue Signal (Default)
+  static const Color _live      = Color(0xFF007AFF);
+  static const Color _liveGlow  = Color(0xFF3DA8FF);
+  static const Color _liveHot   = Color(0xFF71C1FF);
+  static const Color _liveDeep  = Color(0xFF005FD4);
+  static const Color _liveSunk  = Color(0xFF0048AA);
+
+  // Purple Signal (Elegant Lavender-Violet)
+  static const Color _pLive      = Color(0xFF8B5CF6); // Soft Purple
+  static const Color _pLiveGlow  = Color(0xFF9F7AEA); // Eye-friendly Glow
+  static const Color _pLiveHot   = Color(0xFFB794F4); // Soft Hot
+  static const Color _pLiveDeep  = Color(0xFF6D28D9); // Rich Deep
+  static const Color _pLiveSunk  = Color(0xFF4C1D95); // Sunk
 
   // ══════════════════════════════════════════════════════════════════════════
   //  SEMANTIC CIRCUIT MAP
@@ -195,45 +231,118 @@ class AppColors {
   // ══════════════════════════════════════════════════════════════════════════
 
   // ── Ground plane (lowest energy — ambient space) ───────────────────────
-  static Color get background      => _isDark ? _board1   : _paper0;
-  static Color get surface         => _isDark ? _board2   : _paper1;
-  static Color get surfaceElevated => _isDark ? _board3   : _paper1;
-  static Color get surfaceHover    => _isDark ? _board4   : _paper2;
-  static Color get surfacePressed  => _isDark ? _board5   : _paper3;
-  static Color get sidebarBg       => _isDark ? _board0   : _paper1;
+  // ── Ground plane (lowest energy — ambient space) ───────────────────────
+  static Color get background {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard1 : _board1;
+    return _themeColor == AppThemeColor.purple ? _pPaper0 : _paper0;
+  }
+
+  static Color get surface {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard2 : _board2;
+    return _themeColor == AppThemeColor.purple ? _pPaper1 : _paper1;
+  }
+
+  static Color get surfaceElevated {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard3 : _board3;
+    return _themeColor == AppThemeColor.purple ? _pPaper2 : _paper1;
+  }
+
+  static Color get surfaceHover {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard4 : _board4;
+    return _themeColor == AppThemeColor.purple ? _pPaper3 : _paper2;
+  }
+
+  static Color get surfacePressed {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard5 : _board5;
+    return _themeColor == AppThemeColor.purple ? _pPaper4 : _paper3;
+  }
+
+  static Color get sidebarBg {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard0 : _board0;
+    return _themeColor == AppThemeColor.purple ? _pPaper1 : _paper1;
+  }
 
   // ── Live current (the signal — highest energy) ─────────────────────────
-  static Color get primary          => _isDark ? _liveGlow : _live;
-  static Color get primaryHover     => _isDark ? _liveHot  : _liveDeep;
-  static Color get primaryPressed   => _isDark ? _live     : _liveSunk;
-  static Color get primaryDisabled  => _isDark ? _board5   : _paper3;
-  static Color get primaryContainer => _isDark ? _board4   : _paper2;
-  static Color get primaryLight     => _isDark ? _board3   : _paper3;
-  static Color get onPrimary        => Colors.white;
-  static Color get focusBorderColor => _isDark ? _liveGlow : _live;
+  static Color get primary {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _pLiveGlow : _liveGlow;
+    return _themeColor == AppThemeColor.purple ? _pLive : _live;
+  }
+
+  static Color get primaryHover {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _pLiveHot : _liveHot;
+    return _themeColor == AppThemeColor.purple ? _pLiveDeep : _liveDeep;
+  }
+
+  static Color get primaryPressed {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _pLive : _live;
+    return _themeColor == AppThemeColor.purple ? _pLiveSunk : _liveSunk;
+  }
+
+  static Color get primaryDisabled {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard5 : _board5;
+    return _themeColor == AppThemeColor.purple ? _pPaper3 : _paper3;
+  }
+
+  static Color get primaryContainer {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard4 : _board4;
+    return _themeColor == AppThemeColor.purple ? _pPaper2 : _paper2;
+  }
+
+  static Color get primaryLight {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard3 : _board3;
+    return _themeColor == AppThemeColor.purple ? _pPaper3 : _paper3;
+  }
+
+  static Color get onPrimary => Colors.white;
+
+  static Color get focusBorderColor => primary;
 
   // ── Voltage (potential difference — creates readable text) ─────────────
-  static Color get textPrimary   => _isDark ? _boardA : _paper7;
-  static Color get textSecondary => _isDark ? _board9 : _paper6;
-  static Color get textMuted     => _isDark ? _board8 : _paper5;
-  static Color get textDisabled  => _isDark ? _board6 : _paper4;
-  static Color get textInverse   => _isDark ? _paper7 : Colors.white;
-  static Color get textWhite     => Colors.white;
-  static Color get sidebarText   => _isDark ? _board9 : _paper6;
+  static Color get textPrimary {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoardA : _boardA;
+    return _themeColor == AppThemeColor.purple ? _pPaper7 : _paper7;
+  }
+
+  static Color get textSecondary {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard9 : _board9;
+    return _themeColor == AppThemeColor.purple ? _pPaper6 : _paper6;
+  }
+
+  static Color get textMuted {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard8 : _board8;
+    return _themeColor == AppThemeColor.purple ? _pPaper5 : _paper5;
+  }
+
+  static Color get textDisabled {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard6 : _board6;
+    return _themeColor == AppThemeColor.purple ? _pPaper4 : _paper4;
+  }
+
+  static Color get textInverse {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _pPaper7 : _paper7;
+    return Colors.white;
+  }
+
+  static Color get textWhite => Colors.white;
+
+  static Color get sidebarText => textSecondary;
 
   // ── Resistance (the structural skeleton) ───────────────────────────────
-  static Color get borderColor   => _isDark ? _board5 : l_shade300; // Clear, visible premium blue
-  static Color get dividerColor  => _isDark ? _board2 : _paper2;
+  static Color get borderColor {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard5 : _board5;
+    return _themeColor == AppThemeColor.purple ? _pPaper4 : _paper4;
+  }
+
+  static Color get dividerColor {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? _purpleBoard2 : _board2;
+    return _themeColor == AppThemeColor.purple ? _pPaper2 : _paper2;
+  }
 
   // ── Frequencies (gradients — the signal rendered as rhythm) ─────────────
 
   /// POWER ON — Signature hero gradient. The board lights up from left to right.
-  /// Dark: cold void → electric corona. The moment a device wakes.
-  /// Light: blueprint depth → the live signal. Authority becoming action.
   static LinearGradient get powerGradient => LinearGradient(
-    colors: _isDark
-        ? [const Color(0xFF002060), _liveGlow]
-        : [_paper7, _live],
+    colors: [gradientStart, gradientEnd],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
@@ -241,18 +350,21 @@ class AppColors {
   /// AMBIENT FIELD — Background. Nearly invisible. The ground hum.
   static LinearGradient get fieldGradient => LinearGradient(
     colors: _isDark
-        ? [_board2, _board1]
-        : [_paper0, _paper2],
+        ? [dividerColor, background]
+        : [background, surfaceElevated],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   /// ACTIVE PUSH — Button/FAB. The signal surging through a button.
-  /// Creates internal luminosity — the element glows as if powered.
   static LinearGradient get pushGradient => LinearGradient(
     colors: _isDark
-        ? [const Color(0xFF45B2FF), const Color(0xFF005ED4)]
-        : [const Color(0xFF1A8FFF), const Color(0xFF004DBB)],
+        ? (_themeColor == AppThemeColor.purple 
+            ? [const Color(0xFFB466FF), _pLiveDeep]
+            : [const Color(0xFF45B2FF), const Color(0xFF005ED4)])
+        : (_themeColor == AppThemeColor.purple
+            ? [const Color(0xFF9333EA), const Color(0xFF581C87)]
+            : [const Color(0xFF1A8FFF), const Color(0xFF004DBB)]),
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
@@ -269,7 +381,7 @@ class AppColors {
   /// HALO FIELD — Stat cards and chart headers. Electromagnetic aura above key data.
   static LinearGradient get haloGradient => LinearGradient(
     colors: [
-      (_isDark ? _liveGlow : _live).withOpacity(_isDark ? 0.18 : 0.09),
+      primary.withOpacity(_isDark ? 0.18 : 0.09),
       Colors.transparent,
     ],
     begin: Alignment.topCenter,
@@ -279,8 +391,8 @@ class AppColors {
   /// TRACE SCAN — Skeleton shimmer. Signal scanning the circuit looking for data.
   static LinearGradient get scanGradient => LinearGradient(
     colors: _isDark
-        ? [_board2, _board4, _board2]
-        : [_paper2, Colors.white, _paper2],
+        ? [background, surface, background]
+        : [surfaceElevated, surface, surfaceElevated],
     stops: const [0.0, 0.5, 1.0],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
@@ -289,8 +401,8 @@ class AppColors {
   /// PANEL — Sidebar/drawer zone. A different electrical region of the circuit.
   static LinearGradient get panelGradient => LinearGradient(
     colors: _isDark
-        ? [_board0, const Color(0xFF0B1828)]
-        : [_paper1, _paper0],
+        ? [sidebarBg, background]
+        : [surface, background],
     begin: Alignment.topLeft,
     end: Alignment.bottomCenter,
   );
@@ -306,12 +418,15 @@ class AppColors {
   static LinearGradient get shimmerGradient    => scanGradient;
   static LinearGradient get accentGradient     => haloGradient;
 
-  static Color get gradientStart        => _isDark ? const Color(0xFF002060) : _paper7;
-  static Color get gradientEnd          => _isDark ? _liveGlow               : _live;
+  static Color get gradientStart {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? const Color(0xFF2D0050) : const Color(0xFF002060);
+    return _themeColor == AppThemeColor.purple ? _pPaper7 : _paper7;
+  }
+  static Color get gradientEnd => primary;
   static Color get primaryGradientStart => gradientStart;
   static Color get primaryGradientEnd   => gradientEnd;
-  static Color get headerGradientStart  => _isDark ? _board1 : _paper7;
-  static Color get headerGradientEnd    => _isDark ? _liveGlow : _live;
+  static Color get headerGradientStart  => _isDark ? background : gradientStart;
+  static Color get headerGradientEnd    => gradientEnd;
 
   // ── Resonances (status — tuned signal frequencies) ────────────────────
   //
@@ -362,12 +477,17 @@ class AppColors {
   static Color get statBgLight  => surfaceElevated;
   static Color get secondary    => primary;
   static Color get onSecondary  => Colors.white;
-  static Color get shadowColor  => _isDark
-      ? Colors.black.withOpacity(0.65)
-      : const Color(0xFF0B3570).withOpacity(0.10);
+  static Color get shadowColor {
+    if (_isDark) return Colors.black.withOpacity(0.65);
+    final tint = _themeColor == AppThemeColor.purple ? const Color(0xFF581C87) : const Color(0xFF0B3570);
+    return tint.withOpacity(0.12);
+  }
   static Color get statBorder   => borderColor;
   static Color get statShadow   => shadowColor;
-  static Color get primaryDark  => _isDark ? const Color(0xFF002060) : _liveSunk;
+  static Color get primaryDark {
+    if (_isDark) return _themeColor == AppThemeColor.purple ? const Color(0xFF1A052D) : const Color(0xFF002060);
+    return _themeColor == AppThemeColor.purple ? _pLiveSunk : _liveSunk;
+  }
 
   // ── Shade bridge (legacy numeric refs — silently remapped) ────────────
   static Color get shade950 => _isDark ? _board0 : _paper7;
