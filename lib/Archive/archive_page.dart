@@ -40,6 +40,7 @@ class _ArchivePageState extends State<ArchivePage> {
   int _currentPage = 1;
   String? _errorMessage;
   String? _userToken;
+  String _userGroup = 'user'; // نوع المستخدم المسجل
   Timer? _searchDebounce;
   bool _isRefreshing = false; // ✅ للتحكم في التحميل البسيط دون إخفاء الواجهة
   bool _showBackToTop = false;
@@ -99,6 +100,7 @@ class _ArchivePageState extends State<ArchivePage> {
       _api = ArchiveApi(
         baseUrl: baseUrl,
         userToken: _userToken,
+        userGroup: _userGroup,
       );
       await _fetchTypes();
       await _fetchArchiveRequests();
@@ -116,7 +118,9 @@ class _ArchivePageState extends State<ArchivePage> {
       final userInfo = await ArchiveApi.getUserInfo();
       setState(() {
         _userToken = userInfo['token'];
+        _userGroup = userInfo['userGroup'] ?? 'user';
       });
+      debugPrint('🔑 Archive - User group: $_userGroup');
     } catch (e) {
       print("❌ Error getting user info: $e");
       setState(() {

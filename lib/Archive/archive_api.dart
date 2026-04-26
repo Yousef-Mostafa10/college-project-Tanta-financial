@@ -5,10 +5,12 @@ import '../utils/app_error_handler.dart';
 class ArchiveApi {
   final String baseUrl;
   final String? userToken;
+  final String userGroup;
 
   ArchiveApi({
     required this.baseUrl,
     required this.userToken,
+    this.userGroup = 'user',
   });
 
   // 🔹 جلب أنواع المعاملات مع Pagination (صفحة واحدة)
@@ -81,8 +83,13 @@ class ArchiveApi {
       final queryParams = {
         'page': page.toString(),
         'perPage': perPage.toString(),
-        'query': 'all',
       };
+
+      // Admin فقط يستطيع جلب كل المعاملات بـ query=all
+      // اليوزر العادي والمحاسب يجلبان معاملاتهم فقط
+      if (userGroup.toLowerCase() == 'admin') {
+        queryParams['query'] = 'all';
+      }
 
       if (priority != null && priority != 'All') {
         queryParams["priority"] = priority.toUpperCase();
@@ -162,16 +169,19 @@ class ArchiveApi {
           'admin';
 
       final token = prefs.getString('token');
+      final userGroup = prefs.getString('user_group') ?? 'user';
 
       return {
         'userName': userName,
         'token': token,
+        'userGroup': userGroup,
       };
     } catch (e) {
       print("❌ Error getting user info: $e");
       return {
         'userName': 'admin',
         'token': null,
+        'userGroup': 'user',
       };
     }
   }
