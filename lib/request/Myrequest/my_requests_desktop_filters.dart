@@ -11,7 +11,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
   final List<String> typeNames;
   final List<String> statuses;
   final TextEditingController searchController;
-  final FocusNode? searchFocusNode; // ✅ إضافة الـ FocusNode
+  final FocusNode? searchFocusNode;
   final Function(String?) onPriorityChanged;
   final Function(String?) onTypeChanged;
   final Function(String?) onStatusChanged;
@@ -27,7 +27,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
     required this.typeNames,
     required this.statuses,
     required this.searchController,
-    this.searchFocusNode, // ✅ إضافة الـ FocusNode
+    this.searchFocusNode,
     required this.onPriorityChanged,
     required this.onTypeChanged,
     required this.onStatusChanged,
@@ -54,7 +54,7 @@ class MyRequestsDesktopFilters extends StatelessWidget {
           ),
           child: TextField(
             controller: searchController,
-            focusNode: searchFocusNode, // ✅ ربط الـ FocusNode
+            focusNode: searchFocusNode,
             decoration: InputDecoration(
               hintText: AppLocalizations.of(context)!.translate('search_transactions'),
               hintStyle: TextStyle(color: MyRequestsColors.textMuted),

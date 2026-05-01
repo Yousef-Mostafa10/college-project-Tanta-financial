@@ -22,7 +22,7 @@ class ContactDevelopersPage extends StatelessWidget {
       'roleIcon': Icons.dns_rounded,
     },
     {
-      'name': 'Yusuf Naser',
+      'name': 'Yusuf Nasr',
       'jobKey': 'job_backend',
       'phone': '201040207200',
       'roleColor': Color(0xFF34C759),
