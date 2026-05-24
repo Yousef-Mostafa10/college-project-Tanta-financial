@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:college_project/l10n/app_localizations.dart';
 import 'dashboard_colors.dart';
 
 class PaginationWidget extends StatelessWidget {

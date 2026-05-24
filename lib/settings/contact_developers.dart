@@ -15,7 +15,7 @@ class ContactDevelopersPage extends StatelessWidget {
       'roleIcon': Icons.phone_android_rounded,
     },
     {
-      'name': 'Mohamed AlMahllawi',
+      'name': 'Mohammad AlMahllawi',
       'jobKey': 'job_backend',
       'phone': '201553301209',
       'roleColor': Color(0xFF34C759),

@@ -38,7 +38,6 @@ class _ArchivePageState extends State<ArchivePage> {
   bool _isLoadingMore = false;
   bool _hasMore = true;
   int _currentPage = 1;
-  String? _errorMessage;
   String? _userToken;
   String _userGroup = 'user'; // نوع المستخدم المسجل
   Timer? _searchDebounce;
@@ -107,7 +106,12 @@ class _ArchivePageState extends State<ArchivePage> {
     } else {
       setState(() {
         _isLoading = false;
-        _errorMessage = AppLocalizations.of(context)!.translate('unable_load_user_info');
+      if (mounted) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.translate('unable_load_user_info'))),
+        );
+      }
       });
     }
   }
@@ -145,7 +149,12 @@ class _ArchivePageState extends State<ArchivePage> {
   Future<void> _fetchArchiveRequests({bool fullLoad = true}) async {
     if (_userToken == null) {
       setState(() {
-        _errorMessage = AppLocalizations.of(context)!.translate('please_login_first');
+      if (mounted) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.translate('please_login_first'))),
+        );
+      }
         _isLoading = false;
       });
       return;
@@ -154,7 +163,6 @@ class _ArchivePageState extends State<ArchivePage> {
     setState(() {
       if (fullLoad) _isLoading = true;
       _isRefreshing = true;
-      _errorMessage = null;
     });
 
     try {
@@ -191,14 +199,22 @@ class _ArchivePageState extends State<ArchivePage> {
         });
       } else {
         setState(() {
-          final String errString = result['error']?.toString() ?? 'failed_load_requests';
-          _errorMessage = AppErrorHandler.translateException(context, errString);
+          final errString = result['error'].toString();
+          if (mounted) {
+             ScaffoldMessenger.of(context).showSnackBar(
+               SnackBar(content: Text(AppErrorHandler.translateException(context, errString))),
+             );
+          }
         });
       }
     } catch (e) {
       print("❌ Error fetching archive: $e");
       setState(() {
-        _errorMessage = AppErrorHandler.translateException(context, e);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppErrorHandler.translateException(context, e))),
+          );
+        }
       });
     } finally {
       setState(() {
@@ -421,7 +437,7 @@ class _ArchivePageState extends State<ArchivePage> {
           backgroundColor: ArchiveColors.bodyBg,
           appBar: AppBar(
             title: Text(
-              AppLocalizations.of(context)!.translate('archive') ?? 'Archive',
+              AppLocalizations.of(context)!.translate('archive'),
               style: TextStyle(
                 fontSize: isMobile ? 18 : 20,
                 fontWeight: FontWeight.w600,

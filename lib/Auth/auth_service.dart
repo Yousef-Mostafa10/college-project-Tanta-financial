@@ -147,8 +147,6 @@ class AuthService {
   Future<bool> isAuthenticated() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
-    final refreshToken = prefs.getString('refresh_token');
-
     if (token == null) {
       return false;
     }

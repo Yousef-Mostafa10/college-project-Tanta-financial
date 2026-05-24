@@ -112,11 +112,11 @@ class InboxMobileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final id = request["id"].toString();
+    // final id = request["id"].toString();
     final title = request["title"] ?? AppLocalizations.of(context)!.translate('no_title');
     final type = request["type"]?["name"] ?? AppLocalizations.of(context)!.translate('n_a');
     final priority = request["priority"] ?? AppLocalizations.of(context)!.translate('n_a');
-    final senderName = request["lastSenderName"] ?? request["creator"]?["name"] ?? AppLocalizations.of(context)!.translate('unknown');
+    // final senderName = request["lastSenderName"] ?? request["creator"]?["name"] ?? AppLocalizations.of(context)!.translate('unknown');
     final createdAt = request["createdAt"];
     final formattedDate = InboxFormatters.formatDate(context, createdAt);
     final forwardStatus = (request['yourCurrentStatus'] ?? 'not-assigned').toString().toLowerCase();
@@ -490,7 +490,7 @@ class InboxMobileCard extends StatelessWidget {
                             child: OutlinedButton.icon(
                               onPressed: onEditResponse,
                               icon: Icon(Icons.edit_rounded, size: 14),
-                              label: Text(AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response', style: TextStyle(fontSize: 11)),
+                              label: Text(AppLocalizations.of(context)!.translate('edit_response'), style: TextStyle(fontSize: 11)),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.deepPurple,
                                 side: BorderSide(color: Colors.deepPurple),
@@ -539,7 +539,7 @@ class InboxMobileCard extends StatelessWidget {
                           child: OutlinedButton.icon(
                             onPressed: onEditResponse,
                             icon: Icon(Icons.edit_rounded, size: 14),
-                            label: Text(AppLocalizations.of(context)!.translate('edit_response') ?? 'Edit Response', style: TextStyle(fontSize: 11)),
+                            label: Text(AppLocalizations.of(context)!.translate('edit_response'), style: TextStyle(fontSize: 11)),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.deepPurple,
                               side: BorderSide(color: Colors.deepPurple),

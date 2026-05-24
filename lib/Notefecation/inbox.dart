@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -18,7 +17,6 @@ import 'inbox_desktop_card.dart';
 import 'inbox_desktop_filters.dart';
 import 'inbox_empty_state.dart';
 import 'inbox_header.dart';
-import 'inbox_helpers.dart';
 import 'inbox_mobile_card.dart';
 import 'inbox_mobile_filters.dart';
 import 'inbox_mobile_stats.dart';
@@ -549,7 +547,7 @@ class _InboxPageState extends State<InboxPage> {
       }) async {
     if (_isLoading) return;
 
-    final requestId = request["id"].toString();
+    // final id = request["id"].toString();
 
     // تحويل اسم الإجراء إلى الصيغة المستخدمة في الـ UI
     String uiStatus;
@@ -567,10 +565,10 @@ class _InboxPageState extends State<InboxPage> {
         uiStatus = action.toLowerCase();
     }
 
-    print('🎯 Performing $action on request $requestId');
+    print('🎯 Performing $action on request ${request["id"]}');
 
     // تحديث حالة الطلب فوراً في الـ UI (قبل استجابة السيرفر)
-    _updateRequestInList(requestId, {
+    _updateRequestInList(request["id"].toString(), {
       'yourCurrentStatus': uiStatus,
       'isUpdating': true, // علامة للتحديث
     });
@@ -583,7 +581,7 @@ class _InboxPageState extends State<InboxPage> {
       }
 
       final response = await _apiService.performActionUpdated(
-        requestId,
+        request["id"].toString(),
         action,
         _userToken,
         _userName,
@@ -594,12 +592,12 @@ class _InboxPageState extends State<InboxPage> {
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         // إزالة علامة التحديث
-        _updateRequestInList(requestId, {'isUpdating': null});
+        _updateRequestInList(request["id"].toString(), {'isUpdating': null});
 
         // إعادة جلب البيانات الحقيقية من السيرفر بعد 500 مللي ثانية
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
-            _recalculateRequestData(requestId);
+            _recalculateRequestData(request["id"].toString());
           }
         });
 
@@ -617,21 +615,21 @@ class _InboxPageState extends State<InboxPage> {
           ),
         );
 
-        print('✅ $action successful for request $requestId');
+        print('✅ $action successful for request ${request["id"]}');
       } else {
         // في حالة الفشل، إرجاع الحالة الأصلية
-        _updateRequestInList(requestId, {
+        _updateRequestInList(request["id"].toString(), {
           'yourCurrentStatus': request['yourCurrentStatus'],
           'isUpdating': null,
         });
 
         _handleApiError(response, 'failed_to_perform_action');
-        print('❌ $action failed for request $requestId with status ${response.statusCode}');
+        print('❌ $action failed for request ${request["id"]} with status ${response.statusCode}');
       }
     } catch (e) {
       print('❌ Exception in _performAction: $e');
       if (mounted) {
-        _updateRequestInList(requestId, {
+        _updateRequestInList(request["id"].toString(), {
           'yourCurrentStatus': request['yourCurrentStatus'],
           'isUpdating': null,
         });
@@ -681,7 +679,7 @@ class _InboxPageState extends State<InboxPage> {
             children: [
               Text(
                 action == 'Approve'
-                    ? AppLocalizations.of(context)!.translate('approve_comment_hint') ?? 'Add a comment for approval (optional):'
+                    ? AppLocalizations.of(context)!.translate('approve_comment_hint')
                     : action == 'Reject'
                         ? AppLocalizations.of(context)!.translate('reject_reason_hint')
                         : AppLocalizations.of(context)!.translate('specify_changes_hint'),
@@ -743,231 +741,6 @@ class _InboxPageState extends State<InboxPage> {
     }
   }
 
-  // 🔹 دالة لإظهار dialog لطلب التعديل
-  Future<void> _showNeedChangeDialog(Map<String, dynamic> request) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(AppLocalizations.of(context)!.translate('request_changes')),
-          content: Text(AppLocalizations.of(context)!.translate('request_changes_confirm')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(AppLocalizations.of(context)!.translate('cancel')),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-              ),
-              child: Text(AppLocalizations.of(context)!.translate('request_changes')),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true) return;
-
-    String comment = '';
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: Text(AppLocalizations.of(context)!.translate('specify_changes')),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(AppLocalizations.of(context)!.translate('specify_changes_hint')),
-                  SizedBox(height: 16),
-                  TextField(
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)!.translate('enter_comments'),
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      setStateDialog(() {
-                        comment = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(AppLocalizations.of(context)!.translate('cancel')),
-                ),
-                ElevatedButton(
-                  onPressed: comment.trim().isEmpty
-                      ? null
-                      : () {
-                    Navigator.pop(context);
-                    _sendNeedChangeRequest(request, comment);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                  ),
-                  child: Text(AppLocalizations.of(context)!.translate('submit_changes_request')),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // 🔹 دالة لإرسال طلب التعديل
-  Future<void> _sendNeedChangeRequest(
-      Map<String, dynamic> request, String comment) async {
-    final requestId = request["id"].toString();
-
-    // تحديث حالة الطلب فوراً في الـ UI
-    _updateRequestInList(requestId, {
-      'yourCurrentStatus': 'needs_change',
-      'isUpdating': true,
-    });
-
-    try {
-      if (mounted) {
-        setState(() {
-          _isLoading = true;
-        });
-      }
-
-      // استخدام _performAction بدلاً من الكود المكرر
-      await _performAction(request, 'Needs Change', Colors.orange, comment: comment);
-      bool success = true; // _performAction handles the snackbar and UI update
-
-      if (!mounted) return;
-
-      if (success) {
-        // إزالة علامة التحديث
-        _updateRequestInList(requestId, {'isUpdating': null});
-
-        // إعادة جلب البيانات الحقيقية
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            _recalculateRequestData(requestId);
-          }
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('change_request_sent_success')),
-            backgroundColor: Colors.orange,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-
-        print('✅ Need change request sent for request $requestId');
-        return; // Already handled by _performAction
-      } else {
-        // في حالة الفشل، إرجاع الحالة الأصلية
-        _updateRequestInList(requestId, {
-          'yourCurrentStatus': request['yourCurrentStatus'],
-          'isUpdating': null,
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('failed_to_send_change_request')),
-            backgroundColor: InboxColors.accentRed,
-          ),
-        );
-
-        print('❌ Need change request failed for request $requestId');
-      }
-    } catch (e) {
-      print('❌ Exception in _sendNeedChangeRequest: $e');
-      if (mounted) {
-        _updateRequestInList(requestId, {
-          'yourCurrentStatus': request['yourCurrentStatus'],
-          'isUpdating': null,
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.translateException(context, e)),
-            backgroundColor: InboxColors.accentRed,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  // 🔹 دالة لإظهار dialog لسبب الرفض
-  Future<void> _showRejectWithCommentDialog(Map<String, dynamic> request) async {
-    String reason = '';
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: Text(AppLocalizations.of(context)!.translate('reject_request_title')),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(AppLocalizations.of(context)!.translate('reject_reason_hint')),
-                  SizedBox(height: 16),
-                  TextField(
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)!.translate('enter_rejection_reason'),
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      setStateDialog(() {
-                        reason = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(AppLocalizations.of(context)!.translate('cancel')),
-                ),
-                ElevatedButton(
-                  onPressed: reason.trim().isEmpty
-                      ? null
-                      : () {
-                    Navigator.pop(context);
-                    _rejectWithComment(request, reason);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: InboxColors.accentRed,
-                  ),
-                  child: Text(AppLocalizations.of(context)!.translate('reject')),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // 🔹 دالة للرفض مع التعليق
-  Future<void> _rejectWithComment(
-      Map<String, dynamic> request, String reason) async {
-    await _performAction(request, 'Reject', InboxColors.accentRed, comment: reason);
-  }
 
   // 🔹 دالة للتنقل إلى صفحة التعديل
   void _navigateToEditRequest(Map<String, dynamic> request) {
@@ -1568,15 +1341,6 @@ class _InboxPageState extends State<InboxPage> {
     );
   }
 
-  void _handleTokenExpired() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)!.translate('session_expired')),
-        backgroundColor: InboxColors.accentRed,
-        action: SnackBarAction(label: AppLocalizations.of(context)!.translate('login'), onPressed: _logout),
-      ),
-    );
-  }
 
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
@@ -1679,6 +1443,7 @@ class _InboxPageState extends State<InboxPage> {
               ),
             ),
             SizedBox(height: 8),
+            // final senderName = request["lastSenderName"] ?? request["creator"]?["name"] ?? AppLocalizations.of(context)!.translate('unknown');
             Text(
               _errorMessage ?? AppLocalizations.of(context)!.translate('unknown_error'),
               textAlign: TextAlign.center,
@@ -1827,7 +1592,6 @@ class _InboxPageState extends State<InboxPage> {
     String? selectedAction;
     String comment = '';
     final forwardStatus = (request['yourCurrentStatus'] ?? 'not-assigned').toString().toLowerCase();
-    final isPending = forwardStatus == 'waiting' || forwardStatus == 'not-assigned' || forwardStatus == 'pending';
     final isApproved = forwardStatus == 'approved';
     final isRejected = forwardStatus == 'rejected';
     final needsChange = forwardStatus == 'needs_change' || forwardStatus == 'needs_editing' || forwardStatus == 'needs-editing';
@@ -1983,7 +1747,7 @@ class _InboxPageState extends State<InboxPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.translate('response_updated_success') ?? 'Response updated successfully'),
+            content: Text(AppLocalizations.of(context)!.translate('response_updated_success')),
             backgroundColor: InboxColors.accentGreen,
             behavior: SnackBarBehavior.floating,
           ),
@@ -2078,7 +1842,7 @@ class _InboxPageState extends State<InboxPage> {
                             onPressed: _loadMoreRequests,
                             icon: Icon(Icons.expand_more, color: InboxColors.primary),
                             label: Text(
-                              AppLocalizations.of(context)!.translate('load_more') ?? 'Load More',
+                              AppLocalizations.of(context)!.translate('load_more'),
                               style: TextStyle(color: InboxColors.primary),
                             ),
                           ),

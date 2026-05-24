@@ -92,41 +92,6 @@ class DashboardAPI {
     return (result['types'] as List<String>);
   }
 
-  // ✅ جلب آخر حالة Forward
-  Future<String?> _getLastForwardStatus(String transactionId) async {
-    final token = await _getToken();
-    if (token == null) return null;
-
-    try {
-      final response = await http.get(
-        Uri.parse("$_baseUrl/transaction/$transactionId/forward"),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> forwards = data is List
-            ? data
-            : (data["transaction"]?["forwards"] ?? data["forwards"] ?? []);
-
-        if (forwards.isNotEmpty) {
-          forwards.sort((a, b) {
-            final timeA = DateTime.parse(a["updatedAt"] ?? a["forwardedAt"]);
-            final timeB = DateTime.parse(b["updatedAt"] ?? b["forwardedAt"]);
-            return timeB.compareTo(timeA);
-          });
-
-          return forwards.first["status"];
-        }
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
 
   // ✅ جلب الطلبات مع Pagination وفلترة من السيرفر
   Future<Map<String, dynamic>> fetchAllRequests({

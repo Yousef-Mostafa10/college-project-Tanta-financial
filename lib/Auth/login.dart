@@ -1,11 +1,7 @@
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import '../home/dashboard.dart';
 import 'package:college_project/l10n/app_localizations.dart';
-import '../app_config.dart';
 import '../core/app_colors.dart';
 import '../utils/app_error_handler.dart';
 import 'package:provider/provider.dart';
@@ -53,9 +49,9 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (result['success'] == true) {
-        final userData = result['data']['user'];
-        final userName = userData['name'] ?? emailController.text.trim();
-        final userRole = userData['role'] ?? 'user';
+        // final userData = result['data']['user'];
+        // final userName = userData['name'] ?? emailController.text.trim();
+        final userRole = result['data']['user']?['role'] ?? 'user';
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

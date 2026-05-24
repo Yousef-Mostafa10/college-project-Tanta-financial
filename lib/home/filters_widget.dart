@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import '../shared/paginated_type_picker.dart';
 import 'dashboard_colors.dart';
-import 'dashboard_helpers.dart';
 
 class FiltersWidget extends StatelessWidget {
   final TextEditingController searchController;

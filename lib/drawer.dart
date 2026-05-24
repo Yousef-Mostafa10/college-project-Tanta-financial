@@ -71,7 +71,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
     final width = MediaQuery.of(context).size.width;
     final isMobile = width < 600;
     final isTablet = width >= 600 && width < 1024;
-    final isDesktop = width >= 1024;
+    // final isDesktop = width >= 1024;
 
     return Drawer(
       width: isMobile ? width * 0.8 :
@@ -549,7 +549,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
             ),
           ),
           title: Text(
-            AppLocalizations.of(context)!.translate('general') ?? 'General',
+            AppLocalizations.of(context)!.translate('general'),
             style: TextStyle(
               fontWeight: FontWeight.w500,
               fontSize: isMobile ? 14 : 16,
@@ -616,7 +616,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
             Consumer<ThemeProvider>(
               builder: (context, themeProvider, child) {
                 return _buildSubExpansionTile(
-                  title: AppLocalizations.of(context)!.translate('theme_color') ?? 'Theme Color',
+                  title: AppLocalizations.of(context)!.translate('theme_color'),
                   icon: Icons.palette_rounded,
                   isMobile: isMobile,
                   children: [

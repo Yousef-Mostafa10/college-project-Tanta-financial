@@ -1,4 +1,3 @@
-import 'package:college_project/l10n/app_localizations.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -8,13 +7,12 @@ import 'package:college_project/providers/theme_provider.dart';
 
 import '../Auth/login.dart';
 import '../Notefecation/inbox.dart';
-import '../drawer.dart' hide AppColors;
+import '../drawer.dart';
 import '../request/Ditalis_Request/ditalis_request.dart' hide AppColors;
 import '../request/RequestTracking/request_tracking.dart' hide AppColors;
-import '../request/editerequest.dart' hide AppColors;
+import '../request/editerequest.dart';
 import 'dashboard_api.dart';
 import 'dashboard_colors.dart';
-import 'dashboard_helpers.dart';
 import 'stats_widget.dart';
 import 'filters_widget.dart';
 import 'header_widget.dart';
@@ -23,6 +21,8 @@ import 'desktop_request_card.dart';
 import 'mobile_request_card.dart';
 import '../shared/paginated_type_picker.dart';
 import '../utils/app_error_handler.dart';
+import '../l10n/app_localizations.dart';
+import 'dashboard_helpers.dart';
 class AdministrativeDashboardPage extends StatefulWidget {
   const AdministrativeDashboardPage({super.key});
 
@@ -349,15 +349,6 @@ class _AdministrativeDashboardPageState
     fetchRequests(page: 1, fullLoad: true);
   }
 
-  void _applyFilters(List<dynamic> allRequests) {
-    fetchRequests(page: 1, fullLoad: true);
-  }
-
-  void _updatePaginatedRequests() {
-    setState(() {
-      paginatedRequests = filteredRequests;
-    });
-  }
 
   void _handleTokenExpired() {
     ScaffoldMessenger.of(context).showSnackBar(

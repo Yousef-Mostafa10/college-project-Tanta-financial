@@ -33,7 +33,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
     try {
       final response = await http.get(
         url,
-        headers: {'Authorization': 'Bearer \$token'},
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {

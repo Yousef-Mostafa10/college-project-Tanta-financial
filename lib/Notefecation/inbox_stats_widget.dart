@@ -53,8 +53,6 @@ class InboxStatsWidget extends StatelessWidget {
         req["fulfilled"] != true
     ).length;
 
-    final fulfilled = requests.where((req) => req["fulfilled"] == true).length;
-
     return {
       'total': total,
       'waiting': waiting,

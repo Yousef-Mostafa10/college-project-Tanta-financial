@@ -182,7 +182,7 @@ class AppColors {
   static const Color _purpleBoard4 = Color(0xFF2D2B3D); // hover
   static const Color _purpleBoard5 = Color(0xFF39374B); // border
   static const Color _purpleBoard6 = Color(0xFF4A485E);
-  static const Color _purpleBoard7 = Color(0xFF65627C);
+  // static const Color _purpleBoard7 = Color(0xFF65627C);
   static const Color _purpleBoard8 = Color(0xFF8F8BA7);
   static const Color _purpleBoard9 = Color(0xFFB9B5D1); // secondary text
   static const Color _purpleBoardA = Color(0xFFF2F0FF); // primary text (clean & soft)
