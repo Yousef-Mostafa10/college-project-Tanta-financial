@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_colors.dart';
 
 class ThemeProvider extends ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.light;
   AppThemeColor _themeColor = AppThemeColor.defaultBlue;
 
   ThemeMode get themeMode => _themeMode;
@@ -33,7 +33,7 @@ class ThemeProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     
     // Load Dark Mode
-    final isDark = prefs.getBool('isDark') ?? true; 
+    final isDark = prefs.getBool('isDark') ?? false; 
     _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
     
     // Load Theme Color

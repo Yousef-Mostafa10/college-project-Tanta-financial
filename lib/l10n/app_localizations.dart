@@ -17,6 +17,8 @@ class AppLocalizations {
       'settings': 'Settings',
       'language': 'Language',
       'logout': 'Logout',
+      'login': 'Login',
+      'session_expired': 'Your session has expired. Please log in again.',
       'dashboard': 'Dashboard',
       'management': 'Management',
       'dark_mode': 'Dark Mode',
@@ -249,8 +251,8 @@ class AppLocalizations {
       // Login
       'login_title': 'Login',
       'welcome_back': 'Welcome Back!',
-      'app_name_long': 'Tanta Finance System',
-      'app_name_short': 'Tanta Finance',
+      'app_name_long': 'Faculty of Science Finance System - Tanta University',
+      'app_name_short': 'Faculty of Science Finance System',
       'sign_in_subtitle': 'Sign in to your account',
       'enter_username_hint': 'Enter your username',
       'enter_username_error': 'Enter username',
@@ -577,6 +579,8 @@ class AppLocalizations {
       'settings': 'الإعدادات',
       'language': 'اللغة',
       'logout': 'تسجيل الخروج',
+      'login': 'تسجيل الدخول',
+      'session_expired': 'انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى.',
       'dashboard': 'لوحة التحكم',
       'management': 'الإدارة',
       'dark_mode': 'الوضع الداكن',
@@ -795,8 +799,8 @@ class AppLocalizations {
       // Login
       'login_title': 'تسجيل الدخول',
       'welcome_back': 'مرحبًا بعودتك!',
-      'app_name_long': 'نظام طنطا المالي',
-      'app_name_short': 'طنطا المالية',
+      'app_name_long': 'نظام كلية العلوم المالية - جامعة طنطا',
+      'app_name_short': 'نظام كلية العلوم المالية',
       'sign_in_subtitle': 'سجل الدخول إلى حسابك',
       'enter_username_hint': 'أدخل اسم المستخدم',
       'enter_username_error': 'أدخل اسم المستخدم',
@@ -1129,6 +1133,18 @@ class AppLocalizations {
       'job_frontend': 'مطور فرونت إند',
       'job_tester': 'مختبر جودة برمجيات',
       'whatsapp_chat': 'تواصل عبر واتساب',
+
+      // Manage Request Types Dialog
+      'manage_request_types': 'إدارة أنواع المعاملات',
+      'new_type_name_hint': 'اسم النوع الجديد',
+      'request_type_created': 'تم إنشاء النوع بنجاح!',
+      'request_type_deleted': 'تم حذف النوع بنجاح!',
+      'request_type_create_failed': 'فشل إنشاء النوع: {error}',
+      'request_type_delete_failed': 'فشل الحذف: {error}',
+      'type_by': 'بواسطة: {name}',
+      'delete_type': 'حذف النوع',
+      'delete_type_confirm': 'هل أنت متأكد أنك تريد حذف "{name}"؟',
+      'close': 'إغلاق',
     },
   };
 

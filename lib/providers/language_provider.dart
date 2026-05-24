@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
 class LanguageProvider with ChangeNotifier {
-  Locale _currentLocale = const Locale('en');
+  Locale _currentLocale = const Locale('ar');
 
   Locale get currentLocale => _currentLocale;
 
@@ -21,11 +21,9 @@ class LanguageProvider with ChangeNotifier {
 
   void _loadLanguage() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? languageCode = prefs.getString('language_code');
-    if (languageCode != null) {
-      _currentLocale = Locale(languageCode);
-      Intl.defaultLocale = languageCode;
-      notifyListeners();
-    }
+    String? languageCode = prefs.getString('language_code') ?? 'ar';
+    _currentLocale = Locale(languageCode);
+    Intl.defaultLocale = languageCode;
+    notifyListeners();
   }
 }

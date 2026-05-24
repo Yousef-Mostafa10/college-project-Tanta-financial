@@ -481,7 +481,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     }
   }
 
-  Future<void> _createNewRequestType(String name) async {
+  Future<bool> _createNewRequestType(String name) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token') ?? '';
@@ -497,12 +497,15 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         await fetchRequestTypes();
-        _showSuccessMessage('Type created successfully!');
+        _showSuccessMessage(AppLocalizations.of(context)!.translate('request_type_created'));
+        return true;
       } else {
-        _handleApiError(response, 'Failed to create type');
+        _handleApiError(response, 'request_type_create_failed');
+        return false;
       }
     } catch (e) {
       _showErrorMessage(AppErrorHandler.translateException(context, e));
+      return false;
     }
   }
 
@@ -518,9 +521,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         await fetchRequestTypes();
-        _showSuccessMessage('Type deleted successfully!');
+        _showSuccessMessage(AppLocalizations.of(context)!.translate('request_type_deleted'));
       } else {
-        _handleApiError(response, 'Failed to delete type');
+        _handleApiError(response, 'request_type_delete_failed');
       }
     } catch (e) {
       _showErrorMessage(AppErrorHandler.translateException(context, e));
@@ -529,11 +532,12 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
 
   void _showManageTypesDialog() {
     final nameController = TextEditingController();
+    final loc = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          title: Text('Manage Request Types'),
+          title: Text(loc.translate('manage_request_types')),
           content: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: Column(
@@ -544,16 +548,22 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     Expanded(
                       child: TextField(
                         controller: nameController,
-                        decoration: InputDecoration(hintText: 'New type name'),
+                        decoration: InputDecoration(hintText: loc.translate('new_type_name_hint')),
                       ),
                     ),
                     IconButton(
                       icon: Icon(Icons.add_circle, color: CreateRequestColors.primary),
-                      onPressed: () {
-                        if (nameController.text.trim().isNotEmpty) {
-                          _createNewRequestType(nameController.text.trim());
-                          nameController.clear();
-                          Navigator.pop(context);
+                      onPressed: () async {
+                        final typeName = nameController.text.trim();
+                        if (typeName.isNotEmpty) {
+                          final success = await _createNewRequestType(typeName);
+                          if (success && mounted) {
+                            setState(() {
+                              _selectedRequestType = typeName;
+                            });
+                            nameController.clear();
+                            Navigator.pop(context);
+                          }
                         }
                       },
                     ),
@@ -590,19 +600,19 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                               final type = _requestTypesData[index];
                               return ListTile(
                                 title: Text(type.name),
-                                subtitle: Text('By: ${type.creatorName}', style: TextStyle(fontSize: 10)),
+                                subtitle: Text(loc.translate('type_by').replaceAll('{name}', type.creatorName), style: TextStyle(fontSize: 10)),
                                 trailing: IconButton(
                                   icon: Icon(Icons.delete_outline, color: CreateRequestColors.accentRed, size: 20),
                                   onPressed: () {
                                     showDialog(
                                       context: context,
                                       builder: (confirmContext) => AlertDialog(
-                                        title: Text('Delete Type'),
-                                        content: Text('Are you sure you want to delete "${type.name}"?'),
+                                        title: Text(loc.translate('delete_type')),
+                                        content: Text(loc.translate('delete_type_confirm').replaceAll('{name}', type.name)),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.pop(confirmContext),
-                                            child: Text('Cancel'),
+                                            child: Text(loc.translate('cancel')),
                                           ),
                                           TextButton(
                                             onPressed: () {
@@ -611,7 +621,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                                                 setStateDialog(() {});
                                               });
                                             },
-                                            child: Text('Delete', style: TextStyle(color: CreateRequestColors.accentRed)),
+                                            child: Text(loc.translate('delete'), style: TextStyle(color: CreateRequestColors.accentRed)),
                                           ),
                                         ],
                                       ),
@@ -627,7 +637,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text('Close')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text(loc.translate('close'))),
           ],
         ),
       ),

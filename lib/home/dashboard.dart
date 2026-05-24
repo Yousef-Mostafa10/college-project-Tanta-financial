@@ -309,10 +309,16 @@ class _AdministrativeDashboardPageState
     } catch (e) {
       debugPrint('❌ Error loading more: $e');
       _lastRequestedPage = currentPage;
+      if (mounted) {
+        setState(() {
+          _hasMorePages = false;
+        });
+      }
       if (e.toString().contains('Unauthorized')) {
         _handleTokenExpired();
       } else {
         if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(AppErrorHandler.translateException(context, e)),
@@ -351,20 +357,23 @@ class _AdministrativeDashboardPageState
 
 
   void _handleTokenExpired() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)!.translate('session_expired')),
-        backgroundColor: AppColors.accentRed,
-        duration: const Duration(seconds: 3),
-        action: SnackBarAction(
-          label: AppLocalizations.of(context)!.translate('login'),
-          textColor: Colors.white,
-          onPressed: () {
-            logout();
-          },
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.translate('session_expired')),
+          backgroundColor: AppColors.accentRed,
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: AppLocalizations.of(context)!.translate('login'),
+            textColor: Colors.white,
+            onPressed: () {
+              logout();
+            },
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   void _updateStatsFromSummary(Map<String, dynamic>? summary) {

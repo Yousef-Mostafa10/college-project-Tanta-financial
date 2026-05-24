@@ -122,8 +122,8 @@ class MyApp extends StatelessWidget {
           darkTheme: _buildThemeData(true),
           locale: languageProvider.currentLocale,
           supportedLocales: const [
-            Locale('en', ''),
             Locale('ar', ''),
+            Locale('en', ''),
           ],
           localizationsDelegates: const [
             AppLocalizations.delegate,
@@ -139,7 +139,7 @@ class MyApp extends StatelessWidget {
                 return supportedLocale;
               }
             }
-            return supportedLocales.first; // Default to English
+            return supportedLocales.first; // Default to Arabic
           },
           home: FutureBuilder<String?>(
             future: getUserRole(),

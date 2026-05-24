@@ -139,7 +139,7 @@ class AppFonts {
 class AppColors {
   AppColors._();
 
-  static bool _isDark = true;
+  static bool _isDark = false;
   static AppThemeColor _themeColor = AppThemeColor.defaultBlue;
 
   /// SET THEME — Call this to update the global color system state.
