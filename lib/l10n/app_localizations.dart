@@ -567,6 +567,24 @@ class AppLocalizations {
       'inputter_label': 'Entered By',
       'Budget category in use': 'Budget category in use, cannot be deleted',
       'BUDGET_CATEGORY_IN_USE': 'Budget category in use, cannot be deleted',
+
+      // 409 - Fulfillment
+      'TRANSACTION_NOT_APPROVED': 'This transaction has not been approved yet and cannot be fulfilled.',
+
+      // 403 - Budget
+      'INSUFFICIENT_BUDGET': 'Insufficient budget in category "{categoryName}": available {availableAmount}, requested {requestedAmount}.',
+      'NOT_TRANSACTION_ACCOUNTANT': 'This transaction was not forwarded to you for fulfillment.',
+
+      // Preallocation
+      'preallocation_label': 'Preallocation',
+      'update_preallocation': 'Update Preallocation',
+      'preallocation_hint': 'Enter preallocation amount',
+      'preallocation_updated_success': 'Preallocation updated successfully',
+      'preallocation_update_failed': 'Failed to update preallocation',
+
+      // Seen timestamps
+      'seen_at_label': 'Seen at',
+
       'contact_developers': 'Contact Developers',
       'job_flutter': 'Flutter Developer',
       'job_backend': 'Backend Developer',
@@ -1127,6 +1145,24 @@ class AppLocalizations {
       'inputter_label': 'بواسطة',
       'Budget category in use': 'فئة الميزانية قيد الاستخدام، لا يمكن حذفها.',
       'BUDGET_CATEGORY_IN_USE': 'فئة الميزانية قيد الاستخدام، لا يمكن حذفها.',
+
+      // 409 - الإنجاز
+      'TRANSACTION_NOT_APPROVED': 'لم تتم الموافقة على هذه المعاملة بعد ولا يمكن إنجازها.',
+
+      // 403 - الميزانية
+      'INSUFFICIENT_BUDGET': 'رصيد غير كافٍ في فئة "{categoryName}": المتاح {availableAmount}، المطلوب {requestedAmount}.',
+      'NOT_TRANSACTION_ACCOUNTANT': 'هذه المعاملة لم يتم توجيهها إليك للإنجاز.',
+
+      // التخصيص المسبق
+      'preallocation_label': 'التخصيص المسبق',
+      'update_preallocation': 'تحديث التخصيص المسبق',
+      'preallocation_hint': 'أدخل مبلغ التخصيص المسبق',
+      'preallocation_updated_success': 'تم تحديث التخصيص المسبق بنجاح',
+      'preallocation_update_failed': 'فشل تحديث التخصيص المسبق',
+
+      // وقت القراءة
+      'seen_at_label': 'شوهد في',
+
       'contact_developers': 'تواصل مع المطورين',
       'job_flutter': 'مطور فلاتر',
       'job_backend': 'مطور باك إند',

@@ -12,6 +12,8 @@ import 'package:college_project/l10n/app_localizations.dart';
 import 'package:college_project/providers/theme_provider.dart';
 import 'package:college_project/core/app_colors.dart';
 import 'package:college_project/core/app_theme_color.dart';
+import 'package:college_project/notifications/notifications_provider.dart';
+import 'package:college_project/notifications/notifications_page.dart';
 
 import 'Department/DepartmentsPage.dart';
 import 'Budget/BudgetPage.dart';
@@ -197,7 +199,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
             ),
 
             _buildMenuItem(
-              icon: Icons.notifications_active_rounded,
+              icon: Icons.move_to_inbox_rounded,
               title: AppLocalizations.of(context)!.translate('inbox_title'),
               color: AppColors.accentPurple,
               isMobile: isMobile,
@@ -205,6 +207,26 @@ class _CustomDrawerState extends State<CustomDrawer> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const InboxPage()),
+                );
+              },
+            ),
+
+            Consumer<NotificationProvider>(
+              builder: (context, notifProvider, _) {
+                return _buildMenuItem(
+                  icon: Icons.notifications_rounded,
+                  title: AppLocalizations.of(context)!.translate('notifications'),
+                  color: AppColors.accentOrange,
+                  isMobile: isMobile,
+                  badgeCount: notifProvider.unreadCount,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsPage(),
+                      ),
+                    );
+                  },
                 );
               },
             ),

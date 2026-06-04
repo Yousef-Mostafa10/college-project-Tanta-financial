@@ -161,53 +161,65 @@ Widget buildTimelineStep({
                     const Spacer(),
 
                     // معلومات المشاهدة - المرسل
-                    Row(
-                      children: [
-                        Icon(
-                          forward['senderSeen'] == true
-                              ? Icons.done_all_rounded
-                              : Icons.done_rounded,
-                          size: isMobile ? 13 : 15,
-                          color: forward['senderSeen'] == true
-                              ? TrackingColors.accentBlue
-                              : TrackingColors.textMuted,
-                        ),
-                        SizedBox(width: 2),
-                        Text(
-                          AppLocalizations.of(context)!.translate('from_label'),
-                          style: TextStyle(
-                            fontSize: isMobile ? 9 : 11,
+                    _buildSeenTooltip(
+                      context,
+                      forward['senderSeen'] == true,
+                      forward['senderSeenAt'],
+                      Row(
+                        children: [
+                          Icon(
+                            forward['senderSeen'] == true
+                                ? Icons.done_all_rounded
+                                : Icons.done_rounded,
+                            size: isMobile ? 18 : 22,
                             color: forward['senderSeen'] == true
                                 ? TrackingColors.accentBlue
                                 : TrackingColors.textMuted,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: 4),
+                          Text(
+                            AppLocalizations.of(context)!.translate('from_label'),
+                            style: TextStyle(
+                              fontSize: isMobile ? 12 : 14,
+                              fontWeight: FontWeight.w600,
+                              color: forward['senderSeen'] == true
+                                  ? TrackingColors.accentBlue
+                                  : TrackingColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    SizedBox(width: isMobile ? 6 : 8),
+                    SizedBox(width: isMobile ? 8 : 12),
                     // معلومات المشاهدة - المستقبل
-                    Row(
-                      children: [
-                        Icon(
-                          forward['receiverSeen'] == true
-                              ? Icons.done_all_rounded
-                              : Icons.done_rounded,
-                          size: isMobile ? 13 : 15,
-                          color: forward['receiverSeen'] == true
-                              ? TrackingColors.statusApproved
-                              : TrackingColors.textMuted,
-                        ),
-                        SizedBox(width: 2),
-                        Text(
-                          AppLocalizations.of(context)!.translate('to_label'),
-                          style: TextStyle(
-                            fontSize: isMobile ? 9 : 11,
+                    _buildSeenTooltip(
+                      context,
+                      forward['receiverSeen'] == true,
+                      forward['receiverSeenAt'],
+                      Row(
+                        children: [
+                          Icon(
+                            forward['receiverSeen'] == true
+                                ? Icons.done_all_rounded
+                                : Icons.done_rounded,
+                            size: isMobile ? 18 : 22,
                             color: forward['receiverSeen'] == true
                                 ? TrackingColors.statusApproved
                                 : TrackingColors.textMuted,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: 4),
+                          Text(
+                            AppLocalizations.of(context)!.translate('to_label'),
+                            style: TextStyle(
+                              fontSize: isMobile ? 12 : 14,
+                              fontWeight: FontWeight.w600,
+                              color: forward['receiverSeen'] == true
+                                  ? TrackingColors.statusApproved
+                                  : TrackingColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     SizedBox(width: isMobile ? 8 : 12),
 
@@ -407,4 +419,20 @@ Widget _buildUserCard(BuildContext context, Map<String, dynamic>? user, String l
       ],
     ),
   );
+}
+
+Widget _buildSeenTooltip(BuildContext context, bool seen, dynamic seenAt, Widget child) {
+  Widget content = MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: child,
+  );
+  if (seen && seenAt != null && seenAt.toString().isNotEmpty) {
+    final formattedDate = TrackingHelpers.formatDate(seenAt.toString());
+    return Tooltip(
+      message: '${AppLocalizations.of(context)!.translate('seen_at_label')}: $formattedDate',
+      triggerMode: TooltipTriggerMode.tap,
+      child: content,
+    );
+  }
+  return content;
 }

@@ -707,8 +707,17 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
           _fetchBudgets();
         }
       } else {
-        // استخراج الـ key مثل: RESTRICTED_FIELD_UPDATE, TRANSACTION_ALREADY_FULFILLED
-        throw Exception(AppErrorHandler.extractKeyOrFallback(response.body, response.statusCode));
+        // استخراج الـ error بما فيها INSUFFICIENT_BUDGET و TRANSACTION_NOT_APPROVED
+        final errMsg = _extractFulfillmentError(response.body, response.statusCode);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errMsg),
+              backgroundColor: AppColors.accentRed,
+            ),
+          );
+        }
+        return;
       }
     } catch (e) {
       if (mounted) {
@@ -722,6 +731,29 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }
+  }
+
+  // ✅ استخراج رسالة خطأ الإنجاز مع دعم INSUFFICIENT_BUDGET بالحجج
+  String _extractFulfillmentError(String responseBody, int statusCode) {
+    try {
+      final data = json.decode(responseBody);
+      if (data is Map) {
+        final message = data['message'];
+        if (message is Map) {
+          final key = message['key']?.toString() ?? '';
+          if (key == 'INSUFFICIENT_BUDGET') {
+            final args = message['args'] as Map<String, dynamic>? ?? {};
+            final template = AppLocalizations.of(context)!.translate('INSUFFICIENT_BUDGET');
+            return template
+                .replaceAll('{categoryName}', args['categoryName']?.toString() ?? '')
+                .replaceAll('{availableAmount}', args['availableAmount']?.toString() ?? '')
+                .replaceAll('{requestedAmount}', args['requestedAmount']?.toString() ?? '');
+          }
+          if (key.isNotEmpty) return key;
+        }
+      }
+    } catch (_) {}
+    return AppErrorHandler.extractKeyOrFallback(responseBody, statusCode);
   }
 
   // ✅ نافذة اختيار الميزانية وتأكيد الإنجاز
@@ -1856,6 +1888,8 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
     final receiverComment = forward['receiverComment'];
     final senderSeen = forward['senderSeen'] == true;
     final receiverSeen = forward['receiverSeen'] == true;
+    final senderSeenAt = senderSeen ? _formatDateOnly(forward['senderSeenAt']) : null;
+    final receiverSeenAt = receiverSeen ? _formatDateOnly(forward['receiverSeenAt']) : null;
     final forwardedAt = _formatDateOnly(forward['forwardedAt']);
 
     // ألوان الحالة
@@ -1978,6 +2012,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             _buildSeenBadge(
               label: AppLocalizations.of(context)!.translate('sender') ?? 'Sender',
               seen: senderSeen,
+              seenAt: senderSeenAt,
               color: AppColors.accentBlue,
               isMobile: isMobile,
             ),
@@ -1986,6 +2021,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
             _buildSeenBadge(
               label: AppLocalizations.of(context)!.translate('receiver') ?? 'Receiver',
               seen: receiverSeen,
+              seenAt: receiverSeenAt,
               color: AppColors.accentGreen,
               isMobile: isMobile,
             ),
@@ -2056,26 +2092,40 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
   }
 
   // ✅ Seen badge بسيط
-  Widget _buildSeenBadge({required String label, required bool seen, required Color color, required bool isMobile}) {
-    return Row(
+  Widget _buildSeenBadge({required String label, required bool seen, String? seenAt, required Color color, required bool isMobile}) {
+    final badge = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           seen ? Icons.done_all_rounded : Icons.done_rounded,
-          size: isMobile ? 12 : 14,
+          size: isMobile ? 18 : 22,
           color: seen ? color : AppColors.textMuted,
         ),
-        SizedBox(width: 2),
+        SizedBox(width: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: isMobile ? 9 : 10,
+            fontSize: isMobile ? 12 : 14,
             color: seen ? color : AppColors.textMuted,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
     );
+
+    Widget content = MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: badge,
+    );
+
+    if (seen && seenAt != null && seenAt.isNotEmpty) {
+      return Tooltip(
+        message: '${AppLocalizations.of(context)!.translate('seen_at_label')}: $seenAt',
+        triggerMode: TooltipTriggerMode.tap,
+        child: content,
+      );
+    }
+    return content;
   }
 
   Widget _buildInfoRow(String label, String value, bool isMobile) {

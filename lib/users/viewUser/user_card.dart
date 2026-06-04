@@ -77,9 +77,11 @@ class UserCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
-                  color: user.active
-                      ? AppColors.statusApproved
-                      : AppColors.statusRejected,
+                  color: !user.active
+                      ? AppColors.statusRejected
+                      : (user.presence?.toUpperCase() == 'ONLINE'
+                          ? AppColors.statusApproved
+                          : Colors.grey),
                 ),
               ),
             ),

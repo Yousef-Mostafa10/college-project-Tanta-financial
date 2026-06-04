@@ -231,6 +231,7 @@ class _BudgetPageState extends State<BudgetPage> {
       'budget': (c['budget'] as num?)?.toInt() ?? 0,
       'allocated': (c['allocated'] as num?)?.toInt() ?? 0,
       'available': (c['available'] as num?)?.toInt() ?? 0,
+      'preallocation': (c['preallocation'] as num?)?.toInt() ?? 0,
     };
   }
 
@@ -322,6 +323,48 @@ class _BudgetPageState extends State<BudgetPage> {
     }
   }
 
+  // ✏️ Update preallocation (ADMIN only)
+  Future<void> _updatePreallocation(String name, int preallocation) async {
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await _dio.patch(
+        '/budget-categories/${Uri.encodeComponent(name)}',
+        data: {'preallocation': preallocation},
+        options: Options(headers: headers),
+      );
+
+      if (response.statusCode == 200) {
+        final updated = _mapCategory(response.data);
+        setState(() {
+          final allIdx = allCategories.indexWhere((c) => c['name'] == name);
+          if (allIdx != -1) allCategories[allIdx] = updated;
+          final filtIdx = filteredCategories.indexWhere((c) => c['name'] == name);
+          if (filtIdx != -1) filteredCategories[filtIdx] = updated;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.translate('preallocation_updated_success')),
+              backgroundColor: BudgetColors.accentGreen,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        final errMsg = (e is DioException)
+          ? AppErrorHandler.extractAndTranslate(
+              context, _dioBodyToJson(e.response?.data),
+              fallback: AppLocalizations.of(context)!.translate('preallocation_update_failed'),
+            )
+          : AppLocalizations.of(context)!.translate('preallocation_update_failed');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errMsg), backgroundColor: BudgetColors.accentRed),
+        );
+      }
+    }
+  }
+
   // ✏️ Rename budget category
   Future<void> _renameCategory(String oldName, String newName) async {
     try {
@@ -374,103 +417,124 @@ class _BudgetPageState extends State<BudgetPage> {
 
   // ✏️ Show rename dialog
   void _showRenameCategoryDialog(Map<String, dynamic> category) {
-    final nameController =
-        TextEditingController(text: category['name']);
+    final nameController = TextEditingController(text: category['name']);
+    final preallocController = TextEditingController(
+      text: (category['preallocation'] as int? ?? 0) > 0
+          ? '${category['preallocation']}'
+          : '',
+    );
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: BudgetColors.accentBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.edit,
-                        color: BudgetColors.accentBlue, size: 22),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          // Resolve admin flag inside builder to ensure prefs are loaded
+          return FutureBuilder<SharedPreferences>(
+            future: SharedPreferences.getInstance(),
+            builder: (context, snapshot) {
+              final userRole = snapshot.data?.getString('user_role') ?? '';
+              final adminUser = userRole.toUpperCase() == 'ADMIN';
+              return Dialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: BudgetColors.accentBlue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(Icons.edit, color: BudgetColors.accentBlue, size: 22),
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            AppLocalizations.of(context)!.translate('edit_category_name'),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: BudgetColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 20),
+                      TextField(
+                        controller: nameController,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          labelText: AppLocalizations.of(context)!.translate('new_name_label'),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          prefixIcon: Icon(Icons.account_balance_wallet, color: BudgetColors.primary),
+                        ),
+                      ),
+                      if (adminUser) ...[
+                        SizedBox(height: 16),
+                        TextField(
+                          controller: preallocController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.translate('preallocation_label'),
+                            hintText: AppLocalizations.of(context)!.translate('preallocation_hint'),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            prefixIcon: Icon(Icons.lock_clock_outlined, color: BudgetColors.accentYellow),
+                            suffixText: AppLocalizations.of(context)!.translate('currency_unit'),
+                          ),
+                        ),
+                      ],
+                      SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final newName = nameController.text.trim();
+                                final newPrealloc = int.tryParse(preallocController.text.trim());
+                                Navigator.pop(context);
+                                if (newName.isNotEmpty && newName != category['name']) {
+                                  _renameCategory(category['name'], newName);
+                                }
+                                if (adminUser && newPrealloc != null && newPrealloc != (category['preallocation'] as int? ?? 0)) {
+                                  _updatePreallocation(newName.isNotEmpty ? newName : category['name'], newPrealloc);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: BudgetColors.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: Text(AppLocalizations.of(context)!.translate('save_button'),
+                                  style: TextStyle(color: Colors.white)),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                side: BorderSide(color: BudgetColors.textMuted),
+                              ),
+                              child: Text(AppLocalizations.of(context)!.translate('cancel_button')),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 12),
-                  Text(
-                    AppLocalizations.of(context)!.translate('edit_category_name'),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: BudgetColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
-              TextField(
-                controller: nameController,
-                autofocus: true,
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context)!.translate('new_name_label'),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  prefixIcon: Icon(Icons.account_balance_wallet,
-                      color: BudgetColors.primary),
                 ),
-              ),
-              SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        final newName = nameController.text.trim();
-                        if (newName.isNotEmpty &&
-                            newName != category['name']) {
-                          _renameCategory(category['name'], newName);
-                          Navigator.pop(context);
-                        } else if (newName == category['name']) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: BudgetColors.primary,
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: Text(AppLocalizations.of(context)!.translate('save_button'),
-                          style: TextStyle(color: Colors.white)),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                        side: BorderSide(
-                            color: BudgetColors.textMuted),
-                      ),
-                      child: Text(AppLocalizations.of(context)!.translate('cancel_button')),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -1193,6 +1257,7 @@ class BudgetCategoryCard extends StatelessWidget {
     final int budget = (category['budget'] as num?)?.toInt() ?? 0;
     final int allocated = (category['allocated'] as num?)?.toInt() ?? 0;
     final int available = (category['available'] as num?)?.toInt() ?? 0;
+    final int preallocation = (category['preallocation'] as num?)?.toInt() ?? 0;
 
     // Progress ratio for allocated vs budget
     final double ratio =
@@ -1270,6 +1335,22 @@ class BudgetCategoryCard extends StatelessWidget {
                     icon: Icons.check_circle_outline,
                     color: BudgetColors.accentGreen,
                     isMobile: isMobile,
+                  ),
+                  FutureBuilder<SharedPreferences>(
+                    future: SharedPreferences.getInstance(),
+                    builder: (context, snapshot) {
+                      final role = snapshot.data?.getString('user_role') ?? '';
+                      if (role.toUpperCase() != 'ADMIN' || preallocation == 0) {
+                        return const SizedBox.shrink();
+                      }
+                      return _InfoRow(
+                        label: AppLocalizations.of(context)!.translate('preallocation_label'),
+                        value: '$preallocation',
+                        icon: Icons.lock_clock_outlined,
+                        color: BudgetColors.accentYellow,
+                        isMobile: isMobile,
+                      );
+                    },
                   ),
 
                   if (budget > 0) ...[

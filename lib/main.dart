@@ -8,11 +8,11 @@ import 'providers/language_provider.dart';
 import 'core/app_colors.dart';
 import 'Auth/login.dart';
 import 'home/dashboard.dart';
-import 'home/home.dart';
 import 'utils/session_manager.dart';
 import 'request/Myrequest/myrequest.dart';
 
 import 'providers/theme_provider.dart';
+import 'notifications/notifications_provider.dart';
 
 void main() {
   runApp(
@@ -20,6 +20,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (context) => LanguageProvider()),
         ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        ChangeNotifierProvider(create: (context) => NotificationProvider()..init(), lazy: false),
       ],
       child: const MyApp(),
     ),

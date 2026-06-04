@@ -125,31 +125,34 @@ Widget buildTransactionHeader({
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          (forwards.last['senderSeen'] == true || forwards.last['receiverSeen'] == true)
-                              ? Icons.visibility_rounded
-                              : Icons.visibility_off_rounded,
-                          size: isMobile ? 14 : 16,
-                          color: (forwards.last['senderSeen'] == true || forwards.last['receiverSeen'] == true)
-                              ? TrackingColors.statusApproved
-                              : TrackingColors.textMuted,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          (forwards.last['senderSeen'] == true || forwards.last['receiverSeen'] == true)
-                              ? AppLocalizations.of(context)!.translate('seen_label')
-                              : AppLocalizations.of(context)!.translate('not_seen_label'),
-                          style: TextStyle(
-                            fontSize: isMobile ? 10 : 12,
+                    Tooltip(
+                      message: _buildSeenAtMessage(context, forwards.last),
+                      child: Row(
+                        children: [
+                          Icon(
+                            (forwards.last['senderSeen'] == true || forwards.last['receiverSeen'] == true)
+                                ? Icons.visibility_rounded
+                                : Icons.visibility_off_rounded,
+                            size: isMobile ? 14 : 16,
                             color: (forwards.last['senderSeen'] == true || forwards.last['receiverSeen'] == true)
                                 ? TrackingColors.statusApproved
                                 : TrackingColors.textMuted,
-                            fontWeight: FontWeight.w500,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: 4),
+                          Text(
+                            (forwards.last['senderSeen'] == true || forwards.last['receiverSeen'] == true)
+                                ? AppLocalizations.of(context)!.translate('seen_label')
+                                : AppLocalizations.of(context)!.translate('not_seen_label'),
+                            style: TextStyle(
+                              fontSize: isMobile ? 10 : 12,
+                              color: (forwards.last['senderSeen'] == true || forwards.last['receiverSeen'] == true)
+                                  ? TrackingColors.statusApproved
+                                  : TrackingColors.textMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     SizedBox(height: 4),
                     Text(
@@ -176,4 +179,15 @@ Widget buildTransactionHeader({
       ],
     ),
   );
+}
+
+String _buildSeenAtMessage(BuildContext context, dynamic forward) {
+  List<String> messages = [];
+  if (forward['senderSeen'] == true && forward['senderSeenAt'] != null && forward['senderSeenAt'].toString().isNotEmpty) {
+    messages.add('${AppLocalizations.of(context)!.translate('from_label')}: ${TrackingHelpers.formatDate(forward['senderSeenAt'].toString())}');
+  }
+  if (forward['receiverSeen'] == true && forward['receiverSeenAt'] != null && forward['receiverSeenAt'].toString().isNotEmpty) {
+    messages.add('${AppLocalizations.of(context)!.translate('to_label')}: ${TrackingHelpers.formatDate(forward['receiverSeenAt'].toString())}');
+  }
+  return messages.isEmpty ? '' : messages.join('\n');
 }

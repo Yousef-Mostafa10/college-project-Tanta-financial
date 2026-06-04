@@ -6,6 +6,7 @@ class User {
   final String? departmentName;
   final String createdAt;
   final String lastLogin;
+  final String? presence;
 
   User({
     this.id,
@@ -15,6 +16,7 @@ class User {
     this.departmentName,
     required this.createdAt,
     required this.lastLogin,
+    this.presence,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class User {
       departmentName: json["departmentName"],
       createdAt: json["createdAt"] ?? "",
       lastLogin: lastLoginStr,
+      presence: json["presence"],
     );
   }
 }
