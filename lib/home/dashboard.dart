@@ -6,7 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:college_project/providers/theme_provider.dart';
 
 import '../Auth/login.dart';
-import '../Notefecation/inbox.dart';
+import '../notifications/notifications_page.dart';
+import '../notifications/notifications_provider.dart';
 import '../drawer.dart';
 import '../request/Ditalis_Request/ditalis_request.dart' hide AppColors;
 import '../request/RequestTracking/request_tracking.dart' hide AppColors;
@@ -442,12 +443,49 @@ class _AdministrativeDashboardPageState
                 onPressed: fetchRequests,
                 tooltip: AppLocalizations.of(context)!.translate('refresh'),
               ),
-              IconButton(
-                icon: Icon(Icons.notifications_outlined,
-                    color: Colors.white),
-                onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const InboxPage())),
-                tooltip: AppLocalizations.of(context)!.translate('notifications'),
+              Consumer<NotificationProvider>(
+                builder: (context, provider, child) {
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                        ),
+                        tooltip: AppLocalizations.of(context)!.translate('notifications'),
+                      ),
+                      if (provider.unreadCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Center(
+                              child: Text(
+                                provider.unreadCount > 99 ? '99+' : '${provider.unreadCount}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
