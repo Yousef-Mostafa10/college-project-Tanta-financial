@@ -1,0 +1,383 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:college_project/core/app_colors.dart';
+import 'package:college_project/l10n/app_localizations.dart';
+import 'notifications_provider.dart';
+
+class NotificationsPage extends StatefulWidget {
+  const NotificationsPage({super.key});
+
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    // Refresh notifications when page opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().fetchNotifications(refresh: true);
+    });
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      context.read<NotificationProvider>().fetchNotifications();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  IconData _getNotificationIcon(String? type) {
+    switch (type?.toUpperCase()) {
+      case 'BUDGET':
+        return Icons.account_balance_wallet_rounded;
+      case 'REQUEST':
+        return Icons.description_rounded;
+      case 'APPROVAL':
+        return Icons.check_circle_rounded;
+      case 'REJECTION':
+        return Icons.cancel_rounded;
+      case 'WARNING':
+        return Icons.warning_amber_rounded;
+      default:
+        return Icons.notifications_rounded;
+    }
+  }
+
+  Color _getNotificationColor(String? type) {
+    switch (type?.toUpperCase()) {
+      case 'BUDGET':
+        return AppColors.accentYellow;
+      case 'REQUEST':
+        return AppColors.accentBlue;
+      case 'APPROVAL':
+        return AppColors.accentGreen;
+      case 'REJECTION':
+        return AppColors.accentRed;
+      case 'WARNING':
+        return AppColors.accentOrange;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  String _formatTime(String? isoDate) {
+    if (isoDate == null) return '';
+    try {
+      final dt = DateTime.parse(isoDate).toLocal();
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+      if (diff.inMinutes < 1) return 'الآن';
+      if (diff.inHours < 1) return 'منذ ${diff.inMinutes} د';
+      if (diff.inDays < 1) return 'منذ ${diff.inHours} س';
+      if (diff.inDays < 7) return 'منذ ${diff.inDays} أيام';
+      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _buildMessage(dynamic notification) {
+    final code = notification['code']?.toString() ?? '';
+    final args = notification['args'] as Map? ?? {};
+
+    switch (code) {
+      case 'BUDGET_ALLOCATION_OVERFLOW_ATTEMPT':
+        final cat = args['categoryName'] ?? args['budgetName'] ?? 'غير معروف';
+        final avail = args['availableAmount'] ?? args['available'] ?? '0';
+        final req = args['requestedAmount'] ?? args['requested'] ?? '0';
+        final user = args['attemptedBy'] ?? 'مجهول';
+        final transaction = args['transactionId'] ?? 'غير معروف';
+        return 'محاولة تجاوز الميزانية في قسم "$cat" من مستخدم ($user) لمعاملة رقم ($transaction) — المتاح: $avail، المطلوب: $req';
+      case 'INSUFFICIENT_BUDGET':
+        final cat = args['categoryName'] ?? '';
+        final avail = args['availableAmount'] ?? '0';
+        final req = args['requestedAmount'] ?? '0';
+        return 'الميزانية غير كافية في "$cat" — المتاح: $avail، المطلوب: $req';
+      case 'REQUEST_APPROVED':
+        return 'تمت الموافقة على طلبك';
+      case 'REQUEST_REJECTED':
+        final reason = args['reason']?.toString() ?? '';
+        return 'تم رفض طلبك${reason.isNotEmpty ? ': $reason' : ''}';
+      default:
+        if (code.isNotEmpty) {
+          if (args.isNotEmpty) {
+            final argsStr = args.entries
+                .map((e) => '${e.key}: ${e.value}')
+                .join('، ');
+            return '$code ($argsStr)';
+          }
+          return code;
+        }
+        return notification['body']?.toString() ?? '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        title: Text(
+          AppLocalizations.of(context)!.translate('notifications'),
+          style: TextStyle(
+            color: AppColors.textWhite,
+            fontWeight: FontWeight.bold,
+            fontSize: isMobile ? 18 : 20,
+          ),
+        ),
+        iconTheme: IconThemeData(color: AppColors.textWhite),
+        actions: [
+          Consumer<NotificationProvider>(
+            builder: (context, provider, _) {
+              if (provider.unreadCount == 0) return const SizedBox.shrink();
+              return TextButton(
+                onPressed: () async {
+                  // Mark all visible unread as seen
+                  final unread = provider.notifications
+                      .where((n) => n['seen'] == false)
+                      .toList();
+                  for (final n in unread) {
+                    await provider.markAsSeen(n['id']);
+                  }
+                },
+                child: Text(
+                  'تحديد الكل كمقروء',
+                  style: TextStyle(
+                    color: AppColors.textWhite.withValues(alpha: 0.85),
+                    fontSize: 13,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: Consumer<NotificationProvider>(
+        builder: (context, provider, _) {
+          if (provider.isLoading && provider.notifications.isEmpty) {
+            return Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              ),
+            );
+          }
+
+          if (provider.notifications.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.notifications_none_rounded,
+                    size: 72,
+                    color: AppColors.textMuted,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'لا توجد إشعارات',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            controller: _scrollController,
+            padding: EdgeInsets.symmetric(
+              vertical: 8,
+              horizontal: isMobile ? 8 : 16,
+            ),
+            itemCount:
+                provider.notifications.length + (provider.hasMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == provider.notifications.length) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              final notification = provider.notifications[index];
+              final isSeen = notification['seen'] == true;
+              final type = notification['type']?.toString();
+              final color = _getNotificationColor(type);
+              final icon = _getNotificationIcon(type);
+              final message = _buildMessage(notification);
+              final time = _formatTime(notification['timestamp']);
+
+              return Dismissible(
+                key: Key('notif_${notification['id']}'),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentGreen.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: AppColors.accentGreen,
+                  ),
+                ),
+                confirmDismiss: (_) async {
+                  if (!isSeen) {
+                    await provider.markAsSeen(notification['id']);
+                  }
+                  return false; // don't actually dismiss
+                },
+                child: GestureDetector(
+                  onTap: () {
+                    if (!isSeen) {
+                      provider.markAsSeen(notification['id']);
+                    }
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isSeen
+                          ? AppColors.cardBg
+                          : AppColors.primary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSeen
+                            ? AppColors.borderColor
+                            : AppColors.primary.withValues(alpha: 0.25),
+                        width: isSeen ? 1 : 1.5,
+                      ),
+                      boxShadow: isSeen
+                          ? []
+                          : [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.06),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(isMobile ? 12 : 16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Icon
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: color.withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: Icon(icon, color: color, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          // Content
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (!isSeen)
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        margin: const EdgeInsets.only(
+                                            right: 6, top: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    Expanded(
+                                      child: Text(
+                                        message.isNotEmpty
+                                            ? message
+                                            : (type ?? 'إشعار'),
+                                        style: TextStyle(
+                                          fontSize: isMobile ? 13 : 14,
+                                          fontWeight: isSeen
+                                              ? FontWeight.w400
+                                              : FontWeight.w600,
+                                          color: AppColors.textPrimary,
+                                          height: 1.4,
+                                        ),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    if (type != null)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: color.withValues(alpha: 0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          type,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: color,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    const Spacer(),
+                                    Text(
+                                      time,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
