@@ -4,7 +4,7 @@ import 'package:college_project/Archive/archive_page.dart';
 import 'package:college_project/users/Adduser.dart';
 import 'package:college_project/users/viewUser/viewuser.dart';
 import 'package:flutter/material.dart';
-import 'package:college_project/Notefecation/inbox.dart';
+import 'package:college_project/inbox/inbox.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:college_project/providers/language_provider.dart';
