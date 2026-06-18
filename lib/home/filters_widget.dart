@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import '../shared/paginated_type_picker.dart';
@@ -37,12 +38,28 @@ class FiltersWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      color: AppColors.cardBg,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.isDark
+                  ? Colors.white.withOpacity(0.12)
+                  : AppColors.borderColor.withOpacity(0.5),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.statShadow.withOpacity(0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
       child: Padding(
         padding: EdgeInsets.all(isMobile ? 12 : 16),
         child: Column(
@@ -70,6 +87,8 @@ class FiltersWidget extends StatelessWidget {
                 : _buildDesktopFilters(context),
           ],
         ),
+      ),
+      ),
       ),
     );
   }
@@ -163,10 +182,13 @@ class FiltersWidget extends StatelessWidget {
     required Function(String?) onChanged,
     required bool isMobile,
   }) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.statBorder),
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.primary.withOpacity(0.05),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),

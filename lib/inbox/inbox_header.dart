@@ -35,22 +35,29 @@ class InboxHeader extends StatelessWidget {
               ),
             ],
           ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: InboxColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: InboxColors.primary.withOpacity(0.3)),
-            ),
-            child: Text(
-              AppLocalizations.of(context)!.translate('transactions_count').replaceAll('{count}', itemCount.toString()),
-              style: TextStyle(
-                fontSize: isMobile ? 10 : 12,
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
                 color: InboxColors.primary,
-                fontWeight: FontWeight.w600,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: InboxColors.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                AppLocalizations.of(context)!.translate('transactions_count').replaceAll('{count}', itemCount.toString()),
+                style: TextStyle(
+                  fontSize: isMobile ? 10 : 12,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

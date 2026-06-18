@@ -1,8 +1,7 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
-import './inbox_colors.dart';
+import 'package:college_project/core/app_colors.dart';
+import './inbox_helpers.dart';
 import '../shared/paginated_type_picker.dart';
 
 class InboxMobileFilters extends StatelessWidget {
@@ -51,23 +50,23 @@ class InboxMobileFilters extends StatelessWidget {
 
       if (isStatus) {
         switch (value.toLowerCase()) {
-          case 'waiting': return InboxColors.statusWaiting;
-          case 'approved': return InboxColors.statusApproved;
-          case 'rejected': return InboxColors.statusRejected;
-          case 'fulfilled': return InboxColors.statusFulfilled;
+          case 'waiting': return AppColors.statusWaiting;
+          case 'approved': return AppColors.statusApproved;
+          case 'rejected': return AppColors.statusRejected;
+          case 'fulfilled': return AppColors.statusFulfilled;
           case 'needs change': 
           case 'needs_change': return Colors.orange;
-          default: return InboxColors.textPrimary;
+          default: return AppColors.textPrimary;
         }
       } else if (isPriority) {
         switch (value.toLowerCase()) {
-          case 'high': return InboxColors.statusRejected;
-          case 'medium': return InboxColors.statusPending;
-          case 'low': return InboxColors.statusApproved;
-          default: return InboxColors.primary;
+          case 'high': return AppColors.statusRejected;
+          case 'medium': return AppColors.statusPending;
+          case 'low': return AppColors.statusApproved;
+          default: return AppColors.primary;
         }
       }
-      return InboxColors.textPrimary;
+      return AppColors.textPrimary;
     }
 
     // تحديد أيقونة حسب الحالة أو الأولوية
@@ -104,42 +103,61 @@ class InboxMobileFilters extends StatelessWidget {
       if (isStatus || isPriority) {
         return getTextColor();
       }
-      return InboxColors.primary;
+      return AppColors.primary;
     }
+
+    final bool isActive = value != 'All' && value != 'All Types';
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         decoration: BoxDecoration(
-          color: InboxColors.primary.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: InboxColors.primary.withOpacity(0.2)),
+          color: isActive 
+              ? getIconColor().withOpacity(0.15)
+              : AppColors.primary.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isActive 
+                ? getIconColor().withOpacity(0.5)
+                : AppColors.primary.withOpacity(0.15),
+            width: isActive ? 1.5 : 1.0,
+          ),
+          boxShadow: isActive 
+              ? [
+                  BoxShadow(
+                    color: getIconColor().withOpacity(0.2),
+                    blurRadius: 8,
+                    spreadRadius: 0,
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              getStatusIcon(), // استخدم الأيقونة المناسبة للحالة
-              size: 14,
-              color: getIconColor(), // لون الأيقونة حسب الحالة
+              getStatusIcon(),
+              size: isActive ? 16 : 14,
+              color: getIconColor(),
             ),
-            SizedBox(height: 2),
+            const SizedBox(height: 2),
             Text(
               AppLocalizations.of(context)!.translate(label.toLowerCase()),
               style: TextStyle(
                 fontSize: 9,
-                color: InboxColors.primary,
-                fontWeight: FontWeight.w500,
+                color: isActive ? getIconColor() : AppColors.primary,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
               ),
             ),
-            if (value != 'All' && value != 'All Types')
+            if (isActive)
               Text(
                 AppLocalizations.of(context)!.translate(value.toLowerCase().replaceAll(' ', '_')),
                 style: TextStyle(
                   fontSize: 8,
-                  color: getTextColor(), // لون النص حسب الحالة
-                  fontWeight: FontWeight.w600,
+                  color: getTextColor(),
+                  fontWeight: FontWeight.w700,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -153,48 +171,65 @@ class InboxMobileFilters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: InboxColors.cardBg,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.cardBg.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: InboxColors.statShadow,
-            blurRadius: 8,
-            offset: Offset(0, 2),
+            color: AppColors.primary.withOpacity(0.07),
+            blurRadius: 12,
+            spreadRadius: 1,
+            offset: const Offset(0, 4),
           ),
         ],
+        border: Border.all(
+          color: AppColors.isDark
+              ? Colors.white.withOpacity(0.2)
+              : AppColors.borderColor.withOpacity(0.4),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
-          // شريط البحث
-          TextField(
-            controller: searchController,
-            decoration: InputDecoration(
-              hintText: AppLocalizations.of(context)!.translate('search_requests'),
-              hintStyle: TextStyle(color: InboxColors.textMuted),
-              prefixIcon: Icon(Icons.search_rounded, color: InboxColors.primary),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: InboxColors.primary, width: 1.5),
-              ),
-              filled: true,
-              fillColor: InboxColors.bodyBg,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              isDense: true,
+          // شريط البحث الدائري
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.bodyBg,
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: AppColors.primary.withOpacity(0.15)),
             ),
-            onChanged: onSearchChanged,
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)!.translate('search_requests'),
+                hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide(color: AppColors.primary.withOpacity(0.4), width: 1.5),
+                ),
+                filled: true,
+                fillColor: Colors.transparent,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                isDense: true,
+              ),
+              onChanged: onSearchChanged,
+            ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // الفلاتر في صف واحد
           Row(
@@ -217,20 +252,20 @@ class InboxMobileFilters extends StatelessWidget {
                   },
                 ),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Expanded(
                 child: PaginatedTypePicker(
                   selectedType: selectedType,
                   onTypeChanged: (val) => onTypeChanged(val!),
                   fetchPage: fetchTypePage,
                   isMobile: true,
-                  primaryColor: InboxColors.primary,
-                  borderColor: InboxColors.primary.withOpacity(0.2),
-                  textColor: InboxColors.textPrimary,
-                  cardBg: InboxColors.cardBg,
+                  primaryColor: AppColors.primary,
+                  borderColor: AppColors.primary.withOpacity(0.2),
+                  textColor: AppColors.textPrimary,
+                  cardBg: AppColors.cardBg,
                 ),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Expanded(
                 child: _buildMobileFilterChip(
                   context: context,

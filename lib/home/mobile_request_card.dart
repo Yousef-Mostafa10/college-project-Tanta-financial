@@ -4,7 +4,7 @@ import 'dashboard_colors.dart';
 import 'dashboard_helpers.dart';
 import 'package:intl/intl.dart';
 
-class MobileRequestCard extends StatelessWidget {
+class MobileRequestCard extends StatefulWidget {
   final String id;
   final String title;
   final String type;
@@ -17,7 +17,7 @@ class MobileRequestCard extends StatelessWidget {
   final String createdAt;
   final VoidCallback onViewDetails;
   final VoidCallback onTrackRequest;
-  final VoidCallback onEditRequest; // ✅ زر تعديل
+  final VoidCallback onEditRequest;
   final VoidCallback onDeleteRequest;
 
   const MobileRequestCard({
@@ -34,9 +34,16 @@ class MobileRequestCard extends StatelessWidget {
     required this.createdAt,
     required this.onViewDetails,
     required this.onTrackRequest,
-    required this.onEditRequest, // ✅
+    required this.onEditRequest,
     required this.onDeleteRequest,
   });
+
+  @override
+  State<MobileRequestCard> createState() => _MobileRequestCardState();
+}
+
+class _MobileRequestCardState extends State<MobileRequestCard> {
+  bool _isPressed = false;
 
   String _formatDate(String dateString) {
     try {
@@ -49,178 +56,126 @@ class MobileRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priorityColor = DashboardHelpers.getPriorityColor(priority);
-    final formattedDate = _formatDate(createdAt);
+    final priorityColor = DashboardHelpers.getPriorityColor(widget.priority);
+    final formattedDate = _formatDate(widget.createdAt);
 
-    // Translate priority
-    String displayPriority = priority;
-    if (priority.toLowerCase() == 'high') {
+    String displayPriority = widget.priority;
+    if (widget.priority.toLowerCase() == 'high') {
       displayPriority = AppLocalizations.of(context)!.translate('high');
-    } else if (priority.toLowerCase() == 'medium') {
+    } else if (widget.priority.toLowerCase() == 'medium') {
       displayPriority = AppLocalizations.of(context)!.translate('medium');
-    } else if (priority.toLowerCase() == 'low') {
+    } else if (widget.priority.toLowerCase() == 'low') {
       displayPriority = AppLocalizations.of(context)!.translate('low');
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Card(
-        elevation: 1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: AppColors.borderColor,
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeInOut,
+        margin: const EdgeInsets.only(bottom: 12),
+        transform: _isPressed ? (Matrix4.identity()..scale(0.98)) : Matrix4.identity(),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.statShadow.withOpacity(0.08),
+              blurRadius: 10,
+              spreadRadius: 1,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: widget.statusColor.withOpacity(0.3),
             width: 1,
           ),
         ),
-        color: AppColors.cardBg,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // الصف العلوي: العنوان والحالة
-              Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: statusColor.withOpacity(0.5)),
-                    ),
-                    child: Icon(statusIcon, color: statusColor, size: 18), // 16 -> 18
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: statusColor.withOpacity(0.5)),
-                    ),
-                    child: Text(
-                      AppLocalizations.of(context)!.translate(statusText.toLowerCase().replaceAll(' ', '_')),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: statusColor,
-                      ),
-                    ),
-                  ),
-                ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(
+                  color: widget.statusColor,
+                  width: 4,
+                ),
               ),
-              const SizedBox(height: 8),
-
-              // معلومات المرسل والتاريخ
-              Row(
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary), // 10 -> 14
-                  const SizedBox(width: 6), // 2 -> 6
-                  Text(
-                    formattedDate,
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary), // 10 -> 13
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-
-              // النوع والأولوية وعدد المستندات
-              Row(
-                children: [
-                  _buildChip(type, Icons.category_outlined, AppColors.primary),
-                  const SizedBox(width: 4),
-                  _buildChip(displayPriority, Icons.flag_outlined, priorityColor),
-                  const SizedBox(width: 4),
-                  _buildDocumentsChip(),
-                  const Spacer(),
-                  PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert_rounded, size: 16, color: AppColors.textSecondary),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    onSelected: (value) {
-                      if (value == "details") {
-                        onViewDetails();
-                      } else if (value == "track") {
-                        onTrackRequest();
-                      } else if (value == "edit") {      // ✅ زر تعديل
-                        onEditRequest();
-                      } else if (value == "delete") {
-                        onDeleteRequest();
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: "details",
-                        child: Row(
-                          children: [
-                            Icon(Icons.remove_red_eye_outlined, size: 16, color: AppColors.primary),
-                            const SizedBox(width: 8),
-                            Text(
-                              AppLocalizations.of(context)!.translate('view_details'),
-                              style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w500),
-                            ),
-                          ],
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: widget.statusColor.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(widget.statusIcon, color: widget.statusColor, size: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      PopupMenuItem(
-                        value: "track",
-                        child: Row(
-                          children: [
-                            Icon(Icons.track_changes_outlined, size: 16, color: AppColors.primary),
-                            const SizedBox(width: 8),
-                            Text(
-                              AppLocalizations.of(context)!.translate('track_request'),
-                              style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w500),
-                            ),
-                          ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: widget.statusColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ),
-                      PopupMenuItem(
-                        value: "edit",
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit_outlined, size: 16, color: AppColors.accentYellow),
-                            const SizedBox(width: 8),
-                            Text(
-                              AppLocalizations.of(context)!.translate('edit'),
-                              style: TextStyle(fontSize: 12, color: AppColors.accentYellow, fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: "delete",
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete_outlined, size: 16, color: AppColors.accentRed),
-                            const SizedBox(width: 8),
-                            Text(
-                              AppLocalizations.of(context)!.translate('delete'),
-                              style: TextStyle(fontSize: 12, color: AppColors.accentRed, fontWeight: FontWeight.w500),
-                            ),
-                          ],
+                        child: Text(
+                          AppLocalizations.of(context)!.translate(widget.statusText.toLowerCase().replaceAll(' ', '_')),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: widget.statusColor,
+                          ),
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        formattedDate,
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _buildChip(widget.type, Icons.category_outlined, AppColors.primary),
+                      const SizedBox(width: 6),
+                      _buildChip(displayPriority, Icons.flag_outlined, priorityColor),
+                      const SizedBox(width: 6),
+                      _buildDocumentsChip(context),
+                      const Spacer(),
+                      _buildActionsMenu(context),
+                    ],
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -229,23 +184,22 @@ class MobileRequestCard extends StatelessWidget {
 
   Widget _buildChip(String text, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 6,2 -> 8,4
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: color), // 10 -> 13
-          const SizedBox(width: 4), // 2 -> 4
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
           Text(
-            text.length > 8 ? '${text.substring(0, 8)}...' : text, // 6 -> 8
+            text.length > 10 ? '${text.substring(0, 10)}...' : text,
             style: TextStyle(
-              fontSize: 11, // 9 -> 11
+              fontSize: 11,
               color: color,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -253,31 +207,99 @@ class MobileRequestCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDocumentsChip() {
-    final color = documentsCount > 0 ? AppColors.accentBlue : AppColors.textMuted;
-
+  Widget _buildDocumentsChip(BuildContext context) {
+    final color = widget.documentsCount > 0 ? AppColors.accentBlue : AppColors.textMuted;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 6,2 -> 8,4
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.attach_file_rounded, size: 13, color: color), // 10 -> 13
-          const SizedBox(width: 4), // 2 -> 4
+          Icon(Icons.attach_file_rounded, size: 13, color: color),
+          const SizedBox(width: 4),
           Text(
-            documentsCount.toString(),
+            widget.documentsCount.toString(),
             style: TextStyle(
-              fontSize: 11, // 9 -> 11
+              fontSize: 11,
               color: color,
               fontWeight: FontWeight.w600,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionsMenu(BuildContext context) {
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert_rounded, size: 18, color: AppColors.textSecondary),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      onSelected: (value) {
+        if (value == "details") widget.onViewDetails();
+        else if (value == "track") widget.onTrackRequest();
+        else if (value == "edit") widget.onEditRequest();
+        else if (value == "delete") widget.onDeleteRequest();
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: "details",
+          child: Row(
+            children: [
+              Icon(Icons.remove_red_eye_outlined, size: 16, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                AppLocalizations.of(context)!.translate('view_details'),
+                style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: "track",
+          child: Row(
+            children: [
+              Icon(Icons.track_changes_outlined, size: 16, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                AppLocalizations.of(context)!.translate('track_request'),
+                style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: "edit",
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 16, color: AppColors.accentYellow),
+              const SizedBox(width: 8),
+              Text(
+                AppLocalizations.of(context)!.translate('edit'),
+                style: TextStyle(fontSize: 12, color: AppColors.accentYellow, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: "delete",
+          child: Row(
+            children: [
+              Icon(Icons.delete_outlined, size: 16, color: AppColors.accentRed),
+              const SizedBox(width: 8),
+              Text(
+                AppLocalizations.of(context)!.translate('delete'),
+                style: TextStyle(fontSize: 12, color: AppColors.accentRed, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,4 +1,4 @@
-
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import 'dashboard_colors.dart';
@@ -32,41 +32,60 @@ class StatsWidget extends StatelessWidget {
       {"label": AppLocalizations.of(context)!.translate('needs_change'), "value": needsChange, "color": AppColors.statusNeedsChange, "icon": Icons.edit_note_rounded},
     ];
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.statBgLight,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.statShadow,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.statShadow.withOpacity(0.15),
+                blurRadius: 20,
+                spreadRadius: 5,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            border: Border.all(
+              color: AppColors.isDark
+                  ? Colors.white.withOpacity(0.15)
+                  : AppColors.borderColor.withOpacity(0.6),
+              width: 1.5,
+            ),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.statBgLight,
+                AppColors.statBgLight.withOpacity(AppColors.isDark ? 0.45 : 0.9),
+              ],
+            ),
           ),
-        ],
-        border: Border.all(color: AppColors.statBorder),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(isMobile ? 16 : 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: stats.map((stat) =>
-              isMobile 
-                  ? Expanded(
-                      child: _buildStatItem(
-                        stat["label"] as String,
-                        stat["value"] as int,
-                        stat["color"] as Color,
-                        stat["icon"] as IconData,
-                      ),
-                    )
-                  : _buildStatItem(
-                      stat["label"] as String,
-                      stat["value"] as int,
-                      stat["color"] as Color,
-                      stat["icon"] as IconData,
-                    )
-          ).toList(),
+          child: Padding(
+            padding: EdgeInsets.all(isMobile ? 16 : 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: stats.map((stat) =>
+                  isMobile 
+                      ? Expanded(
+                          child: _buildStatItem(
+                            stat["label"] as String,
+                            stat["value"] as int,
+                            stat["color"] as Color,
+                            stat["icon"] as IconData,
+                          ),
+                        )
+                      : _buildStatItem(
+                          stat["label"] as String,
+                          stat["value"] as int,
+                          stat["color"] as Color,
+                          stat["icon"] as IconData,
+                        )
+              ).toList(),
+            ),
+          ),
         ),
       ),
     );
@@ -76,32 +95,70 @@ class StatsWidget extends StatelessWidget {
     return Column(
       children: [
         Container(
-          padding: EdgeInsets.all(isMobile ? 8 : 10),
+          padding: EdgeInsets.all(isMobile ? 10 : 14),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
             shape: BoxShape.circle,
-            border: Border.all(color: color.withOpacity(0.3), width: 1),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withOpacity(0.2),
+                color.withOpacity(0.05),
+              ],
+            ),
+            boxShadow: AppColors.isDark
+                ? [
+                    BoxShadow(
+                      color: color.withOpacity(0.25),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: color.withOpacity(0.12),
+                      blurRadius: 8,
+                      spreadRadius: 0,
+                    ),
+                  ],
+            border: Border.all(color: color.withOpacity(0.5), width: 1.5),
           ),
-          child: Icon(icon, color: color, size: isMobile ? 18 : 22),
+          child: Icon(icon, color: color, size: isMobile ? 22 : 28),
         ),
-        SizedBox(height: isMobile ? 6 : 10),
-        Text(
-          value.toString(),
-          style: TextStyle(
-            fontSize: isMobile ? 16 : 20,
-            fontWeight: FontWeight.bold,
-            color: color, // الرقم باللون المميز لكل حالة
-          ),
+        SizedBox(height: isMobile ? 8 : 12),
+        TweenAnimationBuilder<int>(
+          tween: IntTween(begin: 0, end: value),
+          duration: const Duration(milliseconds: 1500),
+          curve: Curves.easeOutQuart,
+          builder: (context, val, child) {
+            return Text(
+              val.toString(),
+              style: TextStyle(
+                fontSize: isMobile ? 18 : 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+                shadows: AppColors.isDark
+                    ? [
+                        Shadow(
+                          color: color.withOpacity(0.4),
+                          blurRadius: 4,
+                        ),
+                      ]
+                    : null,
+              ),
+            );
+          },
         ),
-        SizedBox(height: isMobile ? 2 : 6),
+        SizedBox(height: isMobile ? 4 : 8),
         Text(
           label,
           softWrap: false,
           maxLines: 1,
           style: TextStyle(
-            fontSize: isMobile ? 10 : 13,
-            fontWeight: FontWeight.w500,
+            fontSize: isMobile ? 11 : 14,
+            fontWeight: FontWeight.w600,
             color: AppColors.textSecondary,
+            letterSpacing: 0.5,
           ),
         ),
       ],

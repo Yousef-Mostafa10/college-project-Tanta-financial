@@ -11,31 +11,41 @@ Widget buildDesktopHeader(BuildContext context, int itemCount) {
         Row(
           children: [
             Icon(Icons.list_alt_outlined, color: MyRequestsColors.primary, size: 18),
-            SizedBox(width: 6),
+            const SizedBox(width: 8),
             Text(
               AppLocalizations.of(context)!.translate('all_transactions').toUpperCase(),
               style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
                 color: MyRequestsColors.primary,
-                letterSpacing: 1.2,
+                letterSpacing: 1.4,
               ),
             ),
           ],
         ),
+        // Count badge styled like Inbox
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: MyRequestsColors.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: MyRequestsColors.primary.withOpacity(0.3)),
+            color: MyRequestsColors.primary,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: MyRequestsColors.primary.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Text(
-            AppLocalizations.of(context)!.translate('transactions_count').replaceFirst('{count}', '$itemCount'),
-            style: TextStyle(
+            AppLocalizations.of(context)!
+                .translate('transactions_count')
+                .replaceFirst('{count}', '$itemCount'),
+            style: const TextStyle(
               fontSize: 12,
-              color: MyRequestsColors.primary,
-              fontWeight: FontWeight.w600,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
         ),
@@ -51,12 +61,13 @@ Widget buildLoadingState(BuildContext context, bool isMobile) {
       children: [
         CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(MyRequestsColors.primary),
+          strokeWidth: 3,
         ),
         SizedBox(height: isMobile ? 16 : 20),
         Text(
           AppLocalizations.of(context)!.translate('loading_requests'),
           style: TextStyle(
-            fontSize: isMobile ? 16 : 18,
+            fontSize: isMobile ? 14 : 16,
             color: MyRequestsColors.textSecondary,
           ),
         ),

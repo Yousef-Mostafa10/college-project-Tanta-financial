@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -401,15 +402,45 @@ class _AdministrativeDashboardPageState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.7, end: 1.0),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeInOut,
+            builder: (context, scale, child) => Transform.scale(
+              scale: scale,
+              child: child,
+            ),
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withOpacity(0.1),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.2),
+                    blurRadius: 24,
+                    spreadRadius: 6,
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  strokeWidth: 3,
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Text(
             AppLocalizations.of(context)!.translate('loading_transactions'),
             style: TextStyle(
               fontSize: 16,
+              fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -424,11 +455,41 @@ class _AdministrativeDashboardPageState
         final width = MediaQuery.of(context).size.width;
         final isMobile = width < 600;
 
-        return Scaffold(
-          backgroundColor: AppColors.bodyBg,
-          appBar: AppBar(
-            backgroundColor: AppColors.primary,
-            elevation: 0,
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.bodyBg,
+                AppColors.primary.withOpacity(AppColors.isDark ? 0.05 : 0.01),
+                AppColors.bodyBg,
+              ],
+            ),
+          ),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              flexibleSpace: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.9),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: AppColors.isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : AppColors.primary.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                    ),
+                  ),
+                ),
+              ),
             title: Text(
               AppLocalizations.of(context)!.translate('administrative_dashboard'),
               style: TextStyle(
@@ -519,6 +580,7 @@ class _AdministrativeDashboardPageState
                   child: const Icon(Icons.arrow_upward, color: Colors.white),
                 )
               : null,
+          ),
         );
       },
     );
@@ -586,40 +648,45 @@ class _AdministrativeDashboardPageState
   Widget _buildSearchBar(bool isMobile) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.cardBg.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: AppColors.statShadow,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: AppColors.primary.withOpacity(0.1),
+            blurRadius: 15,
+            spreadRadius: 2,
+            offset: const Offset(0, 5),
           ),
         ],
+        border: Border.all(color: AppColors.primary.withOpacity(0.1)),
       ),
       child: TextField(
         controller: _searchController,
-        focusNode: _searchFocusNode, // ✅ ربط الـ FocusNode
+        focusNode: _searchFocusNode,
         decoration: InputDecoration(
           hintText: AppLocalizations.of(context)!.translate('search_transactions'),
-          hintStyle: TextStyle(color: AppColors.textMuted),
-          prefixIcon: Icon(Icons.search_rounded, color: AppColors.primary),
+          hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
+          prefixIcon: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Icon(Icons.search_rounded, color: AppColors.primary),
+          ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(30),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(30),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide(color: AppColors.primary.withOpacity(0.5), width: 1.5),
           ),
           filled: true,
-          fillColor: AppColors.bodyBg,
+          fillColor: Colors.transparent,
           contentPadding: EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: isMobile ? 12 : 14,
+            horizontal: 20,
+            vertical: isMobile ? 14 : 16,
           ),
         ),
         onChanged: _onSearchChanged,
@@ -726,7 +793,7 @@ class _AdministrativeDashboardPageState
       {
         "label": "Total",
         "value": total,
-        "color": AppColors.textPrimary,
+        "color": AppColors.primary,
         "icon": Icons.dashboard_rounded
       },
       {
@@ -755,34 +822,55 @@ class _AdministrativeDashboardPageState
       },
     ];
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.statBgLight,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.statShadow,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: AppColors.statBorder),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: statItems.map((stat) =>
-            Expanded(
-              child: _buildMobileStatItem(
-                label: stat["label"] as String,
-                value: stat["value"] as int,
-                color: stat["color"] as Color,
-                icon: stat["icon"] as IconData,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.statBgLight,
+                  AppColors.statBgLight.withOpacity(AppColors.isDark ? 0.45 : 0.9),
+                ],
               ),
-            )
-        ).toList(),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.08),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+              border: Border.all(
+                color: AppColors.isDark
+                    ? Colors.white.withOpacity(0.2)
+                    : AppColors.borderColor.withOpacity(0.4),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: statItems.map((stat) =>
+                  Expanded(
+                    child: _buildMobileStatItem(
+                      label: stat["label"] as String,
+                      value: stat["value"] as int,
+                      color: stat["color"] as Color,
+                      icon: stat["icon"] as IconData,
+                    ),
+                  )
+              ).toList(),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -796,31 +884,58 @@ class _AdministrativeDashboardPageState
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
             shape: BoxShape.circle,
-            border: Border.all(color: color.withOpacity(0.3), width: 1),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withOpacity(0.2),
+                color.withOpacity(0.05),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.2),
+                blurRadius: 8,
+                spreadRadius: 1,
+              ),
+            ],
+            border: Border.all(color: color.withOpacity(0.4), width: 1.2),
           ),
-          child: Icon(icon, color: color, size: 18),
+          child: Icon(icon, color: color, size: 20),
         ),
-        const SizedBox(height: 6),
-        Text(
-          value.toString(),
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
+        const SizedBox(height: 8),
+        TweenAnimationBuilder<int>(
+          tween: IntTween(begin: 0, end: value),
+          duration: const Duration(milliseconds: 1200),
+          curve: Curves.easeOutQuart,
+          builder: (context, val, _) => Text(
+            val.toString(),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: color,
+              shadows: AppColors.isDark
+                  ? [
+                      Shadow(
+                        color: color.withOpacity(0.3),
+                        blurRadius: 4,
+                      ),
+                    ]
+                  : null,
+            ),
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           AppLocalizations.of(context)?.translate(label.toLowerCase().replaceAll(' ', '_')) ?? label,
           softWrap: false,
           maxLines: 1,
           style: TextStyle(
             fontSize: 10,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             color: AppColors.textSecondary,
           ),
         ),
@@ -830,50 +945,66 @@ class _AdministrativeDashboardPageState
 
   Widget _buildMobileFilterSection() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.cardBg.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.statShadow,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: AppColors.primary.withOpacity(0.07),
+            blurRadius: 12,
+            spreadRadius: 1,
+            offset: const Offset(0, 4),
           ),
         ],
+        border: Border.all(
+          color: AppColors.isDark
+              ? Colors.white.withOpacity(0.2)
+              : AppColors.borderColor.withOpacity(0.4),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
-          TextField(
-            controller: _searchController,
-            focusNode: _searchFocusNode, // ✅ ربط الـ FocusNode
-            decoration: InputDecoration(
-              hintText: AppLocalizations.of(context)!.translate('search_transactions'),
-              hintStyle: TextStyle(color: AppColors.textMuted),
-              prefixIcon:
-              Icon(Icons.search_rounded, color: AppColors.primary),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.primary, width: 1.5),
-              ),
-              filled: true,
-              fillColor: AppColors.bodyBg,
-              contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              isDense: true,
+          // Pill-shaped search bar
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.bodyBg,
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: AppColors.primary.withOpacity(0.15)),
             ),
-            onChanged: _onSearchChanged,
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)!.translate('search_transactions'),
+                hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide(color: AppColors.primary.withOpacity(0.4), width: 1.5),
+                ),
+                filled: true,
+                fillColor: Colors.transparent,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                isDense: true,
+              ),
+              onChanged: _onSearchChanged,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
@@ -1002,21 +1133,40 @@ class _AdministrativeDashboardPageState
       displayValue = AppLocalizations.of(context)?.translate(value.toLowerCase().replaceAll(' ', '_')) ?? value;
     }
 
+    final bool isActive = value != 'All' && value != 'All Types';
+
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+          color: isActive 
+              ? getIconColor().withOpacity(0.15)
+              : AppColors.primary.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isActive 
+                ? getIconColor().withOpacity(0.5)
+                : AppColors.primary.withOpacity(0.15),
+            width: isActive ? 1.5 : 1.0,
+          ),
+          boxShadow: isActive 
+              ? [
+                  BoxShadow(
+                    color: getIconColor().withOpacity(0.2),
+                    blurRadius: 8,
+                    spreadRadius: 0,
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               getStatusIcon(),
-              size: 14,
+              size: isActive ? 16 : 14,
               color: getIconColor(),
             ),
             const SizedBox(height: 2),
@@ -1024,17 +1174,17 @@ class _AdministrativeDashboardPageState
               label,
               style: TextStyle(
                 fontSize: 9,
-                color: AppColors.primary,
-                fontWeight: FontWeight.w500,
+                color: isActive ? getIconColor() : AppColors.primary,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
               ),
             ),
-            if (value != 'All' && value != 'All Types')
+            if (isActive)
               Text(
                 displayValue.length > 8 ? displayValue.substring(0, 8) + '...' : displayValue,
                 style: TextStyle(
                   fontSize: 8,
                   color: getTextColor(),
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1050,63 +1200,131 @@ class _AdministrativeDashboardPageState
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
+        return ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.isDark
+                    ? AppColors.cardBg.withOpacity(0.85)
+                    : AppColors.cardBg.withOpacity(0.95),
+                border: Border(
+                  top: BorderSide(
+                    color: AppColors.isDark
+                        ? Colors.white.withOpacity(0.15)
+                        : AppColors.borderColor.withOpacity(0.4),
+                    width: 1,
                   ),
                 ),
-                const Divider(),
-                ...options.map((option) {
-                  bool isSelected = option == currentValue;
-                  Color itemColor = AppColors.textPrimary;
-                  IconData itemIcon = Icons.circle_outlined;
-
-                  // تحديد الألوان والأيقونات للقائمة
-                  if (title == AppLocalizations.of(context)!.translate('select_status')) {
-                    itemColor = _getStatusColor(option);
-                    itemIcon = _getStatusFilterIcon(option);
-                  } else if (title == AppLocalizations.of(context)!.translate('select_priority')) {
-                    itemColor = _getPriorityColor(option);
-                    itemIcon = _getPriorityIcon(option);
-                  }
-
-                  return ListTile(
-                    leading: Icon(itemIcon, color: itemColor, size: 22),
-                    title: Text(
-                      AppLocalizations.of(context)?.translate(option.toLowerCase().replaceAll(' ', '_')) ?? option,
-                      style: TextStyle(
-                        color: isSelected ? AppColors.primary : itemColor,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                      ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 12),
+                  // Drag Handle
+                  Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppColors.textMuted.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    trailing: isSelected ? Icon(Icons.check_circle, color: AppColors.primary, size: 20) : null,
-                    onTap: () {
-                      onSelected(option);
-                      Navigator.pop(context);
-                    },
-                  );
-                }),
-                const SizedBox(height: 16),
-              ],
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Icon(Icons.filter_alt_rounded, color: AppColors.primary, size: 24),
+                        const SizedBox(width: 10),
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Divider(color: AppColors.dividerColor.withOpacity(0.5), thickness: 1),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Column(
+                      children: options.map((option) {
+                        bool isSelected = option == currentValue;
+                        Color itemColor = AppColors.textPrimary;
+                        IconData itemIcon = Icons.circle_outlined;
+
+                        if (title == AppLocalizations.of(context)!.translate('select_status')) {
+                          itemColor = _getStatusColor(option);
+                          itemIcon = _getStatusFilterIcon(option);
+                        } else if (title == AppLocalizations.of(context)!.translate('select_priority')) {
+                          itemColor = _getPriorityColor(option);
+                          itemIcon = _getPriorityIcon(option);
+                        }
+
+                        if (option == 'All' || option == 'All Types') {
+                          itemColor = AppColors.primary;
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: InkWell(
+                            onTap: () {
+                              onSelected(option);
+                              Navigator.pop(context);
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: isSelected 
+                                    ? itemColor.withOpacity(0.1) 
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isSelected 
+                                      ? itemColor.withOpacity(0.3) 
+                                      : Colors.transparent,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(itemIcon, color: itemColor, size: 22),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Text(
+                                      AppLocalizations.of(context)?.translate(option.toLowerCase().replaceAll(' ', '_')) ?? option,
+                                      style: TextStyle(
+                                        color: isSelected ? itemColor : AppColors.textPrimary,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    Icon(Icons.check_circle_rounded, color: itemColor, size: 22),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         );

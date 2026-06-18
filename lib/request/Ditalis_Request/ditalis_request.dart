@@ -777,201 +777,203 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               elevation: 0,
               backgroundColor: Colors.transparent,
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.shadowColor, 
-                      blurRadius: 10, 
-                      offset: const Offset(0, 10)
-                    )
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
+              child: SingleChildScrollView(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.shadowColor, 
+                        blurRadius: 10, 
+                        offset: const Offset(0, 10)
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 28),
                           ),
-                          child: Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 28),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            AppLocalizations.of(context)!.translate('confirm_completion'),
-                            style: TextStyle(
-                              fontSize: 20, 
-                              fontWeight: FontWeight.bold, 
-                              color: AppColors.textPrimary
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              AppLocalizations.of(context)!.translate('confirm_completion'),
+                              style: TextStyle(
+                                fontSize: 20, 
+                                fontWeight: FontWeight.bold, 
+                                color: AppColors.textPrimary
+                              ),
                             ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        AppLocalizations.of(context)!.translate('budget_used'),
+                        style: TextStyle(
+                          fontSize: 14, 
+                          fontWeight: FontWeight.w600, 
+                          color: AppColors.textSecondary
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      AppLocalizations.of(context)!.translate('budget_used'),
-                      style: TextStyle(
-                        fontSize: 14, 
-                        fontWeight: FontWeight.w600, 
-                        color: AppColors.textSecondary
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.background.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.borderColor),
-                      ),
-                      child: _isLoadingBudgets
-                          ? Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Row(
-                                children: [
-                                  SizedBox(
-                                    width: 20, 
-                                    height: 20, 
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2, 
-                                      color: AppColors.primary
-                                    )
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    AppLocalizations.of(context)!.translate('loading_budgets'),
-                                    style: TextStyle(color: AppColors.textPrimary),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: selectedBudget,
-                                hint: Text(
-                                  AppLocalizations.of(context)!.translate('select_budget'),
-                                  style: TextStyle(color: AppColors.textMuted),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.background.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.borderColor),
+                        ),
+                        child: _isLoadingBudgets
+                            ? Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 20, 
+                                      height: 20, 
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2, 
+                                        color: AppColors.primary
+                                      )
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      AppLocalizations.of(context)!.translate('loading_budgets'),
+                                      style: TextStyle(color: AppColors.textPrimary),
+                                    ),
+                                  ],
                                 ),
-                                isExpanded: true,
-                                dropdownColor: AppColors.surface,
-                                icon: Icon(Icons.account_balance_wallet_outlined, color: AppColors.primary),
-                                items: _budgets.map((budget) {
-                                  final double available = budget['available'] ?? 0.0;
-                                  return DropdownMenuItem<String>(
-                                    value: budget['name'],
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            budget['name'], 
-                                            style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
-                                            overflow: TextOverflow.ellipsis,
+                              )
+                            : DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: selectedBudget,
+                                  hint: Text(
+                                    AppLocalizations.of(context)!.translate('select_budget'),
+                                    style: TextStyle(color: AppColors.textMuted),
+                                  ),
+                                  isExpanded: true,
+                                  dropdownColor: AppColors.surface,
+                                  icon: Icon(Icons.account_balance_wallet_outlined, color: AppColors.primary),
+                                  items: _budgets.map((budget) {
+                                    final double available = budget['available'] ?? 0.0;
+                                    return DropdownMenuItem<String>(
+                                      value: budget['name'],
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              budget['name'], 
+                                              style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           ),
-                                        ),
-                                        Text(
-                                          '${numberFormatter.format(available)} ${AppLocalizations.of(context)!.translate('remaining')}', 
-                                          style: TextStyle(fontSize: 12, color: AppColors.textMuted)
-                                        ),
-                                      ],
+                                          Text(
+                                            '${numberFormatter.format(available)} ${AppLocalizations.of(context)!.translate('remaining')}', 
+                                            style: TextStyle(fontSize: 12, color: AppColors.textMuted)
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setDialogState(() => selectedBudget = value);
+                                  },
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        AppLocalizations.of(context)!.translate('amount_to_allocate'),
+                        style: TextStyle(
+                          fontSize: 14, 
+                          fontWeight: FontWeight.w600, 
+                          color: AppColors.textSecondary
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: amountController,
+                        keyboardType: TextInputType.number,
+                        autofocus: true,
+                        style: TextStyle(color: AppColors.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: AppLocalizations.of(context)!.translate('enter_amount_hint'),
+                          hintStyle: TextStyle(color: AppColors.textMuted),
+                          prefixIcon: Icon(Icons.monetization_on_outlined, color: AppColors.primary),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.primary)),
+                          filled: true,
+                          fillColor: AppColors.background.withOpacity(0.5),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.background,
+                                foregroundColor: AppColors.textPrimary,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
+                              ),
+                              child: Text(
+                                AppLocalizations.of(context)!.translate('cancel'), 
+                                style: const TextStyle(fontWeight: FontWeight.bold)
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final amount = double.tryParse(amountController.text.trim());
+                                if (selectedBudget != null && amount != null && amount > 0) {
+                                  Navigator.pop(context);
+                                  _markAsFulfilled(selectedBudget!, amount);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(AppLocalizations.of(context)!.translate('please_fill_all_fields')),
+                                      backgroundColor: AppColors.accentRed,
                                     ),
                                   );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setDialogState(() => selectedBudget = value);
-                                },
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                elevation: 4,
+                                shadowColor: AppColors.primary.withOpacity(0.4),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: Text(
+                                AppLocalizations.of(context)!.translate('confirm'), 
+                                style: const TextStyle(fontWeight: FontWeight.bold)
                               ),
                             ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      AppLocalizations.of(context)!.translate('amount_to_allocate'),
-                      style: TextStyle(
-                        fontSize: 14, 
-                        fontWeight: FontWeight.w600, 
-                        color: AppColors.textSecondary
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: amountController,
-                      keyboardType: TextInputType.number,
-                      autofocus: true,
-                      style: TextStyle(color: AppColors.textPrimary),
-                      decoration: InputDecoration(
-                        hintText: AppLocalizations.of(context)!.translate('enter_amount_hint'),
-                        hintStyle: TextStyle(color: AppColors.textMuted),
-                        prefixIcon: Icon(Icons.monetization_on_outlined, color: AppColors.primary),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderColor)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.primary)),
-                        filled: true,
-                        fillColor: AppColors.background.withOpacity(0.5),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.background,
-                              foregroundColor: AppColors.textPrimary,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
-                            ),
-                            child: Text(
-                              AppLocalizations.of(context)!.translate('cancel'), 
-                              style: const TextStyle(fontWeight: FontWeight.bold)
-                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              final amount = double.tryParse(amountController.text.trim());
-                              if (selectedBudget != null && amount != null && amount > 0) {
-                                Navigator.pop(context);
-                                _markAsFulfilled(selectedBudget!, amount);
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(AppLocalizations.of(context)!.translate('please_fill_all_fields')),
-                                    backgroundColor: AppColors.accentRed,
-                                  ),
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              elevation: 4,
-                              shadowColor: AppColors.primary.withOpacity(0.4),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: Text(
-                              AppLocalizations.of(context)!.translate('confirm'), 
-                              style: const TextStyle(fontWeight: FontWeight.bold)
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );

@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:college_project/providers/theme_provider.dart';
 import 'package:college_project/core/app_theme_color.dart';
 import 'auth_service.dart';
+import '../notifications/notifications_provider.dart';
 import '../request/Myrequest/myrequest.dart';
 
 class LoginPage extends StatefulWidget {
@@ -52,6 +53,9 @@ class _LoginPageState extends State<LoginPage> {
         // final userData = result['data']['user'];
         // final userName = userData['name'] ?? emailController.text.trim();
         final userRole = result['data']['user']?['role'] ?? 'user';
+
+        // 🔌 تشغيل الـ SSE والاشعارات بعد حفظ التوكن
+        Provider.of<NotificationProvider>(context, listen: false).init();
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

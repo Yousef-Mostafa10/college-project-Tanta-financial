@@ -72,6 +72,7 @@ class MyRequestMobileCard extends StatefulWidget {
 }
 
 class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
+  bool _isPressed = false;
   String? receiverName;
   String? forwardId;
   bool isLoading = true;
@@ -121,229 +122,301 @@ class _MyRequestMobileCardState extends State<MyRequestMobileCard> {
     else if (widget.priority.toLowerCase() == 'medium') displayPriority = AppLocalizations.of(context)!.translate('priority_medium') ?? 'Medium';
     else if (widget.priority.toLowerCase() == 'low') displayPriority = AppLocalizations.of(context)!.translate('priority_low') ?? 'Low';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Card(
-        elevation: 1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: AppColors.borderColor,
-            width: 1.0,
+    return GestureDetector(
+      onTapDown:  (_) => setState(() => _isPressed = true),
+      onTapUp:    (_) => setState(() => _isPressed = false),
+      onTapCancel: ()  => setState(() => _isPressed = false),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) =>
+                  CourseApprovalRequestPage(requestId: widget.id)),
+        );
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeInOut,
+        margin: const EdgeInsets.only(bottom: 12),
+        transform: _isPressed
+            ? (Matrix4.identity()..scale(0.98))
+            : Matrix4.identity(),
+        decoration: BoxDecoration(
+          color: MyRequestsColors.cardBg,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: MyRequestsColors.statShadow.withOpacity(0.08),
+              blurRadius: 10,
+              spreadRadius: 1,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: widget.statusColor.withOpacity(0.3),
+            width: 1,
           ),
         ),
-        color: MyRequestsColors.cardBg,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // الصف العلوي: العنوان والحالة
-              Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: widget.statusColor.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: widget.statusColor.withOpacity(0.3)),
-                    ),
-                    child: Icon(widget.statusIcon, color: widget.statusColor, size: 18), // 16 -> 18
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: MyRequestsColors.textPrimary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: widget.statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: widget.statusColor.withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      widget.statusText,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: widget.statusColor,
-                      ),
-                    ),
-                  ),
-                ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: widget.statusColor, width: 4),
               ),
-              SizedBox(height: 8),
-
-              // التاريخ
-              Row(
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.calendar_today_rounded, size: 14, color: MyRequestsColors.textSecondary), // 12 -> 14
-                  SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      widget.date,
-                      style: TextStyle(fontSize: 13, color: MyRequestsColors.textSecondary), // 11 -> 13
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              
-              if (isLoading)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
+                  // Title + Status
+                  Row(
                     children: [
-                      SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 1.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(MyRequestsColors.primary.withOpacity(0.5)),
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: widget.statusColor.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(widget.statusIcon,
+                            color: widget.statusColor, size: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: MyRequestsColors.textPrimary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      SizedBox(width: 6),
-                      Text(
-                        '...',
-                        style: TextStyle(fontSize: 10, color: MyRequestsColors.textMuted),
+                      // Status badge — no border (matches Dashboard)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: widget.statusColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          widget.statusText,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: widget.statusColor,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                )
-              else if (receiverName != null)
-                ForwardInfoWidget(
-                  transactionId: widget.id,
-                  api: widget.api,
-                  receiverName: receiverName,
-                  forwardId: forwardId,
-                  onCancelled: () {
-                    setState(() {
-                      receiverName = null;
-                      forwardId = null;
-                    });
-                  },
-                ),
-              
-              SizedBox(height: 6),
+                  const SizedBox(height: 10),
 
-              // النوع والأولوية والمستندات
-              Row(
-                children: [
-                  _buildMobileChip(widget.type, Icons.category_outlined, MyRequestsColors.primary),
-                  SizedBox(width: 4),
-                  _buildMobileChip(displayPriority, priorityIcon, priorityColor),
-                  SizedBox(width: 4),
-                  _buildMobileChip(
-                    '${widget.documentsCount}',
-                    Icons.attach_file_rounded,
-                    widget.documentsCount > 0 ? MyRequestsColors.accentBlue : MyRequestsColors.textMuted,
-                  ),
-                  const Spacer(),
-
-                  // Forward Button
-                  if (!isLoading && receiverName == null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: TextButton.icon(
-                        onPressed: widget.onForward,
-                        icon: Icon(Icons.send_rounded, size: 14),
-                        label: Text(AppLocalizations.of(context)!.translate('forward') ?? 'Forward', style: TextStyle(fontSize: 12)),
-                        style: TextButton.styleFrom(
-                          foregroundColor: MyRequestsColors.primary,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          visualDensity: VisualDensity.compact,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          backgroundColor: MyRequestsColors.primary.withOpacity(0.05),
+                  // Date
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today_rounded,
+                          size: 14,
+                          color: MyRequestsColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          widget.date,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: MyRequestsColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                    ],
+                  ),
+
+                  if (isLoading)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  MyRequestsColors.primary.withOpacity(0.5)),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text('...', style: TextStyle(
+                              fontSize: 10,
+                              color: MyRequestsColors.textMuted)),
+                        ],
+                      ),
+                    )
+                  else if (receiverName != null)
+                    ForwardInfoWidget(
+                      transactionId: widget.id,
+                      api: widget.api,
+                      receiverName: receiverName,
+                      forwardId: forwardId,
+                      onCancelled: () {
+                        setState(() {
+                          receiverName = null;
+                          forwardId = null;
+                        });
+                      },
                     ),
 
-                  PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert_rounded, size: 18, color: MyRequestsColors.textSecondary),
-                    onSelected: (value) {
-                      if (value == "details") {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => CourseApprovalRequestPage(requestId: widget.id),
-                          ),
-                        );
-                      } else if (value == "edit") {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EditRequestPage(requestId: widget.id),
-                          ),
-                        );
-                      } else if (value == "delete") {
-                        widget.onDelete(widget.id);
-                      } else if (value == "track") {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TransactionTrackingPage(transactionId: widget.id),
-                          ),
-                        );
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: "details",
-                        child: Row(
-                          children: [
-                            Icon(Icons.remove_red_eye_outlined, size: 16, color: MyRequestsColors.primary),
-                            SizedBox(width: 8),
-                            Text(AppLocalizations.of(context)!.translate('view_details') ?? 'View Details', style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
-                          ],
-                        ),
+                  const SizedBox(height: 12),
+                  // Chips
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _buildMobileChip(widget.type,
+                          Icons.category_outlined, MyRequestsColors.primary),
+                      _buildMobileChip(
+                          displayPriority, priorityIcon, priorityColor),
+                      _buildMobileChip(
+                        '${widget.documentsCount}',
+                        Icons.attach_file_rounded,
+                        widget.documentsCount > 0
+                            ? MyRequestsColors.accentBlue
+                            : MyRequestsColors.textMuted,
                       ),
-                      PopupMenuItem(
-                        value: "edit",
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit_outlined, size: 16, color: MyRequestsColors.primary),
-                            SizedBox(width: 8),
-                            Text(AppLocalizations.of(context)!.translate('edit_request') ?? 'Edit Request', style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
-                          ],
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Actions
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (!isLoading && receiverName == null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: TextButton.icon(
+                            onPressed: widget.onForward,
+                            icon: const Icon(Icons.send_rounded, size: 14),
+                            label: Text(
+                              AppLocalizations.of(context)!.translate('forward') ?? 'Forward',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: MyRequestsColors.primary,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              visualDensity: VisualDensity.compact,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                              backgroundColor:
+                                  MyRequestsColors.primary.withOpacity(0.05),
+                            ),
+                          ),
                         ),
-                      ),
-                      PopupMenuItem(
-                        value: "track",
-                        child: Row(
-                          children: [
-                            Icon(Icons.track_changes_outlined, size: 16, color: MyRequestsColors.primary),
-                            SizedBox(width: 8),
-                            Text(AppLocalizations.of(context)!.translate('track_request') ?? 'Track Request', style: TextStyle(fontSize: 12, color: MyRequestsColors.textPrimary)),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuDivider(),
-                      PopupMenuItem(
-                        value: "delete",
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete_outlined, size: 16, color: MyRequestsColors.accentRed),
-                            SizedBox(width: 8),
-                            Text(AppLocalizations.of(context)!.translate('delete_button') ?? 'Delete', style: TextStyle(fontSize: 12, color: MyRequestsColors.accentRed)),
-                          ],
-                        ),
+                      PopupMenuButton<String>(
+                        icon: Icon(Icons.more_vert_rounded,
+                            size: 18,
+                            color: MyRequestsColors.textSecondary),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        onSelected: (value) {
+                          if (value == 'details') {
+                            Navigator.push(context,
+                                MaterialPageRoute(builder: (_) =>
+                                    CourseApprovalRequestPage(
+                                        requestId: widget.id)));
+                          } else if (value == 'edit') {
+                            Navigator.push(context,
+                                MaterialPageRoute(builder: (context) =>
+                                    EditRequestPage(requestId: widget.id)));
+                          } else if (value == 'delete') {
+                            widget.onDelete(widget.id);
+                          } else if (value == 'track') {
+                            Navigator.push(context,
+                                MaterialPageRoute(builder: (context) =>
+                                    TransactionTrackingPage(
+                                        transactionId: widget.id)));
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'details',
+                            child: Row(children: [
+                              Icon(Icons.remove_red_eye_outlined,
+                                  size: 16, color: MyRequestsColors.primary),
+                              const SizedBox(width: 8),
+                              Text(
+                                AppLocalizations.of(context)!.translate('view_details') ?? 'View Details',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: MyRequestsColors.primary,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ]),
+                          ),
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: Row(children: [
+                              Icon(Icons.edit_outlined,
+                                  size: 16,
+                                  color: MyRequestsColors.accentYellow),
+                              const SizedBox(width: 8),
+                              Text(
+                                AppLocalizations.of(context)!.translate('edit_request') ?? 'Edit',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: MyRequestsColors.accentYellow,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ]),
+                          ),
+                          PopupMenuItem(
+                            value: 'track',
+                            child: Row(children: [
+                              Icon(Icons.track_changes_outlined,
+                                  size: 16, color: MyRequestsColors.primary),
+                              const SizedBox(width: 8),
+                              Text(
+                                AppLocalizations.of(context)!.translate('track_request') ?? 'Track',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: MyRequestsColors.primary,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ]),
+                          ),
+                          const PopupMenuDivider(),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(children: [
+                              Icon(Icons.delete_outlined,
+                                  size: 16, color: MyRequestsColors.accentRed),
+                              const SizedBox(width: 8),
+                              Text(
+                                AppLocalizations.of(context)!.translate('delete_button') ?? 'Delete',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: MyRequestsColors.accentRed,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ]),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),

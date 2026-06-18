@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -1359,41 +1360,115 @@ class _InboxPageState extends State<InboxPage> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        return Container(
-          decoration: BoxDecoration(
-            color: InboxColors.cardBg,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
+        return ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: InboxColors.primary,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.isDark
+                    ? AppColors.cardBg.withOpacity(0.85)
+                    : AppColors.cardBg.withOpacity(0.95),
+                border: Border(
+                  top: BorderSide(
+                    color: AppColors.isDark
+                        ? Colors.white.withOpacity(0.15)
+                        : AppColors.borderColor.withOpacity(0.4),
+                    width: 1,
                   ),
                 ),
               ),
-              ...options.map((option) => ListTile(
-                leading: Icon(
-                  Icons.check_rounded,
-                  color: option == currentValue ? InboxColors.primary : Colors.transparent,
-                ),
-                title: Text(AppLocalizations.of(context)?.translate(option.toLowerCase().replaceAll(' ', '_')) ?? option, style: TextStyle(color: InboxColors.textPrimary)),
-                onTap: () {
-                  Navigator.pop(context);
-                  onSelected(option);
-                },
-              )),
-              SizedBox(height: 16),
-            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 12),
+                  // Drag Handle
+                  Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppColors.textMuted.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Icon(Icons.filter_alt_rounded, color: AppColors.primary, size: 24),
+                        const SizedBox(width: 10),
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Divider(color: AppColors.dividerColor.withOpacity(0.5), thickness: 1),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Column(
+                      children: options.map((option) {
+                        bool isSelected = option == currentValue;
+                        Color itemColor = isSelected ? AppColors.primary : AppColors.textPrimary;
+                        
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: InkWell(
+                            onTap: () {
+                              onSelected(option);
+                              Navigator.pop(context);
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: isSelected 
+                                    ? itemColor.withOpacity(0.1) 
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isSelected 
+                                      ? itemColor.withOpacity(0.3) 
+                                      : Colors.transparent,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(isSelected ? Icons.check_circle_rounded : Icons.circle_outlined, color: itemColor, size: 22),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Text(
+                                      AppLocalizations.of(context)?.translate(option.toLowerCase().replaceAll(' ', '_')) ?? option,
+                                      style: TextStyle(
+                                        color: isSelected ? itemColor : AppColors.textPrimary,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -1898,54 +1973,99 @@ class _InboxPageState extends State<InboxPage> {
         final width = MediaQuery.of(context).size.width;
         final isMobile = width < 600;
 
-        return Scaffold(
-          backgroundColor: InboxColors.bodyBg,
-          appBar: AppBar(
-            title: Text(
-              AppLocalizations.of(context)!.translate('inbox_title'),
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: min(width * 0.04, 20),
-                color: Colors.white,
-              ),
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.bodyBg,
+                AppColors.primary.withOpacity(0.05),
+                AppColors.bodyBg,
+              ],
             ),
-            backgroundColor: InboxColors.primary,
-            elevation: 0,
-            actions: [
-              IconButton(
-                icon: Icon(Icons.refresh_rounded, color: Colors.white),
-                onPressed: _fetchInboxRequests,
-                tooltip: AppLocalizations.of(context)!.translate('refresh'),
-              ),
-              if (_isLoading || _isRefreshing)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              flexibleSpace: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.9),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: AppColors.isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : AppColors.primary.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-            ],
+              ),
+              title: Text(
+                AppLocalizations.of(context)!.translate('inbox_title'),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: min(width * 0.04, 20),
+                  color: Colors.white,
+                ),
+              ),
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.refresh_rounded, color: Colors.white),
+                  onPressed: _fetchInboxRequests,
+                  tooltip: AppLocalizations.of(context)!.translate('refresh'),
+                ),
+                if (_isLoading || _isRefreshing)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            body: _isLoading
+                ? _buildLoadingState()
+                : Stack(
+                    children: [
+                      isMobile
+                          ? _buildMobileOptimizedBody()
+                          : _buildDesktopBody(),
+                      if (_isRefreshing)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(
+                            backgroundColor: Colors.transparent,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          ),
+                        ),
+                    ],
+                  ),
+            floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+            floatingActionButton: _showBackToTop
+                ? FloatingActionButton(
+                    heroTag: 'inbox_scroll_top',
+                    mini: true,
+                    onPressed: _scrollToTop,
+                    backgroundColor: AppColors.primary.withOpacity(0.8),
+                    child: Icon(Icons.arrow_upward, color: Colors.white),
+                  )
+                : null,
           ),
-          body: _isLoading
-              ? _buildLoadingState()
-              : isMobile
-              ? _buildMobileOptimizedBody()
-              : _buildDesktopBody(),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-          floatingActionButton: _showBackToTop
-              ? FloatingActionButton(
-                  heroTag: 'inbox_scroll_top',
-                  mini: true,
-                  onPressed: _scrollToTop,
-                  backgroundColor: InboxColors.primary.withOpacity(0.8),
-                  child: Icon(Icons.arrow_upward, color: Colors.white),
-                )
-              : null,
         );
       },
     );

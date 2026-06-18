@@ -1,8 +1,7 @@
-
-
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
-import './inbox_colors.dart';
+import 'package:college_project/core/app_colors.dart';
 import './inbox_helpers.dart';
 import '../shared/paginated_type_picker.dart';
 
@@ -40,113 +39,134 @@ class InboxDesktopFilters extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // شريط البحث
+        // شريط البحث العصري (مثل الداشبورد)
         Container(
           decoration: BoxDecoration(
-            color: InboxColors.cardBg,
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.cardBg.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
-                color: InboxColors.statShadow,
-                blurRadius: 8,
-                offset: Offset(0, 2),
+                color: AppColors.primary.withOpacity(0.1),
+                blurRadius: 15,
+                spreadRadius: 2,
+                offset: const Offset(0, 5),
               ),
             ],
+            border: Border.all(color: AppColors.primary.withOpacity(0.1)),
           ),
           child: TextField(
             controller: searchController,
             decoration: InputDecoration(
               hintText: AppLocalizations.of(context)!.translate('search_requests'),
-              hintStyle: TextStyle(color: InboxColors.textMuted),
-              prefixIcon: Icon(Icons.search_rounded, color: InboxColors.primary),
+              hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Icon(Icons.search_rounded, color: AppColors.primary),
+              ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(30),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(30),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: InboxColors.primary, width: 1.5),
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide(color: AppColors.primary.withOpacity(0.5), width: 1.5),
               ),
               filled: true,
-              fillColor: InboxColors.bodyBg,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              fillColor: Colors.transparent,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             ),
             onChanged: onSearchChanged,
           ),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
 
-        // فلاتر الديسكتوب
-        Card(
-          elevation: 2,
-          color: InboxColors.cardBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.filter_alt_outlined, color: InboxColors.primary, size: 16),
-                    SizedBox(width: 6),
-                    Text(
-                      AppLocalizations.of(context)!.translate('filters_label'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: InboxColors.primary,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
+        // فلاتر الديسكتوب الزجاجية (مثل الداشبورد)
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.cardBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.isDark
+                      ? Colors.white.withOpacity(0.12)
+                      : AppColors.borderColor.withOpacity(0.5),
+                  width: 1,
                 ),
-                SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildDesktopFilterDropdown(
-                        context: context,
-                        value: selectedPriority,
-                        items: priorities,
-                        label: AppLocalizations.of(context)!.translate('priority'),
-                        icon: Icons.flag_outlined,
-                        onChanged: (value) => onPriorityChanged(value!),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.statShadow.withOpacity(0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.filter_alt_outlined, color: AppColors.primary, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        AppLocalizations.of(context)!.translate('filters_label'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                          letterSpacing: 1.2,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: PaginatedTypePicker(
-                        selectedType: selectedType,
-                        onTypeChanged: (val) => onTypeChanged(val!),
-                        fetchPage: fetchTypePage,
-                        isMobile: false,
-                        primaryColor: InboxColors.primary,
-                        borderColor: InboxColors.statBorder,
-                        textColor: InboxColors.textPrimary,
-                        cardBg: InboxColors.cardBg,
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildDesktopFilterDropdown(
+                          context: context,
+                          value: selectedPriority,
+                          items: priorities,
+                          label: AppLocalizations.of(context)!.translate('priority'),
+                          icon: Icons.flag_outlined,
+                          onChanged: (value) => onPriorityChanged(value!),
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: _buildDesktopFilterDropdown(
-                        context: context,
-                        value: selectedStatus,
-                        items: statuses,
-                        label: AppLocalizations.of(context)!.translate('status'),
-                        icon: Icons.hourglass_top_outlined,
-                        onChanged: (value) => onStatusChanged(value!),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: PaginatedTypePicker(
+                          selectedType: selectedType,
+                          onTypeChanged: (val) => onTypeChanged(val!),
+                          fetchPage: fetchTypePage,
+                          isMobile: false,
+                          primaryColor: AppColors.primary,
+                          borderColor: AppColors.primary.withOpacity(0.2),
+                          textColor: AppColors.textPrimary,
+                          cardBg: AppColors.cardBg,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildDesktopFilterDropdown(
+                          context: context,
+                          value: selectedStatus,
+                          items: statuses,
+                          label: AppLocalizations.of(context)!.translate('status'),
+                          icon: Icons.hourglass_top_outlined,
+                          onChanged: (value) => onStatusChanged(value!),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -162,10 +182,13 @@ class InboxDesktopFilters extends StatelessWidget {
     required IconData icon,
     required Function(String?) onChanged,
   }) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
       decoration: BoxDecoration(
-        border: Border.all(color: InboxColors.statBorder),
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.primary.withOpacity(0.05),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -173,10 +196,10 @@ class InboxDesktopFilters extends StatelessWidget {
           child: DropdownButton<String>(
             value: value,
             isExpanded: true,
-            icon: Icon(Icons.arrow_drop_down_rounded, color: InboxColors.textSecondary),
+            icon: Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
             style: TextStyle(
               fontSize: 14,
-              color: InboxColors.textPrimary,
+              color: AppColors.textPrimary,
               fontWeight: FontWeight.w500,
             ),
             items: items
@@ -195,7 +218,7 @@ class InboxDesktopFilters extends StatelessWidget {
                           size: 18,
                           color: _getStatusColor(context, label, item),
                         ),
-                        SizedBox(width: 6),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             displayText,
@@ -231,7 +254,7 @@ class InboxDesktopFilters extends StatelessWidget {
   IconData _getStatusFilterIcon(String status) {
     switch (status.toLowerCase()) {
       case 'all':
-        return Icons.filter_list;
+        return Icons.filter_list_rounded;
       case 'approved':
         return Icons.check_circle_rounded;
       case 'rejected':
@@ -267,42 +290,42 @@ class InboxDesktopFilters extends StatelessWidget {
 
   Color _getStatusColor(BuildContext context, String label, String item) {
     if (item.toLowerCase() == 'all' || item.toLowerCase() == 'all types') {
-      return InboxColors.primary;
+      return AppColors.primary;
     }
 
     if (label == AppLocalizations.of(context)!.translate('priority')) {
       switch (item.toLowerCase()) {
-        case 'high': return InboxColors.statusRejected;
-        case 'medium': return InboxColors.statusPending;
-        case 'low': return InboxColors.statusApproved;
+        case 'high': return AppColors.statusRejected;
+        case 'medium': return AppColors.statusPending;
+        case 'low': return AppColors.statusApproved;
       }
     }
 
     if (label == AppLocalizations.of(context)!.translate('status')) {
       switch (item.toLowerCase()) {
         case 'approved':
-          return InboxColors.statusApproved;
+          return AppColors.statusApproved;
         case 'rejected':
-          return InboxColors.statusRejected;
+          return AppColors.statusRejected;
         case 'waiting':
         case 'not-assigned':
-          return InboxColors.statusWaiting;
+          return AppColors.statusWaiting;
         case 'needs change':
         case 'needs_change':
           return Colors.orange;
         case 'fulfilled':
-          return InboxColors.statusFulfilled;
+          return AppColors.statusFulfilled;
         default:
-          return InboxColors.primary;
+          return AppColors.primary;
       }
     } else {
-      return InboxColors.primary;
+      return AppColors.primary;
     }
   }
 
   Color _getStatusTextColor(BuildContext context, String label, String item) {
     if (item == 'All Types' || item == 'All' || item == 'All Priorities') {
-      return InboxColors.primary;
+      return AppColors.primary;
     }
 
     return _getStatusColor(context, label, item);

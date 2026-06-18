@@ -15,6 +15,9 @@ class NotificationProvider extends ChangeNotifier {
   bool _hasMore = true;
   int _currentPage = 1;
 
+  final StreamController<Map<String, dynamic>> _presenceStreamController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get presenceStream => _presenceStreamController.stream;
+
   HttpClient? _sseHttpClient;
   StreamSubscription? _sseSubscription;
   bool _isConnected = false;
@@ -148,6 +151,12 @@ class NotificationProvider extends ChangeNotifier {
                     _handleNewNotification(
                       Map<String, dynamic>.from(eventData['data']),
                     );
+                  } else if (eventData['type'] == 'presence' && eventData['data'] != null) {
+                    _presenceStreamController.add(Map<String, dynamic>.from(eventData['data']));
+                  } else if (eventData['type'] == 'presence_change' && eventData['data'] != null) {
+                    _presenceStreamController.add(Map<String, dynamic>.from(eventData['data']));
+                  } else if (eventData['type'] == 'presence') {
+                    _presenceStreamController.add(Map<String, dynamic>.from(eventData));
                   } else if (eventData.containsKey('id') || eventData.containsKey('code')) {
                     _handleNewNotification(
                       Map<String, dynamic>.from(eventData),
@@ -227,6 +236,7 @@ class NotificationProvider extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _disconnectSSE();
+    _presenceStreamController.close();
     super.dispose();
   }
 }

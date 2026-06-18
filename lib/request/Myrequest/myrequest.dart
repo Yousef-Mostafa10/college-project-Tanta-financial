@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:ui';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import '../../utils/app_error_handler.dart';
@@ -773,80 +774,121 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         final width = MediaQuery.of(context).size.width;
         final isMobile = width < 600;
 
-        return Scaffold(
-          backgroundColor: MyRequestsColors.bodyBg,
-          appBar: AppBar(
-            title: Text(
-              AppLocalizations.of(context)!.translate('my_requests'),
-              style: TextStyle(
-                fontSize: isMobile ? 18 : 20,
-                fontWeight: FontWeight.w600,
-              ),
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                MyRequestsColors.bodyBg,
+                MyRequestsColors.primary.withOpacity(0.05),
+                MyRequestsColors.bodyBg,
+              ],
             ),
-            backgroundColor: MyRequestsColors.primary,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            actions: [
-              IconButton(
-                icon: Icon(Icons.refresh_rounded, size: isMobile ? 20 : 24),
-                onPressed: () => _fetchMyRequests(fullLoad: true),
-                tooltip: AppLocalizations.of(context)!.translate('refresh'),
-              ),
-            ],
           ),
-          drawer: (_userRole?.toLowerCase() != 'admin') ? CustomDrawer(onLogout: _logout) : null,
-          body: _isLoading
-              ? buildLoadingState(isMobile)
-              : Stack(
-                  children: [
-                    isMobile ? _buildMobileBody() : _buildDesktopBody(),
-                    if (_isLoadingMore)
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        child: LinearProgressIndicator(
-                          backgroundColor: Colors.transparent,
-                          valueColor: AlwaysStoppedAnimation<Color>(MyRequestsColors.primary),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              flexibleSpace: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: MyRequestsColors.primary.withOpacity(0.9),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: MyRequestsColors.isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : MyRequestsColors.primary.withOpacity(0.2),
+                          width: 1,
                         ),
                       ),
-                  ],
-                ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-          floatingActionButton: SizedBox(
-            width: MediaQuery.of(context).size.width,
-            child: Stack(
-              children: [
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 16.0),
-                    child: FloatingActionButton(
-                      heroTag: 'add_request_btn',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => CreateRequestPage()),
-                        );
-                      },
-                      backgroundColor: MyRequestsColors.primary,
-                      tooltip: AppLocalizations.of(context)!.translate('create_request') ?? 'Create Request',
-                      child: const Icon(Icons.add, color: Colors.white),
                     ),
                   ),
                 ),
-                if (_showBackToTop)
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: FloatingActionButton(
-                      heroTag: 'scroll_to_top_btn',
-                      mini: true,
-                      onPressed: _scrollToTop,
-                      backgroundColor: MyRequestsColors.primary.withOpacity(0.8),
-                      child: const Icon(Icons.arrow_upward, color: Colors.white),
-                    ),
-                  ),
+              ),
+              title: Text(
+                AppLocalizations.of(context)!.translate('my_requests'),
+                style: TextStyle(
+                  fontSize: isMobile ? 18 : 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              foregroundColor: Colors.white,
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.refresh_rounded,
+                      color: Colors.white, size: isMobile ? 20 : 24),
+                  onPressed: () => _fetchMyRequests(fullLoad: true),
+                  tooltip: AppLocalizations.of(context)!.translate('refresh'),
+                ),
               ],
+            ),
+            drawer: (_userRole?.toLowerCase() != 'admin')
+                ? CustomDrawer(onLogout: _logout)
+                : null,
+            body: _isLoading
+                ? buildLoadingState(isMobile)
+                : Stack(
+                    children: [
+                      isMobile ? _buildMobileBody() : _buildDesktopBody(),
+                      if (_isLoadingMore)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(
+                            backgroundColor: Colors.transparent,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                MyRequestsColors.primary),
+                          ),
+                        ),
+                    ],
+                  ),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerFloat,
+            floatingActionButton: SizedBox(
+              width: MediaQuery.of(context).size.width,
+              child: Stack(
+                children: [
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16.0),
+                      child: FloatingActionButton(
+                        heroTag: 'add_request_btn',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => CreateRequestPage()),
+                          );
+                        },
+                        backgroundColor: MyRequestsColors.primary,
+                        tooltip:
+                            AppLocalizations.of(context)!.translate('create_request') ?? 'Create Request',
+                        child: const Icon(Icons.add, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  if (_showBackToTop)
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child: FloatingActionButton(
+                        heroTag: 'scroll_to_top_btn',
+                        mini: true,
+                        onPressed: _scrollToTop,
+                        backgroundColor:
+                            MyRequestsColors.primary.withOpacity(0.8),
+                        child:
+                            const Icon(Icons.arrow_upward, color: Colors.white),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         );

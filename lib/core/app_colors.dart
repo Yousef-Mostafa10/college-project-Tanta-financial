@@ -188,7 +188,7 @@ class AppColors {
   static const Color _purpleBoardA = Color(0xFFF2F0FF); // primary text (clean & soft)
 
   // ·· Light Premium (Blue Blueprint) ··
-  static const Color _paper0 = Color(0xFFF8FAFC);
+  static const Color _paper0 = Color(0xFFFCFDFE);
   static const Color _paper1 = Color(0xFFFFFFFF);
   static const Color _paper2 = Color(0xFFF1F5F9);
   static const Color _paper3 = Color(0xFFE2E8F0);
@@ -198,7 +198,7 @@ class AppColors {
   static const Color _paper7 = Color(0xFF0F172A);
 
   // ·· Light Premium (Purple Blueprint) ··
-  static const Color _pPaper0 = Color(0xFFFAF9FF); // بياض مكسور بلمحة موف خفيفة جداً وغير ملحوظة (Ghost Purple)
+  static const Color _pPaper0 = Color(0xFFFDFDFF); // بياض مكسور بلمحة موف خفيفة جداً وغير ملحوظة (Ghost Purple)
   static const Color _pPaper1 = Color(0xFFFFFFFF); // White surface
   static const Color _pPaper2 = Color(0xFFF1F5F9); // Slate 100
   static const Color _pPaper3 = Color(0xFFE2E8F0); // Slate 200

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import 'dart:async';
+import 'dart:ui';
 import 'package:provider/provider.dart';
 import 'package:college_project/providers/theme_provider.dart';
 
@@ -433,54 +434,89 @@ class _ArchivePageState extends State<ArchivePage> {
         final width = MediaQuery.of(context).size.width;
         final isMobile = width < 600;
 
-        return Scaffold(
-          backgroundColor: ArchiveColors.bodyBg,
-          appBar: AppBar(
-            title: Text(
-              AppLocalizations.of(context)!.translate('archive'),
-              style: TextStyle(
-                fontSize: isMobile ? 18 : 20,
-                fontWeight: FontWeight.w600,
-              ),
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                ArchiveColors.bodyBg,
+                ArchiveColors.primary.withOpacity(0.05),
+                ArchiveColors.bodyBg,
+              ],
             ),
-            backgroundColor: ArchiveColors.primary,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            actions: [
-              IconButton(
-                icon: Icon(Icons.refresh_rounded, size: isMobile ? 20 : 24),
-                onPressed: _fetchArchiveRequests,
-                tooltip: AppLocalizations.of(context)!.translate('refresh'),
-              ),
-            ],
           ),
-          body: _isLoading
-              ? _buildLoadingState(isMobile)
-              : Stack(
-                  children: [
-                    isMobile ? _buildMobileBody() : _buildDesktopBody(),
-                    if (_isRefreshing)
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        child: LinearProgressIndicator(
-                          backgroundColor: Colors.transparent,
-                          valueColor: AlwaysStoppedAnimation<Color>(ArchiveColors.primary),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              flexibleSpace: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: ArchiveColors.primary.withOpacity(0.9),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: ArchiveColors.isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : ArchiveColors.primary.withOpacity(0.2),
+                          width: 1,
                         ),
                       ),
-                  ],
+                    ),
+                  ),
                 ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-          floatingActionButton: _showBackToTop
-              ? FloatingActionButton(
-                  heroTag: 'archive_scroll_top',
-                  mini: true,
-                  onPressed: _scrollToTop,
-                  backgroundColor: ArchiveColors.primary.withOpacity(0.8),
-                  child: Icon(Icons.arrow_upward, color: Colors.white),
-                )
-              : null,
+              ),
+              title: Text(
+                AppLocalizations.of(context)!.translate('archive'),
+                style: TextStyle(
+                  fontSize: isMobile ? 18 : 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              foregroundColor: Colors.white,
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.refresh_rounded,
+                      color: Colors.white, size: isMobile ? 20 : 24),
+                  onPressed: _fetchArchiveRequests,
+                  tooltip: AppLocalizations.of(context)!.translate('refresh'),
+                ),
+              ],
+            ),
+            body: _isLoading
+                ? _buildLoadingState(isMobile)
+                : Stack(
+                    children: [
+                      isMobile ? _buildMobileBody() : _buildDesktopBody(),
+                      if (_isRefreshing)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(
+                            backgroundColor: Colors.transparent,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                ArchiveColors.primary),
+                          ),
+                        ),
+                    ],
+                  ),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerFloat,
+            floatingActionButton: _showBackToTop
+                ? FloatingActionButton(
+                    heroTag: 'archive_scroll_top',
+                    mini: true,
+                    onPressed: _scrollToTop,
+                    backgroundColor: ArchiveColors.primary.withOpacity(0.8),
+                    child: Icon(Icons.arrow_upward, color: Colors.white),
+                  )
+                : null,
+          ),
         );
       },
     );

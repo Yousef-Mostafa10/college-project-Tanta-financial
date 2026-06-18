@@ -145,6 +145,11 @@ class _UsersSearchFilterState extends State<UsersSearchFilter> {
           value: widget.selectedRole,
           isExpanded: true,
           icon: Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.normal,
+            color: AppColors.textPrimary,
+          ),
           items: [
             DropdownMenuItem(
               value: 'all',
@@ -193,7 +198,11 @@ class _UsersSearchFilterState extends State<UsersSearchFilter> {
                     ? (AppLocalizations.of(context)!.translate('all_types') ?? "All Departments")
                     : widget.selectedDepartment,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.normal,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
             Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
@@ -223,6 +232,11 @@ class _UsersSearchFilterState extends State<UsersSearchFilter> {
           value: value,
           isExpanded: true,
           icon: Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.normal,
+            color: AppColors.textPrimary,
+          ),
           items: [
             DropdownMenuItem(
               value: 'all',

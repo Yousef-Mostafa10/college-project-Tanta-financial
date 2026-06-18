@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:provider/provider.dart';
 import 'package:college_project/providers/theme_provider.dart';
 import '../../utils/app_error_handler.dart';
@@ -11,6 +12,7 @@ import 'user_card.dart';
 import 'users_empty_state.dart';
 import 'users_list_header.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/notifications/notifications_provider.dart';
 import 'dart:async';
 
 class ViewUsersPage extends StatefulWidget {
@@ -38,11 +40,13 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
   bool _showBackToTop = false;
+  StreamSubscription? _presenceSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadInitialData();
+    _listenToPresence();
 
     // Scroll listener للتحميل التدريجي
     _scrollController.addListener(() {
@@ -59,6 +63,41 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
         _loadMoreUsers();
       }
     });
+  }
+
+  void _listenToPresence() {
+    try {
+      final notifProvider = Provider.of<NotificationProvider>(context, listen: false);
+      _presenceSubscription = notifProvider.presenceStream.listen((event) {
+        if (!mounted) return;
+        final userId = event['userId'] ?? event['id'];
+        final presence = event['presence'];
+        final lastLogin = event['lastLogin'];
+        if (userId != null && presence != null) {
+          final parsedId = int.tryParse(userId.toString());
+          if (parsedId != null) {
+            setState(() {
+              final index = _users.indexWhere((u) => u.id == parsedId);
+              if (index != -1) {
+                final user = _users[index];
+                _users[index] = User(
+                  id: user.id,
+                  name: user.name,
+                  role: user.role,
+                  active: user.active,
+                  departmentName: user.departmentName,
+                  createdAt: user.createdAt,
+                  lastLogin: lastLogin != null ? lastLogin.toString() : user.lastLogin,
+                  presence: presence.toString(),
+                );
+              }
+            });
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint("Error listening to presence SSE: $e");
+    }
   }
 
   void _scrollToTop() {
@@ -94,6 +133,7 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
   void dispose() {
     _scrollController.dispose();
     _debounce?.cancel();
+    _presenceSubscription?.cancel();
     super.dispose();
   }
 
@@ -231,28 +271,59 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
         final isMobile = width < 600;
         final isTablet = width >= 600 && width < 1024;
 
-        return Scaffold(
-          backgroundColor: AppColors.bodyBg,
-          appBar: AppBar(
-            title: Text(
-              AppLocalizations.of(context)!.translate('users_management'),
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: isMobile ? 18 : 20,
-              ),
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.bodyBg,
+                AppColors.primary.withOpacity(0.05),
+                AppColors.bodyBg,
+              ],
             ),
-            backgroundColor: AppColors.primary,
-            centerTitle: false,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                onPressed: _loadUsers,
-                tooltip: AppLocalizations.of(context)!.translate('refresh_tooltip'),
-              ),
-            ],
           ),
-          body: Column(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              flexibleSpace: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.9),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: AppColors.isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : AppColors.primary.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                AppLocalizations.of(context)!.translate('users_management'),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: isMobile ? 18 : 20,
+                ),
+              ),
+              centerTitle: false,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                  onPressed: _loadUsers,
+                  tooltip: AppLocalizations.of(context)!.translate('refresh_tooltip'),
+                ),
+              ],
+            ),
+            body: Column(
             children: [
               UsersSearchFilter(
                 searchQuery: _searchQuery,
@@ -338,6 +409,7 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
                   child: const Icon(Icons.arrow_upward, color: Colors.white),
                 )
               : null,
+          ),
         );
       },
     );
