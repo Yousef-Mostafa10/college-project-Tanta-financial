@@ -9,6 +9,7 @@ import '../core/app_colors.dart';
 import '../utils/app_error_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:college_project/providers/theme_provider.dart';
+import 'package:college_project/core/app_theme_color.dart';
 
 class DepartmentsPage extends StatefulWidget {
   const DepartmentsPage({Key? key}) : super(key: key);
@@ -1129,8 +1130,36 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
-        return Scaffold(
-          backgroundColor: AppColors.bodyBg,
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: AppColors.isDark
+                  ? [
+                      AppColors.bodyBg,
+                      AppColors.primary.withOpacity(0.12),
+                      AppColors.bodyBg,
+                      AppColors.accentPurple.withOpacity(0.08),
+                    ]
+                  : AppColors.themeColor == AppThemeColor.purple
+                      ? [
+                          const Color(0xFFD8C8FF),
+                          const Color(0xFFF8F4FF),
+                          const Color(0xFFF3EEFF),
+                          const Color(0xFFC4AEF0),
+                        ]
+                      : [
+                          const Color(0xFFC8E0FF),
+                          const Color(0xFFF4F8FF),
+                          const Color(0xFFEDF5FF),
+                          const Color(0xFFBDD5F8),
+                        ],
+              stops: const [0.0, 0.38, 0.62, 1.0],
+            ),
+          ),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
           appBar: AppBar(
             title: Text(
               AppLocalizations.of(context)!.translate('departments_management'),
@@ -1419,10 +1448,11 @@ class _DepartmentsPageState extends State<DepartmentsPage> {
               ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 }
 
 // 🃏 Department Card Widget

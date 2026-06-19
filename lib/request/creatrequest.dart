@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:college_project/core/app_colors.dart';
+import 'package:college_project/core/app_theme_color.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:college_project/l10n/app_localizations.dart';
@@ -1847,7 +1850,35 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     final isTablet = width >= 600 && width < 1024;
     final isDesktop = width >= 1024;
 
-    return Scaffold(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: AppColors.isDark
+              ? [
+                  AppColors.background,
+                  AppColors.primary.withOpacity(0.12),
+                  AppColors.background,
+                  AppColors.accentPurple.withOpacity(0.08),
+                ]
+              : AppColors.themeColor == AppThemeColor.purple
+                  ? [
+                      const Color(0xFFD8C8FF),
+                      const Color(0xFFF8F4FF),
+                      const Color(0xFFF3EEFF),
+                      const Color(0xFFC4AEF0),
+                    ]
+                  : [
+                      const Color(0xFFC8E0FF),
+                      const Color(0xFFF4F8FF),
+                      const Color(0xFFEDF5FF),
+                      const Color(0xFFBDD5F8),
+                    ],
+          stops: const [0.0, 0.38, 0.62, 1.0],
+        ),
+      ),
+      child: Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
@@ -1875,8 +1906,8 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         ),
         backgroundColor: Colors.transparent,
       ),
-      backgroundColor: CreateRequestColors.bodyBg,
       body: _buildResponsiveBody(isMobile, isTablet, isDesktop, height),
+    ),
     );
   }
 

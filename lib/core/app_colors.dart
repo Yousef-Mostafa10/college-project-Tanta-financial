@@ -175,17 +175,17 @@ class AppColors {
   static const Color _boardA = Color(0xFFE4F1FB);
 
   // ·· Dark Board (Purple - Midnight Slate) ··
-  static const Color _purpleBoard0 = Color(0xFF0B090F); // sidebar
-  static const Color _purpleBoard1 = Color(0xFF0F0E15); // main dark bg
-  static const Color _purpleBoard2 = Color(0xFF171620); // cards
-  static const Color _purpleBoard3 = Color(0xFF22202E); // elevated
-  static const Color _purpleBoard4 = Color(0xFF2D2B3D); // hover
-  static const Color _purpleBoard5 = Color(0xFF39374B); // border
+  static const Color _purpleBoard0 = Color(0xFF110F28); // sidebar (Custom dark purple)
+  static const Color _purpleBoard1 = Color(0xFF161432); // main dark bg (primaryBg)
+  static const Color _purpleBoard2 = Color(0xFF211D45); // cards (secondaryBg)
+  static const Color _purpleBoard3 = Color(0xFF2B2659); // elevated
+  static const Color _purpleBoard4 = Color(0xFF35306B); // hover
+  static const Color _purpleBoard5 = Color(0xFF3A356D); // border (borderBlur)
   static const Color _purpleBoard6 = Color(0xFF4A485E);
   // static const Color _purpleBoard7 = Color(0xFF65627C);
   static const Color _purpleBoard8 = Color(0xFF8F8BA7);
   static const Color _purpleBoard9 = Color(0xFFB9B5D1); // secondary text
-  static const Color _purpleBoardA = Color(0xFFF2F0FF); // primary text (clean & soft)
+  static const Color _purpleBoardA = Color(0xFFFFFFFF); // primary text (textWhite)
 
   // ·· Light Premium (Blue Blueprint) ··
   static const Color _paper0 = Color(0xFFFCFDFE);
@@ -203,9 +203,9 @@ class AppColors {
   static const Color _pPaper2 = Color(0xFFF1F5F9); // Slate 100
   static const Color _pPaper3 = Color(0xFFE2E8F0); // Slate 200
   static const Color _pPaper4 = Color(0xFFCBD5E1); // Slate 300 border
-  static const Color _pPaper5 = Color(0xFF7E22CE); // secondary text
-  static const Color _pPaper6 = Color(0xFF581C87); // primary text dim
-  static const Color _pPaper7 = Color(0xFF3B0764); // primary text deep
+  static const Color _pPaper5 = Color(0xFF613394); // secondary text (Custom Purple)
+  static const Color _pPaper6 = Color(0xFF4C4582); // primary text dim
+  static const Color _pPaper7 = Color(0xFF3E3A6D); // primary text deep (Custom Purple Dark)
 
   // ══════════════════════════════════════════════════════════════════════════
   //  ② THE SIGNAL  — The live current.
@@ -218,12 +218,12 @@ class AppColors {
   static const Color _liveDeep  = Color(0xFF005FD4);
   static const Color _liveSunk  = Color(0xFF0048AA);
 
-  // Purple Signal (Elegant Lavender-Violet)
-  static const Color _pLive      = Color(0xFF8B5CF6); // Soft Purple
-  static const Color _pLiveGlow  = Color(0xFF9F7AEA); // Eye-friendly Glow
-  static const Color _pLiveHot   = Color(0xFFB794F4); // Soft Hot
-  static const Color _pLiveDeep  = Color(0xFF6D28D9); // Rich Deep
-  static const Color _pLiveSunk  = Color(0xFF4C1D95); // Sunk
+  // Purple Signal (Custom Purple Palette)
+  static const Color _pLive      = Color(0xFF613394); // اللون البنفسجي الأساسي
+  static const Color _pLiveGlow  = Color(0xFF8A72B8); // درجة أفتح هادئة للدرك مود (primaryLight)
+  static const Color _pLiveHot   = Color(0xFF8A72B8); // درجة أفتح
+  static const Color _pLiveDeep  = Color(0xFF3E3A6D); // درجة أغمق للـ AppBars أو الحدود
+  static const Color _pLiveSunk  = Color(0xFF3E3A6D); // درجة أغمق للـ AppBars أو الحدود
 
   // ══════════════════════════════════════════════════════════════════════════
   //  SEMANTIC CIRCUIT MAP
@@ -361,10 +361,10 @@ class AppColors {
   static LinearGradient get pushGradient => LinearGradient(
     colors: _isDark
         ? (_themeColor == AppThemeColor.purple 
-            ? [const Color(0xFFB466FF), _pLiveDeep]
+            ? [const Color(0xFFA389D4), _pLiveDeep]
             : [const Color(0xFF45B2FF), const Color(0xFF005ED4)])
         : (_themeColor == AppThemeColor.purple
-            ? [const Color(0xFF9333EA), const Color(0xFF581C87)]
+            ? [const Color(0xFF613394), const Color(0xFF3E3A6D)]
             : [const Color(0xFF1A8FFF), const Color(0xFF004DBB)]),
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,

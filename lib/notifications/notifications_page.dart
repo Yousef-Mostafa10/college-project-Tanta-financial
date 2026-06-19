@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:college_project/core/app_colors.dart';
 import 'package:college_project/l10n/app_localizations.dart';
+import 'package:college_project/core/app_theme_color.dart';
 import 'notifications_provider.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -127,8 +128,36 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: AppColors.isDark
+              ? [
+                  AppColors.background,
+                  AppColors.primary.withOpacity(0.12),
+                  AppColors.background,
+                  AppColors.accentPurple.withOpacity(0.08),
+                ]
+              : AppColors.themeColor == AppThemeColor.purple
+                  ? [
+                      const Color(0xFFD8C8FF),
+                      const Color(0xFFF8F4FF),
+                      const Color(0xFFF3EEFF),
+                      const Color(0xFFC4AEF0),
+                    ]
+                  : [
+                      const Color(0xFFC8E0FF),
+                      const Color(0xFFF4F8FF),
+                      const Color(0xFFEDF5FF),
+                      const Color(0xFFBDD5F8),
+                    ],
+          stops: const [0.0, 0.38, 0.62, 1.0],
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
@@ -378,6 +407,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
           );
         },
       ),
-    );
-  }
+    ),
+  );
+}
 }

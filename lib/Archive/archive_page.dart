@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:college_project/providers/theme_provider.dart';
 
 import '../app_config.dart';
+import 'package:college_project/core/app_theme_color.dart';
 import 'archive_colors.dart';
 import 'archive_api.dart';
 import 'archive_mobile_card.dart';
@@ -439,11 +440,27 @@ class _ArchivePageState extends State<ArchivePage> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                ArchiveColors.bodyBg,
-                ArchiveColors.primary.withOpacity(0.05),
-                ArchiveColors.bodyBg,
-              ],
+              colors: ArchiveColors.isDark
+                  ? [
+                      ArchiveColors.bodyBg,
+                      ArchiveColors.primary.withOpacity(0.12),
+                      ArchiveColors.bodyBg,
+                      ArchiveColors.accentPurple.withOpacity(0.08),
+                    ]
+                  : ArchiveColors.themeColor == AppThemeColor.purple
+                      ? [
+                          const Color(0xFFD8C8FF),
+                          const Color(0xFFF8F4FF),
+                          const Color(0xFFF3EEFF),
+                          const Color(0xFFC4AEF0),
+                        ]
+                      : [
+                          const Color(0xFFC8E0FF),
+                          const Color(0xFFF4F8FF),
+                          const Color(0xFFEDF5FF),
+                          const Color(0xFFBDD5F8),
+                        ],
+              stops: const [0.0, 0.38, 0.62, 1.0],
             ),
           ),
           child: Scaffold(

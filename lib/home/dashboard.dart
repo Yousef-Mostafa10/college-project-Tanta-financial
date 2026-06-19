@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:college_project/providers/theme_provider.dart';
+import 'package:college_project/core/app_theme_color.dart';
 
 import '../Auth/login.dart';
 import '../notifications/notifications_page.dart';
@@ -460,11 +461,30 @@ class _AdministrativeDashboardPageState
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                AppColors.bodyBg,
-                AppColors.primary.withOpacity(AppColors.isDark ? 0.05 : 0.01),
-                AppColors.bodyBg,
-              ],
+              colors: AppColors.isDark
+                  // ── Dark Mode (أزرق + بنفسجي خفيف) ──
+                  ? [
+                      AppColors.bodyBg,
+                      AppColors.primary.withOpacity(0.12),
+                      AppColors.bodyBg,
+                      AppColors.accentPurple.withOpacity(0.08),
+                    ]
+                  : AppColors.themeColor == AppThemeColor.purple
+                      // ── Light Purple Theme (لافندر إلى موف) ──
+                      ? [
+                          const Color(0xFFD8C8FF), // لافندر فاتح - أعلى يسار
+                          const Color(0xFFF8F4FF), // أبيض ببنفسجي خفيف
+                          const Color(0xFFF3EEFF), // أبيض بموف خفيف
+                          const Color(0xFFC4AEF0), // بنفسجي هادئ - أسفل يمين
+                        ]
+                      // ── Light Blue Theme (أزرق سماوي) ──
+                      : [
+                          const Color(0xFFC8E0FF), // أزرق سماوي - أعلى يسار
+                          const Color(0xFFF4F8FF), // أبيض مزرق خفيف
+                          const Color(0xFFEDF5FF), // أبيض بأزرق خفيف
+                          const Color(0xFFBDD5F8), // أزرق هادئ - أسفل يمين
+                        ],
+              stops: const [0.0, 0.38, 0.62, 1.0],
             ),
           ),
           child: Scaffold(
