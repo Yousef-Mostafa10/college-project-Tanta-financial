@@ -129,15 +129,20 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   : DropdownButtonFormField<String>(
                 value: _selectedDepartment,
                 decoration: _buildInputDecoration(Icons.business),
+                isExpanded: true,
                 items: _departments
                     .map((dept) => DropdownMenuItem(
                   value: dept,
-                  child: Text(dept),
+                  child: Text(
+                    dept,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedDepartment = v),
                 hint: Text(
                   AppLocalizations.of(context)!.translate('select_department'),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               SizedBox(height: 12),
@@ -146,18 +151,28 @@ class _EditUserDialogState extends State<EditUserDialog> {
               DropdownButtonFormField<String>(
                 value: _selectedRole,
                 decoration: _buildInputDecoration(Icons.admin_panel_settings),
+                isExpanded: true,
                 items: [
                   DropdownMenuItem(
                     value: 'USER',
-                    child: Text(AppLocalizations.of(context)!.translate('regular_user')),
+                    child: Text(
+                      AppLocalizations.of(context)!.translate('regular_user'),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   DropdownMenuItem(
                     value: 'ADMIN',
-                    child: Text(AppLocalizations.of(context)!.translate('administrator')),
+                    child: Text(
+                      AppLocalizations.of(context)!.translate('administrator'),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   DropdownMenuItem(
                     value: 'ACCOUNTANT',
-                    child: Text(AppLocalizations.of(context)!.translate('accountant')),
+                    child: Text(
+                      AppLocalizations.of(context)!.translate('accountant'),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
                 onChanged: (v) => setState(() => _selectedRole = v!),

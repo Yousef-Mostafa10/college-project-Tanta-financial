@@ -1690,52 +1690,54 @@ class _InboxPageState extends State<InboxPage> {
                   Text(AppLocalizations.of(context)!.translate('edit_response')),
                 ],
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!.translate('select_new_status'),
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  SizedBox(height: 12),
-                  // أزرار الحالة
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      _buildResponseChip(
-                        'Approve',
-                        Icons.check_circle_rounded,
-                        InboxColors.accentGreen,
-                        selectedAction == 'Approve',
-                        () => setStateDialog(() => selectedAction = 'Approve'),
-                      ),
-                      _buildResponseChip(
-                        'Reject',
-                        Icons.cancel_rounded,
-                        InboxColors.accentRed,
-                        selectedAction == 'Reject',
-                        () => setStateDialog(() => selectedAction = 'Reject'),
-                      ),
-                      _buildResponseChip(
-                        'Needs Change',
-                        Icons.edit_note_rounded,
-                        Colors.orange,
-                        selectedAction == 'Needs Change',
-                        () => setStateDialog(() => selectedAction = 'Needs Change'),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)!.translate('enter_comments'),
-                      border: OutlineInputBorder(),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)!.translate('select_new_status'),
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    onChanged: (value) => comment = value,
-                  ),
-                ],
+                    SizedBox(height: 12),
+                    // أزرار الحالة
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        _buildResponseChip(
+                          AppLocalizations.of(context)?.translate('approve') ?? 'Approve',
+                          Icons.check_circle_rounded,
+                          InboxColors.accentGreen,
+                          selectedAction == 'Approve',
+                          () => setStateDialog(() => selectedAction = 'Approve'),
+                        ),
+                        _buildResponseChip(
+                          AppLocalizations.of(context)?.translate('reject') ?? 'Reject',
+                          Icons.cancel_rounded,
+                          InboxColors.accentRed,
+                          selectedAction == 'Reject',
+                          () => setStateDialog(() => selectedAction = 'Reject'),
+                        ),
+                        _buildResponseChip(
+                          AppLocalizations.of(context)?.translate('need_change') ?? 'Needs Change',
+                          Icons.edit_note_rounded,
+                          Colors.orange,
+                          selectedAction == 'Needs Change',
+                          () => setStateDialog(() => selectedAction = 'Needs Change'),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: AppLocalizations.of(context)!.translate('enter_comments'),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) => comment = value,
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -1984,7 +1986,7 @@ class _InboxPageState extends State<InboxPage> {
                       AppColors.bodyBg,
                       AppColors.primary.withOpacity(0.12),
                       AppColors.bodyBg,
-                      AppColors.accentPurple.withOpacity(0.08),
+                      AppColors.primary.withOpacity(0.08),
                     ]
                   : AppColors.themeColor == AppThemeColor.purple
                       ? [

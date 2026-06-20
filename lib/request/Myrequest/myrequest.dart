@@ -785,7 +785,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                       MyRequestsColors.bodyBg,
                       MyRequestsColors.primary.withOpacity(0.12),
                       MyRequestsColors.bodyBg,
-                      MyRequestsColors.accentPurple.withOpacity(0.08),
+                      MyRequestsColors.primary.withOpacity(0.08),
                     ]
                   : MyRequestsColors.themeColor == AppThemeColor.purple
                       ? [

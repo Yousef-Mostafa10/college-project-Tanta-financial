@@ -163,6 +163,7 @@ class AppLocalizations {
       // My Requests
       'my_requests': 'My Requests',
       'archive': 'Archive',
+      'mark_all_as_read': 'Mark all as read',
       'all_transactions': 'All Transactions',
       'transactions_count': '{count} Transactions',
       'no_title': 'No Title',
@@ -253,8 +254,8 @@ class AppLocalizations {
       // Login
       'login_title': 'Login',
       'welcome_back': 'Welcome Back!',
-      'app_name_long': 'Faculty of Science Finance System - Tanta University',
-      'app_name_short': 'Faculty of Science Finance System',
+      'app_name_long': 'Finance Management System',
+      'app_name_short': 'Finance Management System',
       'sign_in_subtitle': 'Sign in to your account',
       'enter_username_hint': 'Enter your username',
       'enter_username_error': 'Enter username',
@@ -744,6 +745,7 @@ class AppLocalizations {
       // My Requests
       'my_requests': 'طلباتي',
       'archive': 'الأرشيف',
+      'mark_all_as_read': 'تحديد الكل كمقروء',
       'all_transactions': 'جميع المعاملات',
       'transactions_count': '{count} معاملة',
       'search_transactions': 'البحث في المعاملات...',
@@ -803,6 +805,7 @@ class AppLocalizations {
       'edit_response': 'تعديل الرد',
       'not_assigned': 'غير مكلف',
       'filters_label': 'الفلاتر',
+      'enter_comments': 'أدخل تعليقًا (اختياري)',
       'approve_comment_hint': 'أضف تعليقًا للموافقة (اختياري):',
       'select_new_status': 'اختر الحالة الجديدة:',
       'update_response': 'تحديث الرد',
@@ -820,8 +823,8 @@ class AppLocalizations {
       // Login
       'login_title': 'تسجيل الدخول',
       'welcome_back': 'مرحبًا بعودتك!',
-      'app_name_long': 'نظام كلية العلوم المالية - جامعة طنطا',
-      'app_name_short': 'نظام كلية العلوم المالية',
+      'app_name_long': 'نظام الإدارة المالية',
+      'app_name_short': 'نظام الإدارة المالية',
       'sign_in_subtitle': 'سجل الدخول إلى حسابك',
       'enter_username_hint': 'أدخل اسم المستخدم',
       'enter_username_error': 'أدخل اسم المستخدم',

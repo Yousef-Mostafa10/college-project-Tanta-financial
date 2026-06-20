@@ -138,7 +138,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   AppColors.background,
                   AppColors.primary.withOpacity(0.12),
                   AppColors.background,
-                  AppColors.accentPurple.withOpacity(0.08),
+                  AppColors.primary.withOpacity(0.08),
                 ]
               : AppColors.themeColor == AppThemeColor.purple
                   ? [
@@ -185,7 +185,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   }
                 },
                 child: Text(
-                  'تحديد الكل كمقروء',
+                  AppLocalizations.of(context)?.translate('mark_all_as_read') ?? 'تحديد الكل كمقروء',
                   style: TextStyle(
                     color: AppColors.textWhite.withValues(alpha: 0.85),
                     fontSize: 13,

@@ -10,6 +10,7 @@ import 'package:college_project/core/app_theme_color.dart';
 import 'auth_service.dart';
 import '../notifications/notifications_provider.dart';
 import '../request/Myrequest/myrequest.dart';
+import '../settings/contact_developers.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -842,6 +843,36 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             ],
                           ),
                   ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _AnimatedFormSection(
+            delay: const Duration(milliseconds: 650),
+            child: TextButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ContactDevelopersPage()),
+                );
+              },
+              icon: Icon(Icons.code_rounded, size: 18, color: primaryColor),
+              label: Text(
+                AppLocalizations.of(context)!.translate('contact_developers'),
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: min(screenWidth * 0.035, 14),
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                backgroundColor: primaryColor.withOpacity(0.08),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: primaryColor.withOpacity(0.2)),
                 ),
               ),
             ),

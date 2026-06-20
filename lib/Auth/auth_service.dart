@@ -132,6 +132,25 @@ class AuthService {
   /// 🔹 تسجيل الخروج
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    // إبلاغ السيرفر بتسجيل الخروج لتحديث حالة الـ Presence إلى Offline فوراً
+    if (token != null) {
+      try {
+        final url = Uri.parse("$baseUrl/auth/logout");
+        await http.post(
+          url,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $token",
+          },
+        ).timeout(const Duration(seconds: 3));
+        debugPrint('🟢 API Logout successful');
+      } catch (e) {
+        debugPrint('🔴 Logout API call failed: $e');
+      }
+    }
+
     await prefs.remove('token');
     await prefs.remove('refresh_token');
     await prefs.remove('username');

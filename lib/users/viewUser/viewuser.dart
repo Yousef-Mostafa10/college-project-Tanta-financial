@@ -71,9 +71,12 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
       final notifProvider = Provider.of<NotificationProvider>(context, listen: false);
       _presenceSubscription = notifProvider.presenceStream.listen((event) {
         if (!mounted) return;
-        final userId = event['userId'] ?? event['id'];
-        final presence = event['presence'];
+        debugPrint("🟢 viewuser.dart: SSE Presence Event Received => $event");
+        
+        final userId = event['userId'] ?? event['user_id'] ?? event['id'];
+        final presence = event['presence'] ?? event['status'];
         final lastLogin = event['lastLogin'];
+        
         if (userId != null && presence != null) {
           final parsedId = int.tryParse(userId.toString());
           if (parsedId != null) {
@@ -91,6 +94,9 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
                   lastLogin: lastLogin != null ? lastLogin.toString() : user.lastLogin,
                   presence: presence.toString(),
                 );
+                debugPrint("🟢 viewuser.dart: Updated user ${user.name} to presence: $presence");
+              } else {
+                debugPrint("🟡 viewuser.dart: User with ID $parsedId not found in current list.");
               }
             });
           }
@@ -282,7 +288,7 @@ class _ViewUsersPageState extends State<ViewUsersPage> {
                       AppColors.bodyBg,
                       AppColors.primary.withOpacity(0.12),
                       AppColors.bodyBg,
-                      AppColors.accentPurple.withOpacity(0.08),
+                      AppColors.primary.withOpacity(0.08),
                     ]
                   : AppColors.themeColor == AppThemeColor.purple
                       ? [

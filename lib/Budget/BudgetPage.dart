@@ -988,7 +988,7 @@ class _BudgetPageState extends State<BudgetPage> {
                       AppColors.background,
                       AppColors.primary.withOpacity(0.12),
                       AppColors.background,
-                      AppColors.accentPurple.withOpacity(0.08),
+                      AppColors.primary.withOpacity(0.08),
                     ]
                   : AppColors.themeColor == AppThemeColor.purple
                       ? [

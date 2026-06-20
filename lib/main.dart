@@ -116,7 +116,7 @@ class MyApp extends StatelessWidget {
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'College Project',
+          title: 'Finance Management System',
           themeMode: themeProvider.themeMode,
           navigatorKey: SessionManager.navigatorKey,
           theme: _buildThemeData(false),

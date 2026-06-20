@@ -72,11 +72,13 @@ class _EmptyStateState extends State<EmptyState>
             offset: Offset(0, _slideUp.value),
             child: child,
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 // Glowing icon container
                 AnimatedBuilder(
                   animation: _pulse,
@@ -153,7 +155,8 @@ class _EmptyStateState extends State<EmptyState>
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

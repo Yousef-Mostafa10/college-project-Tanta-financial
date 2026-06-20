@@ -127,6 +127,7 @@ class NotificationProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final StringBuffer eventBuffer = StringBuffer();
+        String currentEventType = '';
 
         _sseSubscription = response
             .transform(utf8.decoder)
@@ -134,7 +135,9 @@ class NotificationProvider extends ChangeNotifier {
             .listen(
           (String line) {
             debugPrint("RAW SSE LINE: $line"); // DEBUG PRINT
-            if (line.startsWith('data: ')) {
+            if (line.startsWith('event: ')) {
+              currentEventType = line.substring(7).trim();
+            } else if (line.startsWith('data: ')) {
               eventBuffer.write(line.substring(6));
             } else if (line.isEmpty && eventBuffer.isNotEmpty) {
               // Empty line = end of SSE event block
@@ -144,20 +147,21 @@ class NotificationProvider extends ChangeNotifier {
               if (dataStr.isNotEmpty) {
                 try {
                   final eventData = jsonDecode(dataStr);
-                  debugPrint("📩 SSE event parsed, type: ${eventData['type']}");
+                  final type = eventData['type'] ?? currentEventType;
+                  debugPrint("📩 SSE event parsed, type: $type");
                   
                   // Handle both wrapped format and direct unwrapped format
-                  if (eventData['type'] == 'notification' && eventData['data'] != null) {
+                  if (type == 'notification' && eventData['data'] != null) {
                     _handleNewNotification(
                       Map<String, dynamic>.from(eventData['data']),
                     );
-                  } else if (eventData['type'] == 'presence' && eventData['data'] != null) {
+                  } else if (type == 'presence' && eventData['data'] != null) {
                     _presenceStreamController.add(Map<String, dynamic>.from(eventData['data']));
-                  } else if (eventData['type'] == 'presence_change' && eventData['data'] != null) {
+                  } else if (type == 'presence_change' && eventData['data'] != null) {
                     _presenceStreamController.add(Map<String, dynamic>.from(eventData['data']));
-                  } else if (eventData['type'] == 'presence') {
+                  } else if (type == 'presence' || type == 'presence_change') {
                     _presenceStreamController.add(Map<String, dynamic>.from(eventData));
-                  } else if (eventData.containsKey('id') || eventData.containsKey('code')) {
+                  } else if (type == 'notification' || eventData.containsKey('id') || eventData.containsKey('code')) {
                     _handleNewNotification(
                       Map<String, dynamic>.from(eventData),
                     );
@@ -166,6 +170,7 @@ class NotificationProvider extends ChangeNotifier {
                   debugPrint("SSE parse error: $e | data: $dataStr");
                 }
               }
+              currentEventType = ''; // Reset event type for the next block
             }
           },
           onError: (error) {

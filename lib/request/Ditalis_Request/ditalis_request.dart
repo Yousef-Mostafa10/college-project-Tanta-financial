@@ -749,7 +749,7 @@ class _CourseApprovalRequestPageState extends State<CourseApprovalRequestPage> {
                 .replaceAll('{availableAmount}', args['availableAmount']?.toString() ?? '')
                 .replaceAll('{requestedAmount}', args['requestedAmount']?.toString() ?? '');
           }
-          if (key.isNotEmpty) return key;
+          if (key.isNotEmpty) return AppLocalizations.of(context)?.translate(key) ?? key;
         }
       }
     } catch (_) {}

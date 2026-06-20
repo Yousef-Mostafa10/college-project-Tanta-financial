@@ -163,7 +163,6 @@ class _CustomDrawerState extends State<CustomDrawer> {
               icon: Icons.add_circle_outline_rounded,
               title: AppLocalizations.of(context)!.translate('create_request'),
               color: AppColors.primary,
-              isBold: true,
               isMobile: isMobile,
               onTap: () {
                 Navigator.of(context).push(
@@ -211,25 +210,26 @@ class _CustomDrawerState extends State<CustomDrawer> {
               },
             ),
 
-            Consumer<NotificationProvider>(
-              builder: (context, notifProvider, _) {
-                return _buildMenuItem(
-                  icon: Icons.notifications_rounded,
-                  title: AppLocalizations.of(context)!.translate('notifications'),
-                  color: AppColors.accentOrange,
-                  isMobile: isMobile,
-                  badgeCount: notifProvider.unreadCount,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const NotificationsPage(),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            if (_userType.toLowerCase() == 'admin')
+              Consumer<NotificationProvider>(
+                builder: (context, notifProvider, _) {
+                  return _buildMenuItem(
+                    icon: Icons.notifications_rounded,
+                    title: AppLocalizations.of(context)!.translate('notifications'),
+                    color: AppColors.accentOrange,
+                    isMobile: isMobile,
+                    badgeCount: notifProvider.unreadCount,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsPage(),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
 
             Divider(
               height: isMobile ? 16 : 20,

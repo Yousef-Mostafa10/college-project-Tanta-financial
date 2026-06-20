@@ -445,7 +445,7 @@ class _ArchivePageState extends State<ArchivePage> {
                       ArchiveColors.bodyBg,
                       ArchiveColors.primary.withOpacity(0.12),
                       ArchiveColors.bodyBg,
-                      ArchiveColors.accentPurple.withOpacity(0.08),
+                      ArchiveColors.primary.withOpacity(0.08),
                     ]
                   : ArchiveColors.themeColor == AppThemeColor.purple
                       ? [

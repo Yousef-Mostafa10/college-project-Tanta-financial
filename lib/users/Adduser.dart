@@ -280,7 +280,7 @@ class _AddUserPageState extends State<AddUserPage> {
                   AppColors.bodyBg,
                   AppColors.primary.withOpacity(0.12),
                   AppColors.bodyBg,
-                  AppColors.accentPurple.withOpacity(0.08),
+                  AppColors.primary.withOpacity(0.08),
                 ]
               : AppColors.themeColor == AppThemeColor.purple
                   ? [
