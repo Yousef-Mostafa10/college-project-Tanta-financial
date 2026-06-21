@@ -135,7 +135,7 @@ class AppLocalizations {
       'sender_comment_label': 'Sender Comment',
       'select_files': 'Select Files',
       'upload_new_files': 'Upload New Files',
-      'select_pdf_hint': 'Select PDF files from your device',
+      'select_pdf_hint': 'Select documents, images or text files from your device',
       'previously_uploaded_files': 'Previously Uploaded Files',
       'no_previous_files': 'No previous files found',
       'scroll_for_more': 'Scroll for more...',
@@ -594,6 +594,20 @@ class AppLocalizations {
       'job_frontend': 'Frontend Developer',
       'job_tester': 'Software Tester',
       'whatsapp_chat': 'Chat on WhatsApp',
+
+      // Notifications
+      'now': 'Just now',
+      'minutes_ago': 'since {minutes}m',
+      'hours_ago': 'since {hours}h',
+      'days_ago': 'since {days}d',
+      'no_notifications': 'No notifications',
+      'notification': 'Notification',
+      'BUDGET_ALLOCATION_OVERFLOW_ATTEMPT': 'Budget overflow attempt in category "{categoryName}" by user ({attemptedBy}) for transaction ({transactionId}) — available: {availableAmount}, requested: {requestedAmount}',
+      'REQUEST_APPROVED': 'Your request was approved',
+      'REQUEST_REJECTED': 'Your request was rejected',
+      'REQUEST_REJECTED_WITH_REASON': 'Your request was rejected: {reason}',
+      'TRANSACTION_FORWARD_RECEIVED': 'A transaction was forwarded to you',
+      'TRANSACTION_FORWARD_RESPONDED': 'A forwarded transaction was responded to',
     },
     'ar': {
       // General & Navigation
@@ -717,7 +731,7 @@ class AppLocalizations {
       'sender_comment_label': 'تعليق المرسل',
       'select_files': 'اختر الملفات',
       'upload_new_files': 'رفع ملفات جديدة',
-      'select_pdf_hint': 'اختر ملفات PDF من جهازك',
+      'select_pdf_hint': 'اختر المستندات أو الصور أو الملفات النصية من جهازك',
       'previously_uploaded_files': 'ملفات تم رفعها مسبقاً',
       'no_previous_files': 'لا توجد ملفات سابقة',
       'scroll_for_more': 'اسحب للمزيد...',
@@ -1187,6 +1201,20 @@ class AppLocalizations {
       'delete_type': 'حذف النوع',
       'delete_type_confirm': 'هل أنت متأكد أنك تريد حذف "{name}"؟',
       'close': 'إغلاق',
+
+      // Notifications
+      'now': 'الآن',
+      'minutes_ago': 'منذ {minutes} د',
+      'hours_ago': 'منذ {hours} س',
+      'days_ago': 'منذ {days} أيام',
+      'no_notifications': 'لا توجد إشعارات',
+      'notification': 'إشعار',
+      'BUDGET_ALLOCATION_OVERFLOW_ATTEMPT': 'محاولة تجاوز الميزانية في قسم "{categoryName}" من مستخدم ({attemptedBy}) لمعاملة رقم ({transactionId}) — المتاح: {availableAmount}، المطلوب: {requestedAmount}',
+      'REQUEST_APPROVED': 'تمت الموافقة على طلبك',
+      'REQUEST_REJECTED': 'تم رفض طلبك',
+      'REQUEST_REJECTED_WITH_REASON': 'تم رفض طلبك: {reason}',
+      'TRANSACTION_FORWARD_RECEIVED': 'تم توجيه معاملة إليك',
+      'TRANSACTION_FORWARD_RESPONDED': 'تم الرد على معاملة موجهة',
     },
   };
 

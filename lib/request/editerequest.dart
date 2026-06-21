@@ -980,7 +980,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
                       try {
                         FilePickerResult? result = await FilePicker.platform.pickFiles(
                           type: FileType.custom,
-                          allowedExtensions: ['pdf'],
+                          allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'png', 'jpg', 'jpeg'],
                           allowMultiple: true,
                         );
                         if (result != null && result.files.isNotEmpty) {

@@ -73,46 +73,71 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  String _formatTime(String? isoDate) {
+  String _formatTime(BuildContext context, String? isoDate) {
     if (isoDate == null) return '';
     try {
       final dt = DateTime.parse(isoDate).toLocal();
       final now = DateTime.now();
       final diff = now.difference(dt);
-      if (diff.inMinutes < 1) return 'الآن';
-      if (diff.inHours < 1) return 'منذ ${diff.inMinutes} د';
-      if (diff.inDays < 1) return 'منذ ${diff.inHours} س';
-      if (diff.inDays < 7) return 'منذ ${diff.inDays} أيام';
+      final local = AppLocalizations.of(context)!;
+      if (diff.inMinutes < 1) return local.translate('now');
+      if (diff.inHours < 1) return local.translate('minutes_ago').replaceAll('{minutes}', '${diff.inMinutes}');
+      if (diff.inDays < 1) return local.translate('hours_ago').replaceAll('{hours}', '${diff.inHours}');
+      if (diff.inDays < 7) return local.translate('days_ago').replaceAll('{days}', '${diff.inDays}');
       return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
     } catch (_) {
       return '';
     }
   }
 
-  String _buildMessage(dynamic notification) {
+  String _buildMessage(BuildContext context, dynamic notification) {
     final code = notification['code']?.toString() ?? '';
     final args = notification['args'] as Map? ?? {};
+    final local = AppLocalizations.of(context)!;
 
     switch (code) {
       case 'BUDGET_ALLOCATION_OVERFLOW_ATTEMPT':
-        final cat = args['categoryName'] ?? args['budgetName'] ?? 'غير معروف';
+        final cat = args['categoryName'] ?? args['budgetName'] ?? local.translate('unknown');
         final avail = args['availableAmount'] ?? args['available'] ?? '0';
         final req = args['requestedAmount'] ?? args['requested'] ?? '0';
-        final user = args['attemptedBy'] ?? 'مجهول';
-        final transaction = args['transactionId'] ?? 'غير معروف';
-        return 'محاولة تجاوز الميزانية في قسم "$cat" من مستخدم ($user) لمعاملة رقم ($transaction) — المتاح: $avail، المطلوب: $req';
+        final user = args['attemptedBy'] ?? local.translate('unknown');
+        final transaction = args['transactionId'] ?? local.translate('unknown');
+        return local.translate('BUDGET_ALLOCATION_OVERFLOW_ATTEMPT')
+            .replaceAll('{categoryName}', cat.toString())
+            .replaceAll('{attemptedBy}', user.toString())
+            .replaceAll('{transactionId}', transaction.toString())
+            .replaceAll('{availableAmount}', avail.toString())
+            .replaceAll('{requestedAmount}', req.toString());
       case 'INSUFFICIENT_BUDGET':
         final cat = args['categoryName'] ?? '';
         final avail = args['availableAmount'] ?? '0';
         final req = args['requestedAmount'] ?? '0';
-        return 'الميزانية غير كافية في "$cat" — المتاح: $avail، المطلوب: $req';
+        return local.translate('INSUFFICIENT_BUDGET')
+            .replaceAll('{categoryName}', cat.toString())
+            .replaceAll('{availableAmount}', avail.toString())
+            .replaceAll('{requestedAmount}', req.toString());
       case 'REQUEST_APPROVED':
-        return 'تمت الموافقة على طلبك';
+        return local.translate('REQUEST_APPROVED');
       case 'REQUEST_REJECTED':
         final reason = args['reason']?.toString() ?? '';
-        return 'تم رفض طلبك${reason.isNotEmpty ? ': $reason' : ''}';
+        if (reason.isNotEmpty) {
+          return local.translate('REQUEST_REJECTED_WITH_REASON').replaceAll('{reason}', reason);
+        }
+        return local.translate('REQUEST_REJECTED');
+      case 'TRANSACTION_FORWARD_RECEIVED':
+        return local.translate('TRANSACTION_FORWARD_RECEIVED');
+      case 'TRANSACTION_FORWARD_RESPONDED':
+        return local.translate('TRANSACTION_FORWARD_RESPONDED');
       default:
         if (code.isNotEmpty) {
+          final translated = local.translate(code);
+          if (translated != code) {
+            var msg = translated;
+            args.forEach((key, val) {
+              msg = msg.replaceAll('{$key}', val.toString());
+            });
+            return msg;
+          }
           if (args.isNotEmpty) {
             final argsStr = args.entries
                 .map((e) => '${e.key}: ${e.value}')
@@ -241,7 +266,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'لا توجد إشعارات',
+                    AppLocalizations.of(context)?.translate('no_notifications') ?? 'لا توجد إشعارات',
                     style: TextStyle(
                       fontSize: 16,
                       color: AppColors.textSecondary,
@@ -274,8 +299,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
               final type = notification['type']?.toString();
               final color = _getNotificationColor(type);
               final icon = _getNotificationIcon(type);
-              final message = _buildMessage(notification);
-              final time = _formatTime(notification['timestamp']);
+              final message = _buildMessage(context, notification);
+              final time = _formatTime(context, notification['timestamp']);
 
               return Dismissible(
                 key: Key('notif_${notification['id']}'),
@@ -369,7 +394,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                       child: Text(
                                         message.isNotEmpty
                                             ? message
-                                            : (type ?? 'إشعار'),
+                                            : (type ?? (AppLocalizations.of(context)?.translate('notification') ?? 'إشعار')),
                                         style: TextStyle(
                                           fontSize: isMobile ? 13 : 14,
                                           fontWeight: isSeen

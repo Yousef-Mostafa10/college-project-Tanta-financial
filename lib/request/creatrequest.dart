@@ -887,7 +887,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                         ),
                       ),
                       subtitle: Text(
-                        'Select PDF files from your device',
+                        AppLocalizations.of(context)!.translate('select_pdf_hint') ?? 'Select documents, images or text files from your device',
                         style: TextStyle(
                           fontSize: 13,
                           color: CreateRequestColors.textSecondary,
@@ -902,7 +902,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                       try {
                         FilePickerResult? result = await FilePicker.platform.pickFiles(
                           type: FileType.custom,
-                          allowedExtensions: ['pdf'],
+                          allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'png', 'jpg', 'jpeg'],
                           allowMultiple: true,
                         );
                         if (result != null && result.files.isNotEmpty) {
