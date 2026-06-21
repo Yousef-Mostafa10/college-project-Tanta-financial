@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
+import 'package:image_picker/image_picker.dart';
 import 'transaction_type_model.dart';
 
 import '../core/app_colors.dart';
@@ -846,7 +847,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Select Files',
+                        AppLocalizations.of(context)!.translate('select_files') ?? 'Select Files',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -879,7 +880,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                         child: Icon(Icons.cloud_upload_rounded, color: CreateRequestColors.accentBlue),
                       ),
                       title: Text(
-                        'Upload New Files',
+                        AppLocalizations.of(context)!.translate('upload_new_files') ?? 'Upload New Files',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -928,6 +929,68 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   ),
                 ),
 
+                  SizedBox(height: 12),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color: CreateRequestColors.accentGreen.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: CreateRequestColors.accentGreen.withOpacity(0.1)),
+                    ),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.all(12),
+                      leading: Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: CreateRequestColors.accentGreen.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.camera_alt_rounded, color: CreateRequestColors.accentGreen),
+                      ),
+                      title: Text(
+                        AppLocalizations.of(context)!.translate('take_photo') ?? 'Take Photo',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: CreateRequestColors.textPrimary,
+                        ),
+                      ),
+                      subtitle: Text(
+                        AppLocalizations.of(context)!.translate('take_photo_hint') ?? 'Capture an image directly from your camera',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: CreateRequestColors.textSecondary,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.add_a_photo_rounded,
+                        color: CreateRequestColors.accentGreen,
+                      ),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        try {
+                          final ImagePicker picker = ImagePicker();
+                          final XFile? photo = await picker.pickImage(source: ImageSource.camera);
+                          if (photo != null) {
+                            final uniqueFileName = _generateUniqueFileName(photo.name);
+                            final uniqueFile = PlatformFile(
+                              name: uniqueFileName,
+                              size: await photo.length(),
+                              path: photo.path,
+                              bytes: await photo.readAsBytes(),
+                            );
+
+                            setState(() {
+                              _selectedFiles.add(uniqueFile);
+                            });
+                          }
+                        } catch (e) {
+                           _showErrorMessage(AppErrorHandler.translateException(context, e));
+                        }
+                      },
+                    ),
+                  ),
+
                   SizedBox(height: 16),
 
                   Row(
@@ -942,7 +1005,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                       ),
                       SizedBox(width: 10),
                       Text(
-                        'Previously Uploaded Files',
+                        AppLocalizations.of(context)!.translate('previously_uploaded_files') ?? 'Previously Uploaded Files',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -977,7 +1040,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                           ),
                           SizedBox(height: 8),
                           Text(
-                            'No previous files found',
+                            AppLocalizations.of(context)!.translate('no_previous_files') ?? 'No previous files found',
                             style: TextStyle(
                               color: CreateRequestColors.textMuted,
                             ),
@@ -1014,7 +1077,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                                         ),
                                       )
                                     : Text(
-                                        'Scroll for more...',
+                                        AppLocalizations.of(context)!.translate('scroll_for_more') ?? 'Scroll for more...',
                                         style: TextStyle(
                                           color: CreateRequestColors.textMuted,
                                           fontSize: 12,
@@ -1037,7 +1100,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                               ),
                             ),
                             title: Text(
-                              doc['title'] ?? 'Untitled',
+                              doc['title'] ?? AppLocalizations.of(context)!.translate('untitled') ?? 'Untitled',
                               style: TextStyle(
                                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                 color: isSelected ? CreateRequestColors.primary : CreateRequestColors.textPrimary,
@@ -1126,7 +1189,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                         ),
                         child: Center(
                           child: Text(
-                            'Done',
+                            AppLocalizations.of(context)!.translate('done') ?? 'Done',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -2356,8 +2419,8 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                               SizedBox(height: 16),
                               Text(
                                 _selectedFiles.isEmpty && _selectedPreviousDocuments.isEmpty
-                                    ? 'Click to select files'
-                                    : '${_selectedFiles.length + _selectedPreviousDocuments.length} file(s) selected',
+                                    ? AppLocalizations.of(context)!.translate('click_to_select_files') ?? 'Click to select files'
+                                    : AppLocalizations.of(context)!.translate('files_selected_count')?.replaceFirst('{count}', '${_selectedFiles.length + _selectedPreviousDocuments.length}') ?? '${_selectedFiles.length + _selectedPreviousDocuments.length} file(s) selected',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -2366,7 +2429,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                'Support PDF documents',
+                                AppLocalizations.of(context)!.translate('support_docs_hint') ?? 'Support PDF documents',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: CreateRequestColors.textSecondary,
@@ -2380,7 +2443,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  'Choose Files',
+                                  AppLocalizations.of(context)!.translate('choose_files') ?? 'Choose Files',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,

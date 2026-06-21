@@ -7,6 +7,7 @@ import 'dart:io' as io;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:college_project/l10n/app_localizations.dart';
 import '../app_config.dart';
+import 'package:image_picker/image_picker.dart';
 import 'transaction_type_model.dart';
 
 import '../core/app_colors.dart';
@@ -1001,6 +1002,61 @@ class _EditRequestPageState extends State<EditRequestPage> {
                           });
                         }
                       } catch (e) {}
+                    },
+                  ),
+
+                  SizedBox(height: 12),
+
+                  ListTile(
+                    leading: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.camera_alt_rounded, color: AppColors.accentGreen),
+                    ),
+                    title: Text(
+                      AppLocalizations.of(context)!.translate('take_photo') ?? 'Take Photo',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      AppLocalizations.of(context)!.translate('take_photo_hint') ?? 'Capture an image directly from your camera',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: AppColors.textMuted,
+                    ),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        final ImagePicker picker = ImagePicker();
+                        final XFile? photo = await picker.pickImage(source: ImageSource.camera);
+                        if (photo != null) {
+                          final uniqueFileName = _generateUniqueFileName(photo.name);
+                          final uniqueFile = PlatformFile(
+                            name: uniqueFileName,
+                            size: await photo.length(),
+                            path: photo.path,
+                            bytes: await photo.readAsBytes(),
+                          );
+
+                          setState(() {
+                            _selectedFiles.add(uniqueFile);
+                          });
+                        }
+                      } catch (e) {
+                         _showErrorSnackBar(AppErrorHandler.translateException(context, e));
+                      }
                     },
                   ),
 
