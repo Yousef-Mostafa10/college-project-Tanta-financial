@@ -3,12 +3,13 @@ import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../notifications/notifications_provider.dart';
 
 import 'package:college_project/l10n/app_localizations.dart';
 import 'package:college_project/utils/app_error_handler.dart';
 import 'package:college_project/core/app_colors.dart';
-import 'package:provider/provider.dart';
 import 'package:college_project/providers/theme_provider.dart';
 import 'package:college_project/core/app_theme_color.dart';
 import '../request/Ditalis_Request/ditalis_request.dart';
@@ -37,6 +38,7 @@ class _InboxPageState extends State<InboxPage> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode(); // ✅ للتحكم في بقاء التركيز على البحث
   Timer? _searchTimer;
+  StreamSubscription? _sseInboxSubscription; // 📬 الاستماع لأحداث SSE
 
   List<dynamic> _requests = [];
   List<dynamic> _filteredRequests = [];
@@ -85,6 +87,107 @@ class _InboxPageState extends State<InboxPage> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _initializeData();
+    _subscribeToInboxSSEEvents();
+  }
+
+  // 📬 الاشتراك في أحداث SSE الخاصة بالمعاملات من NotificationProvider
+  void _subscribeToInboxSSEEvents() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final provider = context.read<NotificationProvider>();
+      _sseInboxSubscription = provider.inboxEventStream.listen((notification) {
+        if (!mounted) return;
+        final code = notification['code']?.toString() ?? '';
+        debugPrint('📬 InboxPage received SSE event: $code');
+
+        if (code == 'TRANSACTION_FORWARD_RECEIVED') {
+          // جاتلي معاملة جديدة → refresh الصفحة وأظهر toast
+          _fetchInboxRequests(fullLoad: false);
+          if (mounted) {
+            final args = notification['args'] as Map<String, dynamic>? ?? {};
+            final senderName = args['senderName']?.toString() ?? '';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.inbox, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        senderName.isNotEmpty
+                            ? 'معاملة جديدة من $senderName'
+                            : 'وصلتك معاملة جديدة',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF1976D2),
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        } else if (code == 'TRANSACTION_FORWARD_RESPONDED') {
+          // شخص رد على معاملة بعتيها → refresh وأظهر toast بالحالة
+          final args = notification['args'] as Map<String, dynamic>? ?? {};
+          final receiverName = args['receiverName']?.toString() ?? '';
+          final status = args['status']?.toString() ?? '';
+
+          // نعيد تحميل البيانات الخاصة بالمعاملة المتأثرة فقط لو كانت في القائمة
+          final transactionId = args['transactionId']?.toString();
+          if (transactionId != null) {
+            _recalculateRequestData(transactionId);
+          } else {
+            _fetchInboxRequests(fullLoad: false);
+          }
+
+          if (mounted) {
+            Color toastColor;
+            String statusAr;
+            switch (status.toUpperCase()) {
+              case 'APPROVED':
+                toastColor = const Color(0xFF2E7D32);
+                statusAr = 'وافق';
+                break;
+              case 'REJECTED':
+                toastColor = const Color(0xFFC62828);
+                statusAr = 'رفض';
+                break;
+              case 'NEEDS_EDITING':
+                toastColor = const Color(0xFFE65100);
+                statusAr = 'طلب تعديل';
+                break;
+              default:
+                toastColor = const Color(0xFF37474F);
+                statusAr = status.toLowerCase();
+            }
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.reply, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        receiverName.isNotEmpty
+                            ? '$receiverName $statusAr على معاملتك'
+                            : 'تم الرد على معاملتك',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: toastColor,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        }
+      });
+    });
   }
 
   void _onScroll() {
@@ -105,10 +208,11 @@ class _InboxPageState extends State<InboxPage> {
 
   @override
   void dispose() {
+    _sseInboxSubscription?.cancel(); // 📬 إلغاء الاشتراك في SSE
     _scrollController.dispose();
     _searchTimer?.cancel();
     _searchController.dispose();
-    _searchFocusNode.dispose(); // ✅ تنظيف الـ FocusNode
+    _searchFocusNode.dispose();
     super.dispose();
   }
 

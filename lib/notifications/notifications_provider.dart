@@ -18,6 +18,10 @@ class NotificationProvider extends ChangeNotifier {
   final StreamController<Map<String, dynamic>> _presenceStreamController = StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get presenceStream => _presenceStreamController.stream;
 
+  // 📬 Stream خاص بأحداث الـ Inbox (TRANSACTION_FORWARD_RECEIVED / TRANSACTION_FORWARD_RESPONDED)
+  final StreamController<Map<String, dynamic>> _inboxEventController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get inboxEventStream => _inboxEventController.stream;
+
   HttpClient? _sseHttpClient;
   StreamSubscription? _sseSubscription;
   bool _isConnected = false;
@@ -27,6 +31,39 @@ class NotificationProvider extends ChangeNotifier {
   int get unreadCount => _unreadCount;
   bool get isLoading => _isLoading;
   bool get hasMore => _hasMore;
+
+  // 📬 الـ codes الخاصة بالـ Inbox — مفصولة تماماً عن عداد الـ Notifications
+  static const _inboxCodes = {
+    'TRANSACTION_FORWARD_RECEIVED',
+    'TRANSACTION_FORWARD_RESPONDED',
+  };
+
+  // 💰 الـ codes الخاصة بتحذيرات البادجيت — لا تظهر إلا للـ Admin
+  static const _budgetCodes = {
+    'BUDGET_ALLOCATION_OVERFLOW_ATTEMPT',
+    'INSUFFICIENT_BUDGET',
+    'BUDGET_WARNING',
+    'BUDGET_EXCEEDED',
+  };
+
+  // 📬 عداد الإشعارات غير المقروءة الخاصة بالـ Inbox فقط
+  int get inboxUnreadCount => _notifications.where((n) {
+    final code = n['code']?.toString() ?? '';
+    return n['seen'] != true && _inboxCodes.contains(code);
+  }).length;
+
+  // 🔔 الإشعارات المفلترة للمستخدم غير الـ Admin (بدون تحذيرات البادجيت)
+  List<dynamic> get notificationsForNonAdmin => _notifications.where((n) {
+    final code = n['code']?.toString() ?? '';
+    return !_budgetCodes.contains(code);
+  }).toList();
+
+  // 🔔 عداد غير المقروءة للمستخدم غير الـ Admin (بدون بادجيت فقط، العمليات تُحسب)
+  int get unreadCountForNonAdmin => _notifications.where((n) {
+    final code = n['code']?.toString() ?? '';
+    return n['seen'] == false && !_budgetCodes.contains(code);
+  }).length;
+
 
   // Initialize and load initial data
   Future<void> init() async {
@@ -95,6 +132,8 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   void _updateUnreadCount() {
+    // ✅ يحسب كل الإشعارات غير المقروءة (بما فيها العمليات)
+    // الـ drawer هو اللي يفلتر حسب الـ role
     _unreadCount = _notifications.where((n) => n['seen'] == false).length;
   }
 
@@ -208,6 +247,15 @@ class NotificationProvider extends ChangeNotifier {
       notifyListeners();
       debugPrint("🔔 New notification: ${notification['code']}");
     }
+
+    // 📬 إرسال حدث للـ InboxPage إذا كان الإشعار متعلق بالمعاملات
+    final code = notification['code']?.toString() ?? '';
+    if (code == 'TRANSACTION_FORWARD_RECEIVED' || code == 'TRANSACTION_FORWARD_RESPONDED') {
+      if (!_inboxEventController.isClosed) {
+        _inboxEventController.add(notification);
+        debugPrint("📬 Inbox event dispatched: $code");
+      }
+    }
   }
 
   void _reconnectSSE() {
@@ -242,6 +290,7 @@ class NotificationProvider extends ChangeNotifier {
     _disposed = true;
     _disconnectSSE();
     _presenceStreamController.close();
+    _inboxEventController.close();
     super.dispose();
   }
 }

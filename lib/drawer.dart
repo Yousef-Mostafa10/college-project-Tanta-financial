@@ -197,39 +197,49 @@ class _CustomDrawerState extends State<CustomDrawer> {
               },
             ),
 
-            _buildMenuItem(
-              icon: Icons.move_to_inbox_rounded,
-              title: AppLocalizations.of(context)!.translate('inbox_title'),
-              color: AppColors.accentPurple,
-              isMobile: isMobile,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const InboxPage()),
+            Consumer<NotificationProvider>(
+              builder: (context, notifProvider, _) {
+                return _buildMenuItem(
+                  icon: Icons.move_to_inbox_rounded,
+                  title: AppLocalizations.of(context)!.translate('inbox_title'),
+                  color: AppColors.accentPurple,
+                  isMobile: isMobile,
+                  badgeCount: notifProvider.inboxUnreadCount,
+                  onTap: () {
+                    // ✅ تحديد كل إشعارات الـ Inbox كمقروءة عند الدخول
+                    _markInboxNotificationsAsSeen(notifProvider);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const InboxPage()),
+                    );
+                  },
                 );
               },
             ),
 
-            if (_userType.toLowerCase() == 'admin')
-              Consumer<NotificationProvider>(
-                builder: (context, notifProvider, _) {
-                  return _buildMenuItem(
-                    icon: Icons.notifications_rounded,
-                    title: AppLocalizations.of(context)!.translate('notifications'),
-                    color: AppColors.accentOrange,
-                    isMobile: isMobile,
-                    badgeCount: notifProvider.unreadCount,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const NotificationsPage(),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
+            Consumer<NotificationProvider>(
+              builder: (context, notifProvider, _) {
+                final isAdmin = _userType.toLowerCase() == 'admin';
+                return _buildMenuItem(
+                  icon: Icons.notifications_rounded,
+                  title: AppLocalizations.of(context)!.translate('notifications'),
+                  color: AppColors.accentOrange,
+                  isMobile: isMobile,
+                  // الادمن يشوف كل الإشعارات، الباقي بدون تحذيرات البادجيت
+                  badgeCount: isAdmin
+                      ? notifProvider.unreadCount
+                      : notifProvider.unreadCountForNonAdmin,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => NotificationsPage(isAdmin: isAdmin),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
 
             Divider(
               height: isMobile ? 16 : 20,
@@ -405,6 +415,20 @@ class _CustomDrawerState extends State<CustomDrawer> {
         onTap: widget.onLogout,
       ),
     );
+  }
+
+  // 📬 تحديد إشعارات الـ Inbox كمقروءة
+  void _markInboxNotificationsAsSeen(NotificationProvider provider) {
+    final inboxCodes = {'TRANSACTION_FORWARD_RECEIVED', 'TRANSACTION_FORWARD_RESPONDED'};
+    final unread = provider.notifications.where((n) {
+      final code = n['code']?.toString() ?? '';
+      return n['seen'] != true && inboxCodes.contains(code);
+    }).toList();
+
+    for (final n in unread) {
+      final id = n['id'];
+      if (id != null) provider.markAsSeen(id);
+    }
   }
 
   // دالة مساعدة لبناء عناصر القائمة

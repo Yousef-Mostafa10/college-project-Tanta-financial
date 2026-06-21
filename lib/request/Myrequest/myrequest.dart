@@ -25,6 +25,9 @@ import '../editerequest.dart';
 import '../creatrequest.dart';
 import '../../drawer.dart';
 import '../../Auth/login.dart';
+import '../../notifications/notifications_provider.dart';
+import '../../notifications/notifications_page.dart';
+
 
 class MyRequestsPage extends StatefulWidget {
   const MyRequestsPage({super.key});
@@ -841,6 +844,58 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                       color: Colors.white, size: isMobile ? 20 : 24),
                   onPressed: () => _fetchMyRequests(fullLoad: true),
                   tooltip: AppLocalizations.of(context)!.translate('refresh'),
+                ),
+                Consumer<NotificationProvider>(
+                  builder: (context, provider, child) {
+                    final isAdmin = _userRole?.toLowerCase() == 'admin';
+                    final count = isAdmin
+                        ? provider.unreadCount
+                        : provider.unreadCountForNonAdmin;
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.notifications_outlined,
+                              color: Colors.white, size: isMobile ? 20 : 24),
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => NotificationsPage(isAdmin: isAdmin),
+                            ),
+                          ),
+                          tooltip: AppLocalizations.of(context)!
+                              .translate('notifications'),
+                        ),
+                        if (count > 0)
+                          Positioned(
+                            right: isMobile ? 4 : 8,
+                            top: isMobile ? 4 : 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  count > 99 ? '99+' : '$count',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

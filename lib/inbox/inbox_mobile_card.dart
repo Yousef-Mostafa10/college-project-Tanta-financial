@@ -320,12 +320,13 @@ class _InboxMobileCardState extends State<InboxMobileCard> {
                   const SizedBox(height: 12),
 
                   // Chips
-                  Row(
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       _buildMobileChip(context, type, Icons.category_outlined, AppColors.primary),
-                      const SizedBox(width: 6),
                       _buildMobileChip(context, priority, Icons.flag_outlined, InboxHelpers.getPriorityColor(priority)),
-                      const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -333,6 +334,7 @@ class _InboxMobileCardState extends State<InboxMobileCard> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.attach_file_rounded, 

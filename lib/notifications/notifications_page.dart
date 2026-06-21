@@ -6,7 +6,8 @@ import 'package:college_project/core/app_theme_color.dart';
 import 'notifications_provider.dart';
 
 class NotificationsPage extends StatefulWidget {
-  const NotificationsPage({super.key});
+  final bool isAdmin;
+  const NotificationsPage({super.key, this.isAdmin = false});
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
@@ -173,13 +174,30 @@ class _NotificationsPageState extends State<NotificationsPage> {
         actions: [
           Consumer<NotificationProvider>(
             builder: (context, provider, _) {
-              if (provider.unreadCount == 0) return const SizedBox.shrink();
+              final isAdmin = widget.isAdmin;
+              final count = isAdmin ? provider.unreadCount : provider.unreadCountForNonAdmin;
+              if (count == 0) return const SizedBox.shrink();
               return TextButton(
                 onPressed: () async {
-                  // Mark all visible unread as seen
-                  final unread = provider.notifications
-                      .where((n) => n['seen'] == false)
-                      .toList();
+                  // الـ codes المستثناة دائماً (Inbox)
+                  const inboxCodes = {
+                    'TRANSACTION_FORWARD_RECEIVED',
+                    'TRANSACTION_FORWARD_RESPONDED',
+                  };
+                  // الـ codes المستثناة للغير Admin (Budget)
+                  const budgetCodes = {
+                    'BUDGET_ALLOCATION_OVERFLOW_ATTEMPT',
+                    'INSUFFICIENT_BUDGET',
+                    'BUDGET_WARNING',
+                    'BUDGET_EXCEEDED',
+                  };
+                  final unread = provider.notifications.where((n) {
+                    final code = n['code']?.toString() ?? '';
+                    if (n['seen'] == true) return false;
+                    if (inboxCodes.contains(code)) return false;
+                    if (!isAdmin && budgetCodes.contains(code)) return false;
+                    return true;
+                  }).toList();
                   for (final n in unread) {
                     await provider.markAsSeen(n['id']);
                   }
@@ -198,7 +216,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
       ),
       body: Consumer<NotificationProvider>(
         builder: (context, provider, _) {
-          if (provider.isLoading && provider.notifications.isEmpty) {
+          // فلترة القائمة حسب الـ role
+          final visibleNotifications = widget.isAdmin
+              ? provider.notifications
+              : provider.notificationsForNonAdmin;
+
+          if (provider.isLoading && visibleNotifications.isEmpty) {
             return Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
@@ -206,7 +229,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             );
           }
 
-          if (provider.notifications.isEmpty) {
+          if (visibleNotifications.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -237,16 +260,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
               horizontal: isMobile ? 8 : 16,
             ),
             itemCount:
-                provider.notifications.length + (provider.hasMore ? 1 : 0),
+                visibleNotifications.length + (provider.hasMore ? 1 : 0),
             itemBuilder: (context, index) {
-              if (index == provider.notifications.length) {
+              if (index == visibleNotifications.length) {
                 return const Padding(
                   padding: EdgeInsets.all(16),
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
 
-              final notification = provider.notifications[index];
+              final notification = visibleNotifications[index];
               final isSeen = notification['seen'] == true;
               final type = notification['type']?.toString();
               final color = _getNotificationColor(type);

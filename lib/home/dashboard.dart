@@ -533,7 +533,7 @@ class _AdministrativeDashboardPageState
                         icon: const Icon(Icons.notifications_outlined, color: Colors.white),
                         onPressed: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                          MaterialPageRoute(builder: (_) => const NotificationsPage(isAdmin: true)),
                         ),
                         tooltip: AppLocalizations.of(context)!.translate('notifications'),
                       ),
