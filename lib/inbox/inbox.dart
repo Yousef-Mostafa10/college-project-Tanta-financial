@@ -1450,8 +1450,16 @@ class _InboxPageState extends State<InboxPage> {
 
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    // Close SSE connection and clear notifications before logging out
+    if (context.mounted) {
+      context.read<NotificationProvider>().logout();
+    }
+    
     await prefs.clear();
-    Navigator.pushReplacementNamed(context, '/login');
+    if (context.mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   void _showMobileFilterDialog(

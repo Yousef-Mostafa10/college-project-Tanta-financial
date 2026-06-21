@@ -694,8 +694,8 @@ class _EditRequestPageState extends State<EditRequestPage> {
   }
 
   // ✅ تحديث تعليق المرسل
-  Future<void> _updateSenderComment() async {
-    if (_forwardId == null) return;
+  Future<bool> _updateSenderComment() async {
+    if (_forwardId == null) return true;
 
     setState(() => _isUpdatingComment = true);
 
@@ -713,12 +713,16 @@ class _EditRequestPageState extends State<EditRequestPage> {
 
       if (response.statusCode == 200) {
         debugPrint('✅ Sender comment updated successfully');
+        return true;
       } else {
         debugPrint('❌ Failed to update comment: ${response.statusCode}');
         _handleApiError(response, 'sender_comment_update_failed');
+        return false;
       }
     } catch (e) {
       debugPrint('❌ Error updating comment: $e');
+      _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
+      return false;
     } finally {
       if (mounted) setState(() => _isUpdatingComment = false);
     }
@@ -922,7 +926,7 @@ class _EditRequestPageState extends State<EditRequestPage> {
             return Container(
               padding: EdgeInsets.all(20),
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.7,
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1258,9 +1262,10 @@ class _EditRequestPageState extends State<EditRequestPage> {
   }
 
   // ✅ رفع ملفات جديدة
-  Future<void> _uploadNewFiles() async {
-    if (_selectedFiles.isEmpty) return;
+  Future<bool> _uploadNewFiles() async {
+    if (_selectedFiles.isEmpty) return true;
 
+    bool allSuccess = true;
     for (var file in _selectedFiles) {
       try {
         final finalFileName = file.name;
@@ -1282,10 +1287,14 @@ class _EditRequestPageState extends State<EditRequestPage> {
             ));
           } else {
             debugPrint('❌ Web upload failed: bytes are null for $finalFileName');
+            allSuccess = false;
             continue;
           }
         } else {
-          if (file.path == null) continue;
+          if (file.path == null) {
+            allSuccess = false;
+            continue;
+          }
           request.files.add(await http.MultipartFile.fromPath(
             'file',
             file.path!,
@@ -1304,7 +1313,8 @@ class _EditRequestPageState extends State<EditRequestPage> {
             final int documentId = rawId is int ? rawId : int.parse(rawId.toString());
 
             // ربط الملف بالطلب فوراً
-            await _linkDocumentToTransaction(documentId);
+            bool linked = await _linkDocumentToTransaction(documentId);
+            if (!linked) allSuccess = false;
 
             // إضافة الملف للقائمة
             final String title = documentData["title"] ?? file.name;
@@ -1323,28 +1333,47 @@ class _EditRequestPageState extends State<EditRequestPage> {
               _documents.add(newDocument);
               _recentlyLinkedFiles.add(file.name);
             });
+          } else {
+            allSuccess = false;
           }
+        } else {
+          allSuccess = false;
+          final responseBody = await response.stream.bytesToString();
+          final errMsg = AppErrorHandler.extractAndTranslate(
+            context,
+            responseBody,
+            fallback: 'Failed to upload file "$finalFileName"',
+          );
+          _showErrorSnackBar(errMsg);
         }
       } catch (e) {
         debugPrint('❌ Error uploading file: $e');
+        _showErrorSnackBar('${AppLocalizations.of(context)!.translate('error_loading_data')} $e');
+        allSuccess = false;
       }
     }
 
     setState(() {
       _selectedFiles.clear();
     });
+    return allSuccess;
   }
 
   // ✅ ربط الملفات القديمة المختارة
-  Future<void> _linkPreviousDocuments() async {
-    if (_selectedPreviousDocuments.isEmpty) return;
+  Future<bool> _linkPreviousDocuments() async {
+    if (_selectedPreviousDocuments.isEmpty) return true;
 
+    bool allSuccess = true;
     for (var doc in _selectedPreviousDocuments) {
       try {
         final documentId = doc['id'] is int ? doc['id'] : int.parse(doc['id'].toString());
 
         // ربط الملف بالطلب
-        await _linkDocumentToTransaction(documentId);
+        bool linked = await _linkDocumentToTransaction(documentId);
+        if (!linked) {
+          allSuccess = false;
+          continue;
+        }
 
         // إضافة الملف للقائمة إذا لم يكن موجوداً
         setState(() {
@@ -1356,16 +1385,18 @@ class _EditRequestPageState extends State<EditRequestPage> {
         });
       } catch (e) {
         debugPrint('❌ Error linking document: $e');
+        allSuccess = false;
       }
     }
 
     setState(() {
       _selectedPreviousDocuments.clear();
     });
+    return allSuccess;
   }
 
   // ✅ دالة منفصلة لربط ملف بالطلب
-  Future<void> _linkDocumentToTransaction(int documentId) async {
+  Future<bool> _linkDocumentToTransaction(int documentId) async {
     try {
       final response = await http.post(
         Uri.parse('$_documentApiUrl/transactions/${widget.requestId}/document/$documentId'),
@@ -1380,11 +1411,14 @@ class _EditRequestPageState extends State<EditRequestPage> {
       debugPrint('🔗 Link Status: ${response.statusCode}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         debugPrint('✅ Document $documentId linked successfully');
+        return true;
       } else {
         debugPrint('❌ Link failed: ${response.body}');
+        return false;
       }
     } catch (e) {
       debugPrint('❌ Error linking document: $e');
+      return false;
     }
   }
 
@@ -1456,18 +1490,19 @@ class _EditRequestPageState extends State<EditRequestPage> {
   // ✅ تعديل: تحديث الطلب مع معالجة الملفات
   Future<void> _updateRequest() async {
     // 1️⃣ التحقق من وجود تغييرات فعلية أولاً
-    bool hasChanges = false;
+    bool mainDetailsChanged = false;
 
     if (_isCreator) {
-      if (_titleController.text != (_requestData?["title"] ?? "")) hasChanges = true;
-      if (_descriptionController.text != (_requestData?["description"] ?? "")) hasChanges = true;
-      if (_selectedPriority.toUpperCase() != (_requestData?["priority"] ?? "MEDIUM").toUpperCase()) hasChanges = true;
-      if (_selectedRequestType != (_requestData?["typeName"] ?? "Request Type")) hasChanges = true;
+      if (_titleController.text != (_requestData?["title"] ?? "")) mainDetailsChanged = true;
+      if (_descriptionController.text != (_requestData?["description"] ?? "")) mainDetailsChanged = true;
+      if (_selectedPriority.toUpperCase() != (_requestData?["priority"] ?? "MEDIUM").toUpperCase()) mainDetailsChanged = true;
+      if (_selectedRequestType != (_requestData?["typeName"] ?? "Request Type")) mainDetailsChanged = true;
     }
 
-    if (_senderCommentController.text != _originalSenderComment) hasChanges = true;
-    if (_selectedFiles.isNotEmpty) hasChanges = true;
-    if (_selectedPreviousDocuments.isNotEmpty) hasChanges = true;
+    bool hasChanges = mainDetailsChanged ||
+        (_senderCommentController.text != _originalSenderComment) ||
+        _selectedFiles.isNotEmpty ||
+        _selectedPreviousDocuments.isNotEmpty;
 
     // إذا لم يكن هناك أي تغيير، نوقف التنفيذ ولا نرسل طلبات للـ API
     if (!hasChanges) {
@@ -1494,59 +1529,66 @@ class _EditRequestPageState extends State<EditRequestPage> {
     });
 
     try {
-      // 0. تحديث تعليق المرسل
-      if (_forwardId != null) {
-        await _updateSenderComment();
+      bool success = true;
+
+      // 0. تحديث تعليق المرسل (فقط إذا تغير بالفعل)
+      if (_forwardId != null && _senderCommentController.text != _originalSenderComment) {
+        bool ok = await _updateSenderComment();
+        if (!ok) success = false;
       }
 
       // 1. رفع الملفات الجديدة وربطها
-      if (_selectedFiles.isNotEmpty) {
-        await _uploadNewFiles();
+      if (success && _selectedFiles.isNotEmpty) {
+        bool ok = await _uploadNewFiles();
+        if (!ok) success = false;
       }
 
       // 2. ربط الملفات القديمة المختارة
-      if (_selectedPreviousDocuments.isNotEmpty) {
-        await _linkPreviousDocuments();
+      if (success && _selectedPreviousDocuments.isNotEmpty) {
+        bool ok = await _linkPreviousDocuments();
+        if (!ok) success = false;
       }
 
-      // 3. تحديث بيانات الطلب الأساسية (فقط إذا كان لديه الصلاحية)
-      if (_isCreator) {
-        List<int> documentIds = _documents.map((doc) {
-          final id = doc["id"];
-          return id is int ? id : int.parse(id.toString());
-        }).toList();
+      // 3. تحديث بيانات الطلب الأساسية (فقط إذا كان لديه الصلاحية وتغيرت البيانات فعلاً)
+      if (success) {
+        if (_isCreator && mainDetailsChanged) {
+          List<int> documentIds = _documents.map((doc) {
+            final id = doc["id"];
+            return id is int ? id : int.parse(id.toString());
+          }).toList();
 
-        final requestData = {
-          'title': _titleController.text,
-          'description': _descriptionController.text,
-          'typeName': _selectedRequestType,
-          'priority': _selectedPriority.toUpperCase(),
-          'documentsIds': documentIds,
-        };
+          final requestData = {
+            'title': _titleController.text,
+            'description': _descriptionController.text,
+            'typeName': _selectedRequestType,
+            'priority': _selectedPriority.toUpperCase(),
+            'documentsIds': documentIds,
+          };
 
-        debugPrint('🚀 Updating request: $requestData');
+          debugPrint('🚀 Updating request: $requestData');
 
-        final response = await http.patch(
-          Uri.parse('$_baseUrl/transactions/${widget.requestId}'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $_userToken',
-          },
-          body: json.encode(requestData),
-        );
+          final response = await http.patch(
+            Uri.parse('$_baseUrl/transactions/${widget.requestId}'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $_userToken',
+            },
+            body: json.encode(requestData),
+          );
 
-        debugPrint('📊 Update Status: ${response.statusCode}');
-        debugPrint('📄 Update Response: ${response.body}');
+          debugPrint('📊 Update Status: ${response.statusCode}');
+          debugPrint('📄 Update Response: ${response.body}');
 
-        if (response.statusCode == 200) {
-          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_updated_success_details'));
+          if (response.statusCode == 200) {
+            _showSuccessSnackBar(AppLocalizations.of(context)!.translate('request_updated_success_details'));
+          } else {
+            _handleApiError(response, 'failed_update_request_status');
+            success = false; // نوقف الاستكمال
+          }
         } else {
-          _handleApiError(response, 'failed_update_request_status');
-          return; // نوقف التنفيذ إذا فشل
+          // رسالة نجاح للمستخدم الذي حدث الملفات/التعليق فقط (مثل المحاسب، أو المنشئ الذي رفع ملفات فقط دون تعديل الحقول)
+          _showSuccessSnackBar(AppLocalizations.of(context)!.translate('editing_completed') ?? 'تم التحديث بنجاح');
         }
-      } else {
-        // رسالة نجاح للمستخدم الذي حدث الملفات/التعليق فقط (مثل المحاسب)
-        _showSuccessSnackBar(AppLocalizations.of(context)!.translate('editing_completed') ?? 'تم التحديث بنجاح');
       }
 
       // في جميع الحالات (سواء حدث الطلب الأساسي أو اكتفى بالملفات والتعليق)، نقوم بجلب التحديثات

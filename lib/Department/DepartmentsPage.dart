@@ -1477,122 +1477,163 @@ class DepartmentCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderColor.withOpacity(0.5), width: 1),
         boxShadow: [
           BoxShadow(
-            color: AppColors.statShadow,
-            blurRadius: 4,
-            offset: Offset(0, 2),
+            color: AppColors.statShadow.withOpacity(0.06),
+            blurRadius: 12,
+            spreadRadius: 0,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          // Content
-          Padding(
-            padding: EdgeInsets.all(isMobile ? 10 : 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Department Icon
-                Container(
-                  padding: EdgeInsets.all(isMobile ? 8 : 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.business,
-                    color: AppColors.primary,
-                    size: isMobile ? 24 : 32,
-                  ),
-                ),
-                SizedBox(height: isMobile ? 8 : 16),
-                // Department Name
-                Text(
-                  department['name'] ?? AppLocalizations.of(context)!.translate('untitled_dept'),
-                  style: TextStyle(
-                    fontSize: isMobile ? 14 : 18, // زيادة الخط للديسكتوب
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: isMobile ? 4 : 8),
-                // Manager ID
-                Row(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            // Optional: maybe show details on tap later
+          },
+          child: Stack(
+            children: [
+              // Content
+              Padding(
+                padding: EdgeInsets.all(isMobile ? 14 : 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: isMobile ? 12 : 14,
-                      color: AppColors.textMuted,
-                    ),
-                    SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        department['managerId'] != null 
-                            ? AppLocalizations.of(context)!.translate('manager_id_label').replaceAll('{id}', '${department['managerId']}')
-                            : AppLocalizations.of(context)!.translate('no_manager_assigned'),
-                        style: TextStyle(
-                          fontSize: isMobile ? 11 : 13,
-                          color: AppColors.textSecondary,
+                    // Department Icon and Name
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(isMobile ? 10 : 12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [AppColors.primary.withOpacity(0.15), AppColors.primary.withOpacity(0.05)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+                          ),
+                          child: Icon(
+                            Icons.business_rounded,
+                            color: AppColors.primary,
+                            size: isMobile ? 26 : 30,
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(height: 4),
+                              Text(
+                                department['name'] ?? AppLocalizations.of(context)!.translate('untitled_dept'),
+                                style: TextStyle(
+                                  fontSize: isMobile ? 15 : 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                  letterSpacing: 0.3,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 24), // Space for menu
+                      ],
+                    ),
+                    Spacer(),
+                    // Manager ID
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.04),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.person_outline_rounded,
+                            size: isMobile ? 14 : 16,
+                            color: department['managerId'] != null ? AppColors.accentBlue : AppColors.textMuted,
+                          ),
+                          SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              department['managerId'] != null 
+                                  ? AppLocalizations.of(context)!.translate('manager_id_label').replaceAll('{id}', '${department['managerId']}')
+                                  : AppLocalizations.of(context)!.translate('no_manager_assigned'),
+                              style: TextStyle(
+                                fontSize: isMobile ? 12 : 13,
+                                fontWeight: FontWeight.w600,
+                                color: department['managerId'] != null ? AppColors.textPrimary : AppColors.textMuted,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
 
-          // Three dots menu
-          PositionedDirectional(
-            top: 12,
-            end: 12,
-            child: PopupMenuButton<String>(
-              icon: Icon(
-                Icons.more_vert,
-                color: AppColors.textMuted,
-                size: 20,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              onSelected: (value) {
-                if (value == 'edit') {
-                  onEdit();
-                } else if (value == 'delete') {
-                  onDelete();
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, color: AppColors.accentBlue, size: 20),
-                      SizedBox(width: 8),
-                      Text(AppLocalizations.of(context)!.translate('edit')),
-                    ],
+              // Three dots menu
+              PositionedDirectional(
+                top: 8,
+                end: 8,
+                child: PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    color: AppColors.textSecondary,
+                    size: 22,
                   ),
-                ),
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, color: AppColors.accentRed, size: 20),
-                      SizedBox(width: 8),
-                      Text(AppLocalizations.of(context)!.translate('delete')),
-                    ],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: AppColors.borderColor, width: 1),
                   ),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      onEdit();
+                    } else if (value == 'delete') {
+                      onDelete();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_rounded, color: AppColors.accentBlue, size: 20),
+                          SizedBox(width: 10),
+                          Text(AppLocalizations.of(context)!.translate('edit')),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_rounded, color: AppColors.accentRed, size: 20),
+                          SizedBox(width: 10),
+                          Text(AppLocalizations.of(context)!.translate('delete')),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

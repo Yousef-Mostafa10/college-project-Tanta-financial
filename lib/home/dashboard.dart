@@ -391,11 +391,19 @@ class _AdministrativeDashboardPageState
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    // Close SSE connection and clear notifications before logging out
+    if (context.mounted) {
+      context.read<NotificationProvider>().logout();
+    }
+    
     await prefs.clear();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-    );
+    if (context.mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    }
   }
 
   Widget _buildLoadingState() {

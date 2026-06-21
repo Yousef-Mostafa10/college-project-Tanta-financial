@@ -827,7 +827,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             return Container(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.8,
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1265,7 +1265,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         body: jsonEncode({
           "receiverId": receiverId,
           "comment": _commentController.text.trim().isEmpty
-              ? "Request forwarded"
+              ? ""
               : _commentController.text.trim(),
         }),
       );

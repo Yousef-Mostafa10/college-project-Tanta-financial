@@ -381,7 +381,7 @@ class MyRequestsApi {
         },
         body: json.encode({
           "receiverId": receiverId,
-          "comment": comment ?? "Forwarded via Mobile App"
+          "comment": comment ?? ""
         }),
       );
 

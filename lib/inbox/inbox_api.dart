@@ -853,7 +853,7 @@ class InboxApi {
         },
         body: json.encode({
           "receiverId": resolvedReceiverId,
-          "comment": comment ?? "Forwarded via Mobile App"
+          "comment": comment ?? ""
         }),
       );
 

@@ -7,6 +7,7 @@ import '../../utils/app_error_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:college_project/providers/theme_provider.dart';
 import 'package:college_project/core/app_theme_color.dart';
+import '../../notifications/notifications_provider.dart';
 
 import '../../app_config.dart';
 import 'my_requests_colors.dart';
@@ -65,11 +66,17 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
 
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    if (mounted) {
+      context.read<NotificationProvider>().logout();
+    }
+    
     await prefs.clear();
+    
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
+        MaterialPageRoute(builder: (context) => const LoginPage()),
       );
     }
   }

@@ -1281,6 +1281,7 @@ class BudgetCategoryCard extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  @override
   Widget build(BuildContext context) {
     final double width = MediaQuery.of(context).size.width;
     final bool isMobile = width < 600;
@@ -1291,205 +1292,249 @@ class BudgetCategoryCard extends StatelessWidget {
     final int preallocation = (category['preallocation'] as num?)?.toInt() ?? 0;
 
     // Progress ratio for allocated vs budget
-    final double ratio =
-        budget > 0 ? (allocated / budget).clamp(0.0, 1.0) : 0.0;
+    final double ratio = budget > 0 ? (allocated / budget).clamp(0.0, 1.0) : 0.0;
+    
+    // Status Color based on ratio
+    final Color progressColor = ratio >= 0.9
+        ? BudgetColors.accentRed
+        : ratio >= 0.7
+            ? Colors.orange
+            : ratio >= 0.4
+                ? BudgetColors.accentYellow
+                : BudgetColors.accentGreen;
 
     return Container(
       decoration: BoxDecoration(
         color: BudgetColors.cardBg,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: BudgetColors.statBorder.withOpacity(0.5), width: 1),
         boxShadow: [
           BoxShadow(
-            color: BudgetColors.statShadow,
-            blurRadius: 4,
-            offset: Offset(0, 2),
+            color: BudgetColors.statShadow.withOpacity(0.06),
+            blurRadius: 12,
+            spreadRadius: 0,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          // Content — ClipRect silently clips any marginal overflow (no more exception)
-          ClipRect(
-            child: Padding(
-              padding: EdgeInsets.all(isMobile ? 8 : 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Icon
-                  Container(
-                    padding: EdgeInsets.all(isMobile ? 7 : 10),
-                    decoration: BoxDecoration(
-                      color: BudgetColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.account_balance_wallet,
-                      color: BudgetColors.primary,
-                      size: isMobile ? 18 : 28,
-                    ),
-                  ),
-                  SizedBox(height: isMobile ? 6 : 12),
-
-                  // Category Name
-                  Text(
-                    category['name'] ?? AppLocalizations.of(context)!.translate('untitled'),
-                    style: TextStyle(
-                      fontSize: isMobile ? 12 : 17, // زيادة الخط للديسكتوب
-                      fontWeight: FontWeight.bold,
-                      color: BudgetColors.textPrimary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: isMobile ? 4 : 8),
-
-                  // Budget info rows
-                  _InfoRow(
-                    label: AppLocalizations.of(context)!.translate('total_budget'),
-                    value: '$budget',
-                    icon: Icons.monetization_on_outlined,
-                    color: BudgetColors.primary,
-                    isMobile: isMobile,
-                  ),
-                  _InfoRow(
-                    label: AppLocalizations.of(context)!.translate('allocated_amount'),
-                    value: '$allocated',
-                    icon: Icons.trending_up,
-                    color: BudgetColors.accentYellow,
-                    isMobile: isMobile,
-                  ),
-                  _InfoRow(
-                    label: AppLocalizations.of(context)!.translate('available_balance'),
-                    value: '$available',
-                    icon: Icons.check_circle_outline,
-                    color: BudgetColors.accentGreen,
-                    isMobile: isMobile,
-                  ),
-                  FutureBuilder<SharedPreferences>(
-                    future: SharedPreferences.getInstance(),
-                    builder: (context, snapshot) {
-                      final role = snapshot.data?.getString('user_role') ?? '';
-                      if (role.toUpperCase() != 'ADMIN' || preallocation == 0) {
-                        return const SizedBox.shrink();
-                      }
-                      return _InfoRow(
-                        label: AppLocalizations.of(context)!.translate('preallocation_label'),
-                        value: '$preallocation',
-                        icon: Icons.lock_clock_outlined,
-                        color: BudgetColors.accentYellow,
-                        isMobile: isMobile,
-                      );
-                    },
-                  ),
-
-                  if (budget > 0) ...[
-                    SizedBox(height: isMobile ? 4 : 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: ratio,
-                        minHeight: 4,
-                        backgroundColor: BudgetColors.statBgLight,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          ratio >= 0.9
-                              ? BudgetColors.accentRed
-                              : ratio >= 0.7
-                                  ? Colors.orange
-                                  : ratio >= 0.4
-                                      ? BudgetColors.accentYellow
-                                      : BudgetColors.accentGreen,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            // Future interaction
+          },
+          child: Stack(
+            children: [
+              // Content
+              Padding(
+                padding: EdgeInsets.all(isMobile ? 12 : 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Header Row: Icon + Name
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(isMobile ? 10 : 12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [BudgetColors.primary.withOpacity(0.15), BudgetColors.primary.withOpacity(0.05)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: BudgetColors.primary.withOpacity(0.1)),
+                          ),
+                          child: Icon(
+                            Icons.account_balance_wallet_rounded,
+                            color: BudgetColors.primary,
+                            size: isMobile ? 24 : 28,
+                          ),
                         ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(height: 4),
+                              Text(
+                                category['name'] ?? AppLocalizations.of(context)!.translate('untitled'),
+                                style: TextStyle(
+                                  fontSize: isMobile ? 15 : 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: BudgetColors.textPrimary,
+                                  letterSpacing: 0.3,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 24), // spacing for menu
+                      ],
+                    ),
+
+                    SizedBox(height: isMobile ? 12 : 16),
+
+                    // Stats Container
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: BudgetColors.primary.withOpacity(0.03),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: BudgetColors.primary.withOpacity(0.05)),
+                      ),
+                      child: Column(
+                        children: [
+                          _InfoRow(
+                            label: AppLocalizations.of(context)!.translate('total_budget'),
+                            value: '$budget',
+                            icon: Icons.monetization_on_outlined,
+                            color: BudgetColors.primary,
+                            isMobile: isMobile,
+                          ),
+                          _InfoRow(
+                            label: AppLocalizations.of(context)!.translate('allocated_amount'),
+                            value: '$allocated',
+                            icon: Icons.trending_up_rounded,
+                            color: BudgetColors.accentYellow,
+                            isMobile: isMobile,
+                          ),
+                          _InfoRow(
+                            label: AppLocalizations.of(context)!.translate('available_balance'),
+                            value: '$available',
+                            icon: Icons.check_circle_outline_rounded,
+                            color: BudgetColors.accentGreen,
+                            isMobile: isMobile,
+                          ),
+                          FutureBuilder<SharedPreferences>(
+                            future: SharedPreferences.getInstance(),
+                            builder: (context, snapshot) {
+                              final role = snapshot.data?.getString('user_role') ?? '';
+                              if (role.toUpperCase() != 'ADMIN' || preallocation == 0) {
+                                return const SizedBox.shrink();
+                              }
+                              return _InfoRow(
+                                label: AppLocalizations.of(context)!.translate('preallocation_label'),
+                                value: '$preallocation',
+                                icon: Icons.lock_clock_outlined,
+                                color: Colors.orange,
+                                isMobile: isMobile,
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(height: 2),
-                    Text(
-                      '${(ratio * 100).toStringAsFixed(0)}% ' +
-                          AppLocalizations.of(context)!.translate('fulfilled_stat').toLowerCase(),
-                      style: TextStyle(fontSize: 9, color: BudgetColors.textMuted),
+
+                    if (budget > 0) ...[
+                      SizedBox(height: isMobile ? 12 : 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                AppLocalizations.of(context)!.translate('fulfilled_stat'),
+                                style: TextStyle(fontSize: 10, color: BudgetColors.textMuted, fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                '${(ratio * 100).toStringAsFixed(0)}%',
+                                style: TextStyle(fontSize: 11, color: progressColor, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 4),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: ratio,
+                              minHeight: 6,
+                              backgroundColor: BudgetColors.statBgLight,
+                              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Three-dot menu
+              PositionedDirectional(
+                top: 8,
+                end: 8,
+                child: PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert_rounded, color: BudgetColors.textSecondary, size: 22),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      onEdit();
+                    } else if (value == 'addEntry') {
+                      onAddEntry();
+                    } else if (value == 'viewEntries') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => BudgetEntriesPage(categoryName: category['name'])),
+                      );
+                    } else if (value == 'delete') {
+                      onDelete();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_rounded, color: BudgetColors.accentBlue, size: 20),
+                          SizedBox(width: 10),
+                          Text(AppLocalizations.of(context)!.translate('edit_category_name')),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'addEntry',
+                      child: Row(
+                        children: [
+                          Icon(Icons.add_card_rounded, color: BudgetColors.accentGreen, size: 20),
+                          SizedBox(width: 10),
+                          Text(AppLocalizations.of(context)!.translate('add_amount_title')),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'viewEntries',
+                      child: Row(
+                        children: [
+                          Icon(Icons.history_rounded, color: BudgetColors.primary, size: 20),
+                          SizedBox(width: 10),
+                          Text(AppLocalizations.of(context)!.translate('view_entries')),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_rounded, color: BudgetColors.accentRed, size: 20),
+                          SizedBox(width: 10),
+                          Text(AppLocalizations.of(context)!.translate('delete_button')),
+                        ],
+                      ),
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-
-          // Three-dot menu
-          PositionedDirectional(
-            top: 8,
-            end: 8,
-            child: PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert,
-                  color: BudgetColors.textMuted, size: 20),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderColor, width: 1)),
-              onSelected: (value) {
-                if (value == 'edit') {
-                  onEdit();
-                } else if (value == 'addEntry') {
-                  onAddEntry();
-                } else if (value == 'viewEntries') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BudgetEntriesPage(
-                          categoryName: category['name']),
-                    ),
-                  );
-                } else if (value == 'delete') {
-                  onDelete();
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit,
-                          color: BudgetColors.accentBlue, size: 20),
-                      SizedBox(width: 8),
-                      Text(AppLocalizations.of(context)!.translate('edit_category_name')),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'addEntry',
-                  child: Row(
-                    children: [
-                      Icon(Icons.add_card,
-                          color: BudgetColors.accentGreen, size: 20),
-                      SizedBox(width: 8),
-                      Text(AppLocalizations.of(context)!.translate('add_amount_title')),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'viewEntries',
-                  child: Row(
-                    children: [
-                      Icon(Icons.history,
-                          color: BudgetColors.primary, size: 20),
-                      SizedBox(width: 8),
-                      Text(AppLocalizations.of(context)!.translate('view_entries')),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete,
-                          color: BudgetColors.accentRed, size: 20),
-                      SizedBox(width: 8),
-                      Text(AppLocalizations.of(context)!.translate('delete_button')),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
